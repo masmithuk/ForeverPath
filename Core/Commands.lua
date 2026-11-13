@@ -38,6 +38,7 @@ local subcommands = {
     help = printHelp,
     next = printNext,
     reset = function()
+        ns.Settings.ResetFramePosition()
         ns.MainFrame.ResetPosition()
         ns.GuideFrame.ResetPosition()
         Util.Print(L.POSITION_RESET)

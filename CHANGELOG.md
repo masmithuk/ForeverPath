@@ -2,6 +2,18 @@
 
 All notable changes are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] - 2026-11-13
+
+### Added
+- Minimap button: left-click toggles the step guide, right-click opens the main window, and you can drag it around the minimap edge.
+- Guide browser (Guides tab): every zone guide on your route, with level range and progress. Selecting a guide lists its quests with level, quest giver and your status. **Follow this guide** or **Automatic** picks what the step guide follows.
+- Settings tab with checkboxes and buttons for every option: guide on or off, guide window, minimap button, announcements, waypoint arrow, bring back skipped quests, and reset positions.
+- **Guides** button and an active-guide header in the step guide window.
+
+### Changed
+- The main window is now tabbed (Guides, Plan, Settings). Slash commands still work but aren't needed.
+- XP updates only redraw the Plan tab. The guide browser redraws when quest state changes.
+
 ## [0.2.0] - 2026-11-13
 
 ### Added

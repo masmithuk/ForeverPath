@@ -46,13 +46,14 @@ ns:RegisterEvent("PLAYER_LOGIN", function()
     if ns.Settings.account.frame.shown then
         ns.MainFrame.Show()
     end
+    ns.MinimapButton.Init()
     ns.Engine.Start()
 end)
 
 ns:RegisterEvent("PLAYER_LEVEL_UP", onLevelUp)
 
--- Keep the rested/XP numbers live while the window is open.
-local function refresh() ns.MainFrame.Refresh() end
+-- Keep the rested/XP numbers live while the Plan tab is open.
+local function refresh() ns.MainFrame.RefreshIf("plan") end
 ns:RegisterEvent("PLAYER_XP_UPDATE", refresh)
 ns:RegisterEvent("UPDATE_EXHAUSTION", refresh)
 ns:RegisterEvent("PLAYER_UPDATE_RESTING", refresh)

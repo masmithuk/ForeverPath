@@ -29,8 +29,10 @@ read_globals = {
     "CreateVector2D",
     "Enum",
     "GameTooltip",
+    "GetCursorPosition",
     "GetTime",
     "IsTradeskillTrainer",
+    "Minimap",
     "UiMapPoint",
     "GetXPExhaustion",
     "IsResting",
@@ -50,5 +52,5 @@ read_globals = {
 
 files["tests/"] = {
     std = "+lua51",
-    globals = { "_G", "print", "issecretvalue", "ForeverPathMainFrame", "ForeverPathGuideFrame" },
+    globals = { "_G", "print", "issecretvalue", "ForeverPathMainFrame", "ForeverPathGuideFrame", "ForeverPathMinimapButton" },
 }

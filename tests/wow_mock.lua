@@ -157,6 +157,7 @@ function mock.install()
     _G.ForeverPathCharDB = nil
     _G.ForeverPathMainFrame = nil
     _G.ForeverPathGuideFrame = nil
+    _G.ForeverPathMinimapButton = nil
     _G.TomTom = nil
     _G.LibQuestieDB = nil
     _G.QuestieLoader = nil
@@ -171,6 +172,8 @@ function mock.install()
     _G.UISpecialFrames = {}
     _G.SlashCmdList = {}
     _G.GameTooltip = mock.newFrame()
+    _G.Minimap = mock.newFrame()
+    _G.GetCursorPosition = function() return 0, 0 end
 
     _G.UnitRace = function() return unpack(mock.player.race) end
     _G.UnitClass = function() return unpack(mock.player.class) end

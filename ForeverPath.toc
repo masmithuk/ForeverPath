@@ -2,7 +2,7 @@
 ## Title: ForeverPath
 ## Notes: Step-by-step leveling guide for World of Warcraft: Forever - quest giver to quest giver, with TomTom arrows and race/class-aware routes.
 ## Author: masmithuk
-## Version: 0.2.0
+## Version: 0.3.0
 ## IconTexture: Interface\Icons\INV_Misc_Map_01
 ## SavedVariables: ForeverPathDB
 ## SavedVariablesPerCharacter: ForeverPathCharDB
@@ -33,10 +33,15 @@ Integrations\Waypoints.lua
 Guide\Planner.lua
 Guide\Sources.lua
 Guide\Engine.lua
+Guide\Catalog.lua
 
 UI\Text.lua
 UI\MainFrame.lua
+UI\PlanTab.lua
+UI\GuidesTab.lua
+UI\SettingsTab.lua
 UI\GuideFrame.lua
+UI\MinimapButton.lua
 
 Core\Commands.lua
 Core\Bootstrap.lua

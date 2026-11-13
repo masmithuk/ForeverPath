@@ -15,6 +15,46 @@ ns.L = L
 
 -- Frame
 L.TITLE                 = "ForeverPath"
+L.TAB_GUIDES            = "Guides"
+L.TAB_PLAN              = "Plan"
+L.TAB_SETTINGS          = "Settings"
+L.ROUTE_LABEL           = "Route:"
+
+-- Guide browser
+L.GUIDES_FOLLOW         = "Follow this guide"
+L.GUIDES_AUTO           = "Automatic"
+L.GUIDES_FOLLOWING_FMT  = "Following: %s"
+L.GUIDES_FOLLOWING_AUTO = "Following: Automatic (your route's zones for your level)"
+L.GUIDES_PROGRESS_FMT   = "%d of %d quests done"
+L.GUIDES_NO_QUESTS      = "QuestieDB has no quests for you in this zone yet."
+L.GUIDES_NEED_QUESTIE   = "Install Questie (with QuestieDB) to see the quests in each guide."
+L.QUEST_DONE            = "Done"
+L.QUEST_READY           = "Ready to turn in"
+L.QUEST_ACTIVE          = "In your log"
+L.QUEST_AVAILABLE       = "Available"
+L.QUEST_LEVEL_FMT       = "Level %d"
+L.QUEST_LOCKED          = "Requirements not met yet"
+
+-- Settings tab
+L.SETTINGS_GUIDE        = "Step guide"
+L.SETTINGS_WAYPOINTS    = "Waypoint arrow"
+L.SETTINGS_TOOLS        = "Tools"
+L.SETTING_GUIDE_ENABLED = "Guide me step by step (steps and waypoints)"
+L.SETTING_GUIDE_SHOWN   = "Show the guide window"
+L.SETTING_MINIMAP       = "Show the minimap button"
+L.SETTING_ANNOUNCE      = "Announce level-ups and milestones in chat"
+L.SETTING_UNSKIP        = "Bring back skipped quests"
+L.SETTING_RESET         = "Reset window positions"
+L.WAYPOINTS_AUTO        = "Automatic"
+L.WAYPOINTS_TOMTOM      = "TomTom"
+L.WAYPOINTS_BUILTIN     = "Map pin"
+L.WAYPOINTS_OFF         = "Off"
+L.WAYPOINTS_IN_USE_FMT  = "In use: %s"
+
+-- Minimap button
+L.MINIMAP_LEFT          = "Left-click: show/hide the step guide"
+L.MINIMAP_RIGHT         = "Right-click: guides, plan and settings"
+L.MINIMAP_DRAG          = "Drag to move"
 L.SHOW_ALL_BANDS        = "Show all bands"
 L.SHOW_CURRENT_BANDS    = "Show current only"
 
@@ -60,7 +100,7 @@ L.MILESTONE_HEADER      = "Coming up"
 L.GENERAL_HEADER        = "Good to know"
 
 -- Chat
-L.LOADED                = "loaded. Type /fp to open your leveling plan."
+L.LOADED                = "loaded. Click the map button on your minimap to pick a guide."
 L.DING_FMT              = "Level %d! Your route now suggests: %s"
 L.DING_MILESTONE_FMT    = "Level %d unlocks: %s"
 L.ROUTE_SET_FMT         = "Route set to %s."
@@ -82,6 +122,8 @@ L.HELP = {
 
 -- Step guide
 L.GUIDE_TITLE                = "ForeverPath Guide"
+L.GUIDE_AUTOMATIC            = "Automatic"
+L.GUIDE_BROWSE               = "Guides"
 L.GUIDE_SKIP                 = "Skip"
 L.GUIDE_DONE                 = "Done"
 L.GUIDE_NOTHING              = "No steps right now. Check the leveling plan (/fp) for where to head next."

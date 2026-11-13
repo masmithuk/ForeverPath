@@ -40,6 +40,8 @@ local state = {
 -- Library access
 ---------------------------------------------------------------------------
 
+local questArea -- defined with the index code below
+
 local function lib()
     local l = _G.LibQuestieDB
     if type(l) == "table" and type(l.Quest) == "table" then return l end
@@ -315,6 +317,39 @@ function QuestieData.GetTrainers(faction)
     return result
 end
 
+--- The zone a quest belongs to: its zoneOrSort when that's a real area,
+--- otherwise where its first quest giver stands.
+questArea = function(questID)
+    local zoneOrSort = get("Quest", questID, "zoneOrSort")
+    if type(zoneOrSort) == "number" and zoneOrSort > 0 then
+        return zoneOrSort
+    end
+    local startedBy = get("Quest", questID, "startedBy")
+    if type(startedBy) ~= "table" then return nil end
+    for index, entity in ipairs({ "Npc", "Object" }) do
+        for _, id in ipairs(startedBy[index] or {}) do
+            local spawns = get(entity, id, "spawns")
+            if type(spawns) == "table" then
+                local areaID = next(spawns)
+                if areaID then return areaID end
+            end
+        end
+    end
+    return nil
+end
+
+--- Every indexed quest for this character whose zone is `mapID`,
+--- regardless of level. Used by the guide browser's quest overview.
+function QuestieData.GetQuestsForMap(mapID)
+    local result = {}
+    for _, q in ipairs(state.candidates) do
+        if q.areaID and ns.ZoneMap.ToUiMap(q.areaID) == mapID then
+            result[#result + 1] = q
+        end
+    end
+    return result
+end
+
 local function allIds(entity)
     local l = lib()
     local e = l and l[entity]
@@ -346,6 +381,7 @@ function QuestieData.BuildIndex(profile, schedule, onDone)
                         id = id,
                         requiredLevel = reqLevel,
                         questLevel = get("Quest", id, "questLevel"),
+                        areaID = questArea(id),
                     }
                 end
             end

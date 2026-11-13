@@ -25,7 +25,7 @@ Steps advance on their own:
 
 **Route order.** Steps are ordered as a walking route. From where you're standing, the guide always picks the nearest next step, and hand-ins get a small head start. The current step stays first until you finish or skip it, so the arrow doesn't jump around as you walk. Once you've walked about 150 yards, the rest of the list is re-sorted.
 
-**Staying on your route.** New quests are only suggested in the zone you're in and in the zones of your current route band (Forever Frontier, Classic Questing or Dungeon Runner). That keeps the guide on the route you picked.
+**Staying on your route.** On **Automatic**, new quests are only suggested in the zone you're in and in the zones of your current route band, which keeps the guide on the route you picked. If you pick a guide in the guide browser instead, new quests come only from that zone. Quests already in your log are always included, wherever they are.
 
 ### What it needs
 
@@ -54,23 +54,35 @@ Steps advance on their own:
 3. Check that the path ends in `AddOns/ForeverPath/ForeverPath.toc`.
 4. Enable ForeverPath in the AddOns list on the character select screen.
 
-## Usage
+## Using it in game
 
-| Command | What it does |
+Everything runs from the game's own UI.
+
+**Minimap button** (the map icon on the edge of the minimap):
+- **Left-click:** show or hide the step guide window.
+- **Right-click:** open or close the main window.
+- **Drag:** move the button around the minimap.
+
+**Step guide window:** shows your current step, the next few steps and your reminders.
+- **Skip** hides the current step's quests.
+- **Done** appears on steps you tick off yourself.
+- **Guides** opens the guide browser.
+- **Reminders:** click one to mark it done.
+- **Header:** names the guide you're following.
+
+**Main window**, with three tabs. The route buttons at the top (Forever Frontier, Classic Questing, Dungeon Runner) apply to Guides and Plan.
+
+| Tab | What's in it |
 |---|---|
-| `/fp` | Toggle the leveling plan window |
-| `/fp guide` | Toggle the step guide window |
-| `/fp guide on\|off` | Turn the step guide and its waypoints on or off |
-| `/fp skip` | Skip the current step. Its quests stay hidden until `/fp unskip`. |
-| `/fp done` | Tick off a reminder the game can't detect |
-| `/fp unskip` | Bring back every skipped quest |
-| `/fp waypoints auto\|tomtom\|builtin\|off` | Choose the arrow. `auto` uses TomTom if it's installed, otherwise the map pin. |
-| `/fp route frontier\|classic\|dungeon` | Choose a route |
-| `/fp next` | Print your current and next zones to chat |
-| `/fp reset` | Reset window positions |
-| `/fp help` | List commands |
+| **Guides** | A list of every zone guide on your route. Each guide shows its level range and how many of its quests you've done, guides for your level are gold, and the one you're following has an arrow. Click a guide to see all its quests: level, quest giver and your status (Done, Ready to turn in, In your log, Available, the level you need, or Requirements not met yet). **Follow this guide** keeps the step guide in that zone. **Automatic** goes back to following your route for your level. |
+| **Plan** | Leveling spec and tips for your class, your route's level bands, dungeons for your level, upcoming milestones and rested XP. |
+| **Settings** | Turn step-by-step guiding on or off, show or hide the guide window and the minimap button, and turn level-up announcements on or off. Choose the waypoint arrow (Automatic, TomTom, Map pin, Off). Bring back skipped quests, and reset window positions. |
 
-You can also open the plan window from the minimap's addon compartment. Both windows can be dragged to move them.
+The minimap's addon compartment also opens the main window, even if you hide the minimap button.
+
+### Slash commands (optional)
+
+Everything above can also be done with commands, which is handy for macros: `/fp`, `/fp guide [on|off]`, `/fp skip`, `/fp done`, `/fp unskip`, `/fp waypoints auto|tomtom|builtin|off`, `/fp route frontier|classic|dungeon`, `/fp next`, `/fp reset` and `/fp help`.
 
 ## Project layout
 
@@ -88,8 +100,12 @@ Core/Advisor.lua     Pure planning logic: profile -> zone route
 Integrations/        QuestieDB adapter and waypoint providers (TomTom, built-in pin)
 Guide/Sources.lua    Live game state -> candidate steps
 Guide/Planner.lua    Pure: merge steps at the same NPC, order as a walking route
-Guide/Engine.lua     Events -> replans, sticky current step, skip/done, caching
-UI/                  Plan window, guide window, text rendering
+Guide/Engine.lua     Events -> replans, sticky current step, skip/done, chosen guide, caching
+Guide/Catalog.lua    Zone guides per route and their quest overviews (guide browser data)
+UI/MainFrame.lua     Main window shell: tabs and route picker
+UI/*Tab.lua          Guides (browser), Plan and Settings tabs
+UI/GuideFrame.lua    Step guide window
+UI/MinimapButton.lua Library-free minimap button
 Core/Commands.lua    Slash commands
 Core/Bootstrap.lua   Event wiring
 tests/               Lua 5.1 tests with a mocked WoW API, QuestieDB and TomTom

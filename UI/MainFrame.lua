@@ -1,12 +1,18 @@
 --[[
     ForeverPath - UI/MainFrame.lua
 
-    The leveling plan window: a movable frame with one button per route,
-    a "show all bands" toggle and a scrolling text area.
+    The main window: a movable frame with three tabs and a route picker.
 
-    The frame is created lazily on first show so the addon costs nothing
-    until it is used. It is not a protected frame, so it can be shown and
-    hidden in combat.
+      Guides    browse every zone guide on your route and pick one
+      Plan      class advice, route bands, dungeons and rested XP
+      Settings  everything that used to need a slash command
+
+    Each tab lives in its own file (UI/GuidesTab.lua, UI/PlanTab.lua,
+    UI/SettingsTab.lua) and exposes Create(parent) and Refresh(). This file
+    only owns the frame, the tab buttons and the route buttons.
+
+    The frame is created lazily on first show. It is not a protected
+    frame, so it can be opened and closed in combat.
 ]]
 
 local _, ns = ...
@@ -17,9 +23,17 @@ ns.MainFrame = MainFrame
 local L = ns.L
 
 local FRAME_NAME = "ForeverPathMainFrame" -- needed for UISpecialFrames (Esc)
-local WIDTH, HEIGHT = 480, 560
-local PADDING = 12
-local BUTTON_HEIGHT = 22
+MainFrame.WIDTH, MainFrame.HEIGHT = 720, 540
+MainFrame.PADDING = 12
+MainFrame.BUTTON_HEIGHT = 22
+-- Where tab content starts, below the tab and route button rows.
+MainFrame.CONTENT_TOP = -32 - 2 * (22 + 6)
+
+local TABS = {
+    { id = "guides",   label = "TAB_GUIDES",   module = "GuidesTab" },
+    { id = "plan",     label = "TAB_PLAN",     module = "PlanTab" },
+    { id = "settings", label = "TAB_SETTINGS", module = "SettingsTab" },
+}
 
 local frame -- created on demand
 
@@ -43,60 +57,43 @@ end
 -- Construction
 ---------------------------------------------------------------------------
 
-local function createRouteButtons(f)
-    f.routeButtons = {}
-    local order = ns.Data.RouteOrder
-    local available = WIDTH - PADDING * 2
-    local width = math.floor(available / #order) - 4
+local function newButton(parent, text, width, onClick)
+    local b = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+    b:SetSize(width, MainFrame.BUTTON_HEIGHT)
+    b:SetText(text)
+    b:SetScript("OnClick", onClick)
+    return b
+end
+MainFrame.NewButton = newButton
 
-    for i, routeId in ipairs(order) do
-        local route = ns.Data.Routes[routeId]
-        local button = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-        button:SetSize(width, BUTTON_HEIGHT)
-        button:SetPoint("TOPLEFT", f, "TOPLEFT", PADDING + (i - 1) * (width + 4), -32)
-        button:SetText(route.name)
-        button:SetScript("OnClick", function()
-            MainFrame.SetRoute(routeId)
-        end)
-        button.routeId = routeId
-        f.routeButtons[#f.routeButtons + 1] = button
+local function createTabButtons(f)
+    f.tabButtons = {}
+    for i, tab in ipairs(TABS) do
+        local b = newButton(f, L[tab.label], 110, function() MainFrame.ShowTab(tab.id) end)
+        b:SetPoint("TOPLEFT", f, "TOPLEFT", MainFrame.PADDING + (i - 1) * 114, -30)
+        b.tabId = tab.id
+        f.tabButtons[i] = b
     end
 end
 
-local function createToggle(f)
-    local toggle = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    toggle:SetSize(140, BUTTON_HEIGHT)
-    toggle:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -PADDING, PADDING)
-    toggle:SetScript("OnClick", function()
-        local account = ns.Settings.account
-        account.showAllBands = not account.showAllBands
-        MainFrame.Refresh()
-    end)
-    f.bandToggle = toggle
-end
+local function createRouteButtons(f)
+    f.routeLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    f.routeLabel:SetPoint("TOPLEFT", f, "TOPLEFT", MainFrame.PADDING, -30 - 28 - 4)
+    f.routeLabel:SetText(L.ROUTE_LABEL)
 
-local function createScrollArea(f)
-    local scroll = CreateFrame("ScrollFrame", nil, f, "UIPanelScrollFrameTemplate")
-    scroll:SetPoint("TOPLEFT", f, "TOPLEFT", PADDING, -32 - BUTTON_HEIGHT - 8)
-    scroll:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -PADDING - 22, PADDING + BUTTON_HEIGHT + 8)
-
-    local child = CreateFrame("Frame", nil, scroll)
-    child:SetSize(WIDTH - PADDING * 2 - 26, 1)
-    scroll:SetScrollChild(child)
-
-    local text = child:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    text:SetPoint("TOPLEFT", child, "TOPLEFT", 0, 0)
-    text:SetWidth(WIDTH - PADDING * 2 - 26)
-    text:SetJustifyH("LEFT")
-    text:SetJustifyV("TOP")
-    text:SetSpacing(2)
-
-    f.scroll, f.scrollChild, f.text = scroll, child, text
+    f.routeButtons = {}
+    for i, routeId in ipairs(ns.Data.RouteOrder) do
+        local route = ns.Data.Routes[routeId]
+        local b = newButton(f, route.name, 150, function() MainFrame.SetRoute(routeId) end)
+        b:SetPoint("TOPLEFT", f, "TOPLEFT", MainFrame.PADDING + 60 + (i - 1) * 154, -30 - 28)
+        b.routeId = routeId
+        f.routeButtons[i] = b
+    end
 end
 
 local function create()
     local f = CreateFrame("Frame", FRAME_NAME, UIParent, "BasicFrameTemplateWithInset")
-    f:SetSize(WIDTH, HEIGHT)
+    f:SetSize(MainFrame.WIDTH, MainFrame.HEIGHT)
     f:SetFrameStrata("MEDIUM")
     f:SetClampedToScreen(true)
     f:SetMovable(true)
@@ -110,14 +107,19 @@ local function create()
     f:SetScript("OnShow", function() ns.Settings.account.frame.shown = true end)
     f:SetScript("OnHide", function() ns.Settings.account.frame.shown = false end)
 
-    local title = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    title:SetPoint("TOP", f, "TOP", 0, -6)
-    title:SetText(L.TITLE)
-    f.title = title
+    f.title = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    f.title:SetPoint("TOP", f, "TOP", 0, -6)
+    f.title:SetText(L.TITLE)
 
+    createTabButtons(f)
     createRouteButtons(f)
-    createToggle(f)
-    createScrollArea(f)
+
+    f.panels = {}
+    for _, tab in ipairs(TABS) do
+        local panel = ns[tab.module].Create(f)
+        panel:Hide()
+        f.panels[tab.id] = panel
+    end
 
     -- Close with Escape.
     table.insert(UISpecialFrames, FRAME_NAME)
@@ -128,36 +130,89 @@ local function create()
 end
 
 local function getFrame()
-    if not frame then
-        frame = create()
-    end
+    if not frame then frame = create() end
     return frame
+end
+
+--- A content panel filling the area below the button rows.
+function MainFrame.NewPanel(parent)
+    local panel = CreateFrame("Frame", nil, parent)
+    panel:SetPoint("TOPLEFT", parent, "TOPLEFT", MainFrame.PADDING, MainFrame.CONTENT_TOP)
+    panel:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -MainFrame.PADDING, MainFrame.PADDING)
+    return panel
+end
+
+--- A vertical scroll area with a single text block inside.
+function MainFrame.NewScrollText(parent, width)
+    local scroll = CreateFrame("ScrollFrame", nil, parent, "UIPanelScrollFrameTemplate")
+    local child = CreateFrame("Frame", nil, scroll)
+    child:SetSize(width, 1)
+    scroll:SetScrollChild(child)
+
+    local text = child:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    text:SetPoint("TOPLEFT", child, "TOPLEFT", 0, 0)
+    text:SetWidth(width)
+    text:SetJustifyH("LEFT")
+    text:SetJustifyV("TOP")
+    text:SetSpacing(2)
+
+    scroll.child, scroll.text = child, text
+    function scroll.SetContent(_, content)
+        text:SetText(content)
+        child:SetHeight(text:GetStringHeight() + 8)
+    end
+    return scroll
 end
 
 ---------------------------------------------------------------------------
 -- Public API
 ---------------------------------------------------------------------------
 
---- Re-read the character and redraw. Cheap; safe to call on every event.
+local function highlight(buttons, field, value)
+    for _, b in ipairs(buttons) do
+        if b[field] == value then b:LockHighlight() else b:UnlockHighlight() end
+    end
+end
+
+--- Redraw the visible tab. Cheap; safe to call on every event.
 function MainFrame.Refresh()
     if not frame or not frame:IsShown() then return end
-
+    local tabId = ns.Settings.account.tab
     local profile = ns.Character.Detect()
-    local plan = ns.Advisor.BuildPlan(profile, ns.Settings.char.routeId)
-    local xp = ns.Advisor.GetXpInfo(profile.level)
-    local showAll = ns.Settings.account.showAllBands
+    local routeId = ns.Advisor.ResolveRouteId(profile, ns.Settings.char.routeId)
 
-    frame.text:SetText(ns.Text.Render(profile, plan, xp, { showAllBands = showAll }))
-    frame.scrollChild:SetHeight(frame.text:GetStringHeight() + 8)
-    frame.bandToggle:SetText(showAll and L.SHOW_CURRENT_BANDS or L.SHOW_ALL_BANDS)
+    highlight(frame.tabButtons, "tabId", tabId)
+    highlight(frame.routeButtons, "routeId", routeId)
 
-    for _, button in ipairs(frame.routeButtons) do
-        if button.routeId == plan.routeId then
-            button:LockHighlight()
+    -- The route picker matters on Guides and Plan, not on Settings.
+    local showRoutes = tabId ~= "settings"
+    for _, b in ipairs(frame.routeButtons) do
+        if showRoutes then b:Show() else b:Hide() end
+    end
+    if showRoutes then frame.routeLabel:Show() else frame.routeLabel:Hide() end
+
+    for _, tab in ipairs(TABS) do
+        if tab.id == tabId then
+            frame.panels[tab.id]:Show()
+            ns[tab.module].Refresh()
         else
-            button:UnlockHighlight()
+            frame.panels[tab.id]:Hide()
         end
     end
+end
+
+--- Redraw only if `tabId` is the visible tab (avoids rebuilding the guide
+--- browser on every XP tick).
+function MainFrame.RefreshIf(tabId)
+    if frame and frame:IsShown() and ns.Settings.account.tab == tabId then
+        MainFrame.Refresh()
+    end
+end
+
+function MainFrame.ShowTab(tabId)
+    ns.Settings.account.tab = tabId
+    getFrame():Show()
+    MainFrame.Refresh()
 end
 
 function MainFrame.Show()
@@ -170,20 +225,20 @@ function MainFrame.Hide()
 end
 
 function MainFrame.Toggle()
-    if frame and frame:IsShown() then
-        MainFrame.Hide()
-    else
-        MainFrame.Show()
-    end
+    if frame and frame:IsShown() then MainFrame.Hide() else MainFrame.Show() end
 end
 
---- Save a route choice for this character and redraw.
+function MainFrame.IsShown()
+    return frame ~= nil and frame:IsShown()
+end
+
+--- Save a route choice for this character and redraw everything.
 function MainFrame.SetRoute(routeId)
     ns.Settings.char.routeId = routeId
     MainFrame.Refresh()
+    if ns.Engine then ns.Engine.RequestReplan() end
 end
 
 function MainFrame.ResetPosition()
-    ns.Settings.ResetFramePosition()
     if frame then restorePosition(frame) end
 end

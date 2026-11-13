@@ -20,20 +20,44 @@ return {
         T.contains(text, "Mount Hyjal")
     end },
 
-    { "/fp toggles the window and /fp route saves per character", function(T)
+    { "minimap button opens the main window; route buttons save per character", function(T)
         local ns = T.fresh()
         ns:FireEvent("PLAYER_LOGIN")
-        SlashCmdList.FOREVERPATH("")
+        T.truthy(ForeverPathMinimapButton, "minimap button created")
+
+        ns.MinimapButton.Click("RightButton")
         T.truthy(ForeverPathMainFrame:IsShown(), "shown")
-        T.contains(ForeverPathMainFrame.text:GetText(), "Forever Frontier")
+        ns.MainFrame.ShowTab("plan")
+        T.contains(ns.PlanTab.GetText(), "Forever Frontier")
 
-        SlashCmdList.FOREVERPATH("route Classic")
+        ns.MainFrame.SetRoute("classic")
         T.eq(ForeverPathCharDB.routeId, "classic")
-        T.contains(ForeverPathMainFrame.text:GetText(), "Classic Questing")
+        T.contains(ns.PlanTab.GetText(), "Classic Questing")
 
-        SlashCmdList.FOREVERPATH("")
+        ns.MinimapButton.Click("RightButton")
         T.truthy(not ForeverPathMainFrame:IsShown(), "hidden")
         T.eq(ForeverPathDB.frame.shown, false)
+    end },
+
+    { "left-click on the minimap button toggles the guide window", function(T)
+        local ns = T.fresh()
+        ns:FireEvent("PLAYER_LOGIN")
+        T.eq(ForeverPathDB.guide.shown, true)
+        ns.MinimapButton.Click("LeftButton")
+        T.eq(ForeverPathDB.guide.shown, false)
+        T.truthy(not ForeverPathGuideFrame:IsShown(), "hidden")
+        ns.MinimapButton.Click("LeftButton")
+        T.truthy(ForeverPathGuideFrame:IsShown(), "shown again")
+    end },
+
+    { "minimap button position follows the saved angle", function(T)
+        local ns = T.fresh()
+        local x, y = ns.MinimapButton.Offset(0, 80)
+        T.eq(math.floor(x + 0.5), 80)
+        T.eq(math.floor(y + 0.5), 0)
+        x, y = ns.MinimapButton.Offset(90, 80)
+        T.eq(math.floor(x + 0.5), 0)
+        T.eq(math.floor(y + 0.5), 80)
     end },
 
     { "unknown route prints the valid choices", function(T)

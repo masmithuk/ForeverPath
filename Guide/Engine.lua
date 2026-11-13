@@ -59,29 +59,48 @@ local function currentOrigin()
     return ns.GameApi.GetWorldPosition(pos.mapID, pos.x, pos.y), pos.mapID
 end
 
+--- Maps where the guide may suggest new quests: the zone of the guide you
+--- chose in the guide browser, or (on Automatic) your route band's zones
+--- plus the zone you're standing in.
+local function allowedMaps(route, playerMapID)
+    local guideId = ns.Settings.char.guideId
+    local chosen = guideId and ns.ZoneMap.MapIdByName(guideId)
+    if chosen then return { [chosen] = true } end
+    return ns.Sources.AllowedMaps(route, playerMapID)
+end
+
+--- Everything a planning pass (or the guide browser) needs to know about
+--- the character right now.
+function Engine.BuildContext()
+    local profile = ns.Character.Detect()
+    local route = ns.Advisor.BuildPlan(profile, ns.Settings.char.routeId)
+    local origin, mapID = currentOrigin()
+    local char = charGuide()
+    return {
+        profile = profile,
+        level = profile.level,
+        route = route,
+        log = ns.GameApi.GetQuestLog(),
+        isCompleted = isCompleted,
+        origin = origin,
+        allowedMaps = allowedMaps(route, mapID),
+        skipped = char.skipped,
+        char = char,
+    }
+end
+
 --- Recompute the step list now.
 function Engine.Replan()
     replanPending = false
     if not guideSettings().enabled then return end
 
-    local profile = ns.Character.Detect()
-    local route = ns.Advisor.BuildPlan(profile, ns.Settings.char.routeId)
-    local origin, mapID = currentOrigin()
-    local char = charGuide()
+    local ctx = Engine.BuildContext()
+    local origin = ctx.origin
 
-    local ctx = {
-        profile = profile,
-        level = profile.level,
-        log = ns.GameApi.GetQuestLog(),
-        isCompleted = isCompleted,
-        origin = origin,
-        allowedMaps = ns.Sources.AllowedMaps(route, mapID),
-        skipped = char.skipped,
-        char = char,
-    }
-
+    local questsChanged = false
     if not doableCache and ns.QuestieData.IsReady() then
         doableCache = ns.Sources.DoableQuests(ctx)
+        questsChanged = true
     end
     ctx.doable = doableCache
 
@@ -97,6 +116,8 @@ function Engine.Replan()
     ns.Waypoints.Set(first and first.target, first and first.title, guideSettings().waypoints)
 
     if ns.GuideFrame then ns.GuideFrame.Update(state) end
+    -- Quest statuses in the guide browser only change with quest state.
+    if questsChanged and ns.MainFrame then ns.MainFrame.RefreshIf("guides") end
 end
 
 --- Ask for a replan soon; many events arrive in bursts.
@@ -156,6 +177,14 @@ function Engine.SkipCurrent()
     Engine.state.currentKey = nil
     Engine.Replan()
     return step
+end
+
+--- Follow one zone guide (by zone name), or nil for Automatic.
+function Engine.SetGuide(guideId)
+    ns.Settings.char.guideId = guideId
+    Engine.state.currentKey = nil
+    invalidateDoable()
+    Engine.Replan()
 end
 
 function Engine.UnskipAll()

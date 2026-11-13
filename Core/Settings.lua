@@ -30,6 +30,8 @@ local ACCOUNT_DEFAULTS = {
     },
     showAllBands = false,
     announceLevelUp = true,
+    tab = "guides",                       -- main window tab last shown
+    minimap = { angle = 225, hide = false },
     guide = {
         enabled = true,
         waypoints = "auto",   -- "auto" | "tomtom" | "builtin" | "off"
@@ -42,6 +44,7 @@ local ACCOUNT_DEFAULTS = {
 local CHAR_DEFAULTS = {
     schema = Settings.SCHEMA_VERSION,
     routeId = nil, -- nil = use the class's default route
+    guideId = nil, -- zone name of the guide being followed; nil = Automatic
     guide = {
         skipped = {},      -- [questID] = true, hidden until /fp unskip
         done = {},         -- [suggestionID] = true

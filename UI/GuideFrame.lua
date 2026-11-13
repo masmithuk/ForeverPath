@@ -79,6 +79,12 @@ function GuideFrame.UpcomingText(steps)
     return table.concat(lines, "\n")
 end
 
+--- "ForeverPath Guide - The Barrens" or "... - Automatic".
+function GuideFrame.HeaderText()
+    local guideId = ns.Settings.char.guideId
+    return L.GUIDE_TITLE .. " - " .. (guideId or L.GUIDE_AUTOMATIC)
+end
+
 --- Status line explaining missing data, or nil when all is well.
 function GuideFrame.StatusText(dataStatus, providerSetting)
     local parts = {}
@@ -206,6 +212,10 @@ local function create()
     end)
     f.done:SetPoint("LEFT", f.skip, "RIGHT", 4, 0)
 
+    f.guides = newButton(f, L.GUIDE_BROWSE, function() ns.MainFrame.ShowTab("guides") end)
+    -- Sits after Done's slot so it doesn't move when Done is hidden.
+    f.guides:SetPoint("LEFT", f.skip, "RIGHT", 78, 0)
+
     f.upcoming = newText(f, "GameFontHighlightSmall")
     f.upcoming:SetPoint("TOPLEFT", f.skip, "BOTTOMLEFT", 0, -8)
 
@@ -249,6 +259,7 @@ function GuideFrame.Update(state)
     if not ns.Settings.account.guide.shown then return end
     local f = getFrame()
     local step = state.steps[1]
+    f.header:SetText(GuideFrame.HeaderText())
 
     if step then
         f.icon:SetTexture(ICONS[step.kind] or ICONS.NOTE)
