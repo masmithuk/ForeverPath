@@ -1,7 +1,7 @@
 ## Interface: 16001
 ## Title: ForeverPath
 ## Notes: Race- and class-aware leveling routes, dungeon picks and rested XP tracking for World of Warcraft: Forever.
-## Author: ForeverPath contributors
+## Author: masmithuk
 ## Version: 0.1.0
 ## IconTexture: Interface\Icons\INV_Misc_Map_01
 ## SavedVariables: ForeverPathDB
