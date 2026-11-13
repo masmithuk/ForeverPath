@@ -39,7 +39,56 @@ local subcommands = {
     next = printNext,
     reset = function()
         ns.MainFrame.ResetPosition()
+        ns.GuideFrame.ResetPosition()
         Util.Print(L.POSITION_RESET)
+    end,
+    guide = function(arg)
+        if arg == "on" or arg == "off" then
+            ns.Engine.SetEnabled(arg == "on")
+            Util.Print(arg == "on" and L.GUIDE_ON or L.GUIDE_OFF)
+        else
+            ns.GuideFrame.Toggle()
+        end
+    end,
+    skip = function()
+        local step = ns.Engine.SkipCurrent()
+        Util.Print(step and L.GUIDE_SKIPPED_FMT:format(step.title) or L.GUIDE_NOTHING_TO_SKIP)
+    end,
+    done = function()
+        local state = ns.Engine.state
+        -- Manual reminders first, then a manual current step. Quest steps
+        -- complete themselves from game events, so they can't be ticked off.
+        local target
+        for _, r in ipairs(state.reminders) do
+            if r.manual then target = r; break end
+        end
+        if not target and state.steps[1] and state.steps[1].manual then
+            target = state.steps[1]
+        end
+        if target then
+            ns.Engine.MarkDone(target.key)
+        else
+            Util.Print(L.GUIDE_NOTHING_TO_MARK)
+        end
+    end,
+    unskip = function()
+        ns.Engine.UnskipAll()
+        Util.Print(L.GUIDE_UNSKIPPED)
+    end,
+    waypoints = function(arg)
+        local setting = arg and arg:lower()
+        local valid = false
+        for _, p in ipairs(ns.Waypoints.PROVIDERS) do
+            if p == setting then valid = true end
+        end
+        if not valid then
+            Util.Print(L.WAYPOINTS_UNKNOWN)
+            return
+        end
+        ns.Settings.account.guide.waypoints = setting
+        ns.Waypoints.Clear()
+        ns.Engine.Replan()
+        Util.Print(L.WAYPOINTS_SET_FMT:format(setting, ns.Waypoints.Resolve(setting)))
     end,
     route = function(arg)
         local id = arg and arg:lower()

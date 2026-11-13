@@ -1,8 +1,36 @@
 # ForeverPath
 
-A leveling companion for **World of Warcraft: Forever**. It reads your race, class, faction and level, then shows you which leveling spec to play, where to quest now and next, which dungeons fit your level, and how much rested XP you have.
+A step-by-step leveling guide for **World of Warcraft: Forever**, in the style of RestedXP. It takes you from quest giver to quest giver with a waypoint arrow, and it updates as you accept, progress and hand in quests. It also tells you when to visit your trainer and when to buy things.
 
-It's inspired by RestedXP, but it's lighter. ForeverPath suggests routes. It doesn't give you step-by-step quest waypoints.
+It reads your race, class, faction and level. From those it picks a leveling route, a spec to play and dungeons that fit your level, and it tracks your rested XP.
+
+## The step guide
+
+The guide window shows your current step, the next few steps and a short list of reminders. Steps are built live from three sources:
+
+| Step | Where it comes from |
+|---|---|
+| **Talk to (NPC) - Accept: (quests)** | Quests you can pick up now in your route's zones. QuestieDB supplies the quest givers and checks prerequisites, race, class, faction and level. |
+| **Complete: (quest)** | Quests in your log. The step shows live objective progress, and the arrow points to Blizzard's own quest waypoint or the nearest QuestieDB spawn. |
+| **Turn in to (NPC)** | Finished quests in your log, pointing to the NPC who ends the quest. |
+| **Train at (trainer)** | Every two levels from level 4, pointing to your nearest class trainer. |
+| **Reminders** | Setting your hearthstone, buying bags, spending talents, learning First Aid, Riding and dual spec, plus class-specific steps. |
+
+Steps advance on their own:
+
+- Accepting, progressing, handing in or abandoning a quest updates the guide immediately.
+- Opening your class trainer completes the training step.
+- Binding your hearthstone completes the hearth reminder.
+- Reminders the game can't detect, like buying bags, are ticked off by clicking them or typing `/fp done`.
+
+**Route order.** Steps are ordered as a walking route. From where you're standing, the guide always picks the nearest next step, and hand-ins get a small head start. The current step stays first until you finish or skip it, so the arrow doesn't jump around as you walk. Once you've walked about 150 yards, the rest of the list is re-sorted.
+
+**Staying on your route.** New quests are only suggested in the zone you're in and in the zones of your current route band (Forever Frontier, Classic Questing or Dungeon Runner). That keeps the guide on the route you picked.
+
+### What it needs
+
+- **[Questie](https://www.curseforge.com/wow/addons/questie) with QuestieDB (Forever bundle): strongly recommended.** QuestieDB is where quest-giver locations come from. ForeverPath reads it through its documented `LibQuestieDB` API (contract 4). If Questie itself is also loaded, ForeverPath uses Questie's own availability check, which knows about hidden and event quests. Without QuestieDB, the guide only covers quests already in your log.
+- **[TomTom](https://www.curseforge.com/wow/addons/tomtom): recommended.** It provides the on-screen arrow. Addons that work from TomTom waypoints, such as Well Trodden (walking trails) and Map Shortcuts, then follow ForeverPath's steps too. Without TomTom, ForeverPath places the game's own map pin instead.
 
 ## Features
 
@@ -30,13 +58,19 @@ It's inspired by RestedXP, but it's lighter. ForeverPath suggests routes. It doe
 
 | Command | What it does |
 |---|---|
-| `/fp` | Toggle the window |
+| `/fp` | Toggle the leveling plan window |
+| `/fp guide` | Toggle the step guide window |
+| `/fp guide on\|off` | Turn the step guide and its waypoints on or off |
+| `/fp skip` | Skip the current step. Its quests stay hidden until `/fp unskip`. |
+| `/fp done` | Tick off a reminder the game can't detect |
+| `/fp unskip` | Bring back every skipped quest |
+| `/fp waypoints auto\|tomtom\|builtin\|off` | Choose the arrow. `auto` uses TomTom if it's installed, otherwise the map pin. |
 | `/fp route frontier\|classic\|dungeon` | Choose a route |
 | `/fp next` | Print your current and next zones to chat |
-| `/fp reset` | Reset the window position |
+| `/fp reset` | Reset window positions |
 | `/fp help` | List commands |
 
-You can also open the window from the minimap's addon compartment. Press Esc to close it, and drag it to move it.
+You can also open the plan window from the minimap's addon compartment. Both windows can be dragged to move them.
 
 ## Project layout
 
@@ -44,19 +78,24 @@ You can also open the window from the minimap's addon compartment. Press Esc to 
 ForeverPath.toc      Load order and metadata (Interface 16001 = Forever 1.60.1)
 Core/Init.lua        Namespace and event dispatcher
 Locales/enUS.lua     UI strings
-Data/                Races, classes, dungeons, routes, milestones (all plain tables)
-Core/Util.lua        Helpers (secret-value guards, formatting, defaults)
+Data/                Races, classes, dungeons, routes, milestones, suggestions (plain tables)
+Core/Util.lua        Helpers (secret-value guards, formatting, 64-bit-safe flag checks)
 Core/Settings.lua    SavedVariables with defaults and schema versioning
+Core/GameApi.lua     Every quest-log, map and position call, guarded and swappable in tests
+Core/ZoneMap.lua     QuestieDB area IDs (0-100 coordinates) -> uiMapIDs (0-1 coordinates)
 Core/Character.lua   Reads race/class/faction/level into a profile
-Core/Advisor.lua     Pure planning logic: profile -> plan
-UI/Text.lua          Plan -> window text
-UI/MainFrame.lua     The window
+Core/Advisor.lua     Pure planning logic: profile -> zone route
+Integrations/        QuestieDB adapter and waypoint providers (TomTom, built-in pin)
+Guide/Sources.lua    Live game state -> candidate steps
+Guide/Planner.lua    Pure: merge steps at the same NPC, order as a walking route
+Guide/Engine.lua     Events -> replans, sticky current step, skip/done, caching
+UI/                  Plan window, guide window, text rendering
 Core/Commands.lua    Slash commands
 Core/Bootstrap.lua   Event wiring
-tests/               Lua 5.1 tests with a mocked WoW API
+tests/               Lua 5.1 tests with a mocked WoW API, QuestieDB and TomTom
 ```
 
-The code is layered so that most of it runs without the game. **Data** is plain tables, **Advisor** is pure functions, and **UI** is a thin shell. All game API calls go through small adapters that the tests replace with fakes.
+The code is layered so that most of it runs without the game. **Data** is plain tables, and **Advisor** and **Planner** are pure functions. **Sources** and **Engine** only reach the game through `GameApi` and the integrations, which the tests replace with fakes. The UI is a thin shell. Optional addons are only ever reached through `_G` with type checks and `pcall`, so a missing or broken Questie or TomTom can't break ForeverPath.
 
 ## Development
 
@@ -76,12 +115,22 @@ Leveling data is opinion-based and goes out of date with balance patches. All of
 - **Changing a class spec or tip:** edit `Data/Classes.lua`.
 - **Changing zones in a route:** edit `Data/Routes.lua`. The tests check that every route still covers levels 1 to 60 with no gaps.
 - **Adding a race:** add it to `Data/Races.lua`, keyed by the `raceFile` from `UnitRace("player")`.
+- **Adding a reminder step:** add a row to `Data/Suggestions.lua`. `detect = "trainer"` or `"hearth"` makes it complete on its own. Without `detect`, the player clicks it off.
 
 ### Notes on the Forever client
 
 - The interface number is **16001**. You can confirm it in game with `/dump select(4, GetBuildInfo())`.
 - Forever uses the modern (Midnight-era) addon API. Old globals such as `GetSpellInfo` and `GetTalentInfo` don't exist, and some unit values can be "secret". ForeverPath only reads basic character info and XP, and it checks every value with `issecretvalue`.
 - The Skyborne `raceFile` token wasn't documented at launch, so race detection falls back to matching names ("Skyborne", "High Order" and "Windshaper").
+- Skyborne race masks in QuestieDB go up to 2^33. That's beyond WoW's 32-bit `bit.band`, so flags are checked with plain arithmetic in `Util.HasFlag`.
+- The guide never calls `C_SuperTrack.SetSuperTrackedUserWaypoint`, because Forever addon guidance warns against it. The built-in provider only places a map pin, so use TomTom for an on-screen arrow.
+
+### Known limits
+
+- **Data depends on QuestieDB.** Forever's newer quests, especially the new zones above level 40, are still being added to QuestieDB. Where it has no entry, the guide only knows about those quests once they're in your log.
+- **Training cadence is assumed.** The every-two-levels training reminder follows Classic. Forever's trainer schedule isn't published, so the cadence is a setting in `Data/Suggestions.lua`.
+- **Only English trainers are found.** Class trainers are matched by their English title, such as "Mage Trainer", so other locales don't get a trainer location. They still get the reminder.
+- **Not tested in the game yet.** It has been tested against a mocked client only.
 
 ## Data sources
 
@@ -91,6 +140,8 @@ The data was gathered in November 2026, shortly after Forever launched on 4 Nove
 - RankedBoost's WoW Forever leveling guide for zone bands and travel notes
 - Tier lists from AxeeTech, Timesaver and MMOnster for leveling specs
 - Icy Veins and Gfinity for race/class combinations
+- Questie's `Public/` API and `LibQuestieDB` type declarations for the QuestieDB integration
+- TomTom's `AddWaypoint` and `RemoveWaypoint` API for the arrow
 
 Where sources disagreed, the Warcraft Wiki range was used. For example, Excavation Site: Wetlands is listed as both 24-29 and 26-31. Shen'dralas had no confirmed level range at launch.
 

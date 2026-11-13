@@ -73,8 +73,8 @@ function Character.Detect(api)
     api = api or Character.defaultApi
     local Util = ns.Util
 
-    local localizedRace, raceFile = api.UnitRace()
-    local localizedClass, classFile = api.UnitClass()
+    local localizedRace, raceFile, raceID = api.UnitRace()
+    local localizedClass, classFile, classID = api.UnitClass()
     local faction = Util.SafeString(api.UnitFactionGroup())
     local level = Util.SafeNumber(api.UnitLevel()) or 1
 
@@ -95,7 +95,9 @@ function Character.Detect(api)
         raceKey = raceKey,
         raceName = (race and race.name) or localizedRace or "Unknown",
         race = race,
+        raceID = Util.SafeNumber(raceID),
         classFile = classFile,
+        classID = Util.SafeNumber(classID),
         className = (class and class.name) or localizedClass or "Unknown",
         class = class,
         level = level,

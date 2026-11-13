@@ -17,7 +17,7 @@ local Settings = {}
 ns.Settings = Settings
 
 -- Bump when the shape of saved data changes, and add a migration below.
-Settings.SCHEMA_VERSION = 1
+Settings.SCHEMA_VERSION = 2
 
 local ACCOUNT_DEFAULTS = {
     schema = Settings.SCHEMA_VERSION,
@@ -30,16 +30,29 @@ local ACCOUNT_DEFAULTS = {
     },
     showAllBands = false,
     announceLevelUp = true,
+    guide = {
+        enabled = true,
+        waypoints = "auto",   -- "auto" | "tomtom" | "builtin" | "off"
+        maxSteps = 6,
+        shown = true,
+        frame = { point = "RIGHT", relativePoint = "RIGHT", x = -80, y = 120 },
+    },
 }
 
 local CHAR_DEFAULTS = {
     schema = Settings.SCHEMA_VERSION,
     routeId = nil, -- nil = use the class's default route
+    guide = {
+        skipped = {},      -- [questID] = true, hidden until /fp unskip
+        done = {},         -- [suggestionID] = true
+        trainedLevel = 0,  -- last level you visited your class trainer at
+    },
 }
 
 local function migrate(db)
-    -- No migrations yet. Example for the future:
-    -- if db.schema < 2 then db.newField = db.oldField; db.oldField = nil end
+    -- Schema 2 (0.2.0) only added the `guide` tables, which ApplyDefaults
+    -- fills in. Future renames or removals go here, e.g.:
+    -- if db.schema < 3 then db.newField = db.oldField; db.oldField = nil end
     db.schema = Settings.SCHEMA_VERSION
 end
 
@@ -57,9 +70,13 @@ function Settings.Init()
     Settings.char = ForeverPathCharDB
 end
 
---- Restore the default window position.
+local function resetPosition(saved, defaults)
+    saved.point, saved.relativePoint = defaults.point, defaults.relativePoint
+    saved.x, saved.y = defaults.x, defaults.y
+end
+
+--- Restore the default window positions (plan window and guide window).
 function Settings.ResetFramePosition()
-    local f = Settings.account.frame
-    local d = ACCOUNT_DEFAULTS.frame
-    f.point, f.relativePoint, f.x, f.y = d.point, d.relativePoint, d.x, d.y
+    resetPosition(Settings.account.frame, ACCOUNT_DEFAULTS.frame)
+    resetPosition(Settings.account.guide.frame, ACCOUNT_DEFAULTS.guide.frame)
 end

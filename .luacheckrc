@@ -22,7 +22,16 @@ globals = {
 -- WoW API used by the addon.
 read_globals = {
     "BreakUpLargeNumbers",
+    "C_Map",
+    "C_QuestLog",
+    "C_Timer",
     "CreateFrame",
+    "CreateVector2D",
+    "Enum",
+    "GameTooltip",
+    "GetTime",
+    "IsTradeskillTrainer",
+    "UiMapPoint",
     "GetXPExhaustion",
     "IsResting",
     "UIParent",
@@ -33,9 +42,13 @@ read_globals = {
     "UnitXP",
     "UnitXPMax",
     "issecretvalue",
+    -- Optional addons, always accessed via _G and type checks.
+    "LibQuestieDB",
+    "QuestieLoader",
+    "TomTom",
 }
 
 files["tests/"] = {
     std = "+lua51",
-    globals = { "_G", "print", "issecretvalue", "ForeverPathMainFrame" },
+    globals = { "_G", "print", "issecretvalue", "ForeverPathMainFrame", "ForeverPathGuideFrame" },
 }

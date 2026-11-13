@@ -101,6 +101,29 @@ function Util.ApplyDefaults(target, defaults)
     return target
 end
 
+--- True if the single-bit `flag` is set in `mask`.
+--- Uses arithmetic instead of bit.band because Forever race masks go up
+--- to 2^33 (Skyborne), beyond the 32-bit range of WoW's bit library.
+function Util.HasFlag(mask, flag)
+    if type(mask) ~= "number" or type(flag) ~= "number" or flag <= 0 then
+        return false
+    end
+    return math.floor(mask / flag) % 2 == 1
+end
+
+--- Straight-line distance between two {x, y} points.
+function Util.Distance(a, b)
+    local dx, dy = a.x - b.x, a.y - b.y
+    return math.sqrt(dx * dx + dy * dy)
+end
+
+--- Number of keys in a table.
+function Util.Count(t)
+    local n = 0
+    for _ in pairs(t) do n = n + 1 end
+    return n
+end
+
 --- Print a prefixed message to the default chat frame.
 function Util.Print(...)
     local prefix = Util.Color("accent", ns.name or "ForeverPath") .. ":"

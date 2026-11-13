@@ -2,6 +2,23 @@
 
 All notable changes are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.2.0] - 2026-11-13
+
+### Added
+- Step-by-step guide window that takes you from quest giver to quest giver: accept, complete and turn in, with live objective progress.
+- QuestieDB integration through the documented `LibQuestieDB` API (contract 4). It finds quest givers, quest enders and objective locations, and checks race, class, faction, level and prerequisites. Questie's own availability check is used when the full Questie addon is loaded.
+- Walking-route ordering: nearest step next, a small preference for hand-ins, a current step that stays put, and re-sorting after you've walked about 150 yards.
+- New quests are limited to your current route band's zones plus the zone you're in.
+- Class training steps every two levels, pointing to your nearest class trainer. Opening the trainer completes the step.
+- Reminders for hearthstone, bags, talents, First Aid, Riding, dual spec and some class-specific steps.
+- Waypoints through TomTom (which also drives TomTom-based path addons) or the built-in map pin: `/fp waypoints`.
+- `/fp guide`, `/fp skip`, `/fp done` and `/fp unskip` commands.
+- Tests for the planner, the QuestieDB adapter and the engine, using fake QuestieDB and TomTom.
+
+### Changed
+- Saved variables schema 2 adds guide settings. Existing settings are kept.
+- Eligibility checks are cached between quest-state changes, so kills and loot don't trigger a full rescan.
+
 ## [0.1.0] - 2026-11-13
 
 ### Added

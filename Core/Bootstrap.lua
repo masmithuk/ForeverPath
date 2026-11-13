@@ -46,6 +46,7 @@ ns:RegisterEvent("PLAYER_LOGIN", function()
     if ns.Settings.account.frame.shown then
         ns.MainFrame.Show()
     end
+    ns.Engine.Start()
 end)
 
 ns:RegisterEvent("PLAYER_LEVEL_UP", onLevelUp)

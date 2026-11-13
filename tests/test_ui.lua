@@ -66,6 +66,6 @@ return {
         T.reload()
         T.eq(ForeverPathDB.showAllBands, true, "kept")
         T.eq(ForeverPathDB.frame.point, "CENTER", "defaults filled")
-        T.eq(ForeverPathDB.schema, 1, "schema stamped")
+        T.eq(ForeverPathDB.schema, 2, "schema stamped")
     end },
 }
