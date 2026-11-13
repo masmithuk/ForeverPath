@@ -1,0 +1,7 @@
+# BigWigs packager config: keeps dev-only files out of release zips.
+package-as: ForeverPath
+ignore:
+  - tests
+  - .github
+  - .luacheckrc
+  - .editorconfig
