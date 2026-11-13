@@ -16,6 +16,8 @@
       actor     optional "npc:<id>" / "object:<id>" used for merging
       target    optional { mapID, x, y, world = { continent, x, y } }
       manual    true when the player must click Done
+      bonus     yards this step is treated as closer than it is (set by
+                the mode's rules: hand-ins, story follow-ups, dungeon quests)
 ]]
 
 local _, ns = ...
@@ -25,17 +27,13 @@ ns.Planner = Planner
 
 -- Order used to break ties between steps at the same spot:
 -- hand quests in before picking up the follow-ups.
-local KIND_ORDER = { TURNIN = 1, ACCEPT = 2, TRAIN = 3, HEARTH = 4, BUY = 5, COMPLETE = 6, NOTE = 7 }
-
--- Turn-ins free up log space and often unlock the next quest, so they are
--- treated as this many yards closer than they really are.
-local TURNIN_BONUS = 60
+local KIND_ORDER = { TURNIN = 1, ACCEPT = 2, TRAIN = 3, HEARTH = 4, BUY = 5, DUNGEON = 6, COMPLETE = 7, NOTE = 8 }
 
 -- Cost of a step on another continent, or with no comparable position.
 local FAR_AWAY = 1e6
 local UNKNOWN_POSITION = 5e5
 
---- Merge ACCEPT and TURNIN steps that share an actor (the same NPC) into a
+--- Merge ACCEPT, TURNIN and DUNGEON steps that share an actor (the same NPC) into a
 --- single step listing every quest.
 function Planner.Merge(steps)
     local merged, byKey = {}, {}
@@ -49,6 +47,9 @@ function Planner.Merge(steps)
             for _, id in ipairs(step.questIDs or {}) do
                 existing.questIDs[#existing.questIDs + 1] = id
             end
+            -- A merged step is as attractive as its best part.
+            existing.bonus = math.max(existing.bonus or 0, step.bonus or 0)
+            existing.target = existing.target or step.target
         else
             local copy = {}
             for k, v in pairs(step) do copy[k] = v end
@@ -75,8 +76,7 @@ function Planner.Cost(from, step)
     else
         cost = ns.Util.Distance(from, to)
     end
-    if step.kind == "TURNIN" then cost = cost - TURNIN_BONUS end
-    return cost
+    return cost - (step.bonus or 0)
 end
 
 local function better(a, costA, b, costB)

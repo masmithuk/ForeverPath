@@ -1,0 +1,9 @@
+<!--
+    Key binding for the Target button. It appears under
+    Options > Keybindings > AddOns > ForeverPath. The binding "clicks" the
+    secure button, which is what lets it change your target.
+-->
+<Bindings>
+    <Binding name="CLICK ForeverPathTargetButton:LeftButton" header="FOREVERPATH" category="ADDONS">
+    </Binding>
+</Bindings>

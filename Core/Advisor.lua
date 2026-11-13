@@ -11,7 +11,7 @@ local _, ns = ...
 local Advisor = {}
 ns.Advisor = Advisor
 
-local DEFAULT_ROUTE = "frontier"
+local DEFAULT_ROUTE = "efficient"
 
 ---------------------------------------------------------------------------
 -- Routes
@@ -21,6 +21,7 @@ local DEFAULT_ROUTE = "frontier"
 --- the global default.
 function Advisor.ResolveRouteId(profile, chosenId)
     local routes = ns.Data.Routes
+    chosenId = ns.Data.LegacyRouteIds[chosenId] or chosenId
     if chosenId and routes[chosenId] then
         return chosenId
     end

@@ -93,6 +93,7 @@ local subcommands = {
     end,
     route = function(arg)
         local id = arg and arg:lower()
+        id = ns.Data.LegacyRouteIds[id] or id
         if not id or not ns.Data.Routes[id] then
             Util.Print(L.ROUTE_UNKNOWN:format(routeIds()))
             return

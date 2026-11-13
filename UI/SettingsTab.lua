@@ -15,6 +15,7 @@ local panel
 
 local WAYPOINT_CHOICES = {
     { id = "auto",    label = "WAYPOINTS_AUTO" },
+    { id = "shortestpath", label = "WAYPOINTS_SHORTESTPATH" },
     { id = "tomtom",  label = "WAYPOINTS_TOMTOM" },
     { id = "builtin", label = "WAYPOINTS_BUILTIN" },
     { id = "off",     label = "WAYPOINTS_OFF" },
@@ -33,6 +34,11 @@ local CHECKBOXES = {
         set = function(v)
             if v then ns.GuideFrame.Show() else ns.GuideFrame.Hide() end
         end,
+    },
+    {
+        label = "SETTING_TARGET",
+        get = function() return ns.Settings.account.targetButton end,
+        set = function(v) ns.TargetButton.SetEnabled(v) end,
     },
     {
         label = "SETTING_MINIMAP",
@@ -115,6 +121,7 @@ function SettingsTab.Create(parent)
         ns.Settings.ResetFramePosition()
         ns.MainFrame.ResetPosition()
         ns.GuideFrame.ResetPosition()
+        ns.TargetButton.ResetPosition()
         ns.MinimapButton.UpdatePosition()
         ns.Util.Print(L.POSITION_RESET)
     end)

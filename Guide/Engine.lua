@@ -59,14 +59,27 @@ local function currentOrigin()
     return ns.GameApi.GetWorldPosition(pos.mapID, pos.x, pos.y), pos.mapID
 end
 
---- Maps where the guide may suggest new quests: the zone of the guide you
---- chose in the guide browser, or (on Automatic) your route band's zones
---- plus the zone you're standing in.
-local function allowedMaps(route, playerMapID)
+local function findDungeon(name)
+    for _, d in ipairs(ns.Data.Dungeons) do
+        if d.name == name then return d end
+    end
+    return nil
+end
+
+--- Maps where the guide may suggest new (non-dungeon) quests:
+---   * a chosen zone guide: that zone
+---   * a chosen dungeon guide: the zone its entrance is in
+---   * Automatic: your mode's zones for your level, plus where you stand
+-- @return allowed maps, chosen dungeon name (or nil)
+local function allowedMaps(plan, playerMapID)
     local guideId = ns.Settings.char.guideId
-    local chosen = guideId and ns.ZoneMap.MapIdByName(guideId)
-    if chosen then return { [chosen] = true } end
-    return ns.Sources.AllowedMaps(route, playerMapID)
+    if guideId then
+        local dungeon = plan.route.guidesAreDungeons and findDungeon(guideId)
+        local zone = dungeon and dungeon.zone or guideId
+        local mapID = ns.ZoneMap.MapIdByName(zone)
+        if mapID then return { [mapID] = true }, dungeon and dungeon.name or nil end
+    end
+    return ns.Sources.AllowedMaps(plan, playerMapID), nil
 end
 
 --- Everything a planning pass (or the guide browser) needs to know about
@@ -76,14 +89,17 @@ function Engine.BuildContext()
     local route = ns.Advisor.BuildPlan(profile, ns.Settings.char.routeId)
     local origin, mapID = currentOrigin()
     local char = charGuide()
+    local maps, chosenDungeon = allowedMaps(route, mapID)
     return {
         profile = profile,
         level = profile.level,
         route = route,
+        rules = route.route.rules,
         log = ns.GameApi.GetQuestLog(),
         isCompleted = isCompleted,
         origin = origin,
-        allowedMaps = allowedMaps(route, mapID),
+        allowedMaps = maps,
+        chosenDungeon = chosenDungeon,
         skipped = char.skipped,
         char = char,
     }
@@ -109,13 +125,15 @@ function Engine.Replan()
     state.steps = ns.Planner.Build(origin, candidates, state.currentKey, guideSettings().maxSteps)
     state.reminders = reminders
     state.origin = origin
+    state.log = ctx.log
     state.dataStatus = ns.QuestieData.Status()
 
     local first = state.steps[1]
     state.currentKey = first and first.key or nil
-    ns.Waypoints.Set(first and first.target, first and first.title, guideSettings().waypoints)
+    ns.Waypoints.Set(state.steps, guideSettings().waypoints)
 
     if ns.GuideFrame then ns.GuideFrame.Update(state) end
+    if ns.TargetButton then ns.TargetButton.Update(state, origin) end
     -- Quest statuses in the guide browser only change with quest state.
     if questsChanged and ns.MainFrame then ns.MainFrame.RefreshIf("guides") end
 end
@@ -134,8 +152,10 @@ local function onTick()
     if origin and (not last or origin.continent ~= last.continent
         or ns.Util.Distance(origin, last) > REPLAN_DISTANCE) then
         Engine.RequestReplan()
-    elseif ns.GuideFrame then
-        ns.GuideFrame.UpdateDistance(origin)
+    else
+        if ns.GuideFrame then ns.GuideFrame.UpdateDistance(origin) end
+        -- The nearest objective creature changes as you walk.
+        if ns.TargetButton then ns.TargetButton.Update(Engine.state, origin) end
     end
 end
 
@@ -179,7 +199,16 @@ function Engine.SkipCurrent()
     return step
 end
 
---- Follow one zone guide (by zone name), or nil for Automatic.
+--- The mode changed: different zones and rules, so rebuild everything.
+--- A guide chosen in the old mode no longer applies.
+function Engine.OnModeChanged()
+    ns.Settings.char.guideId = nil
+    Engine.state.currentKey = nil
+    invalidateDoable()
+    Engine.RequestReplan()
+end
+
+--- Follow one guide (zone or dungeon name), or nil for Automatic.
 function Engine.SetGuide(guideId)
     ns.Settings.char.guideId = guideId
     Engine.state.currentKey = nil
@@ -242,6 +271,11 @@ function Engine.Start()
     -- Objective progress: only the log steps change.
     ns:RegisterEvent("QUEST_LOG_UPDATE", Engine.RequestReplan)
     ns:RegisterEvent("TRAINER_SHOW", onTrainerShow)
+    -- Waypoint addons refuse new routes in combat; try again after it.
+    ns:RegisterEvent("PLAYER_REGEN_ENABLED", function()
+        if ns.TargetButton then ns.TargetButton.OnCombatEnded() end
+        Engine.RequestReplan()
+    end)
     ns:RegisterEvent("HEARTHSTONE_BOUND", onHearthBound)
 
     invalidateDoable()
@@ -259,8 +293,9 @@ function Engine.SetEnabled(enabled)
         Engine.Replan()
     else
         ns.Waypoints.Clear()
-        Engine.state.steps, Engine.state.reminders = {}, {}
+        Engine.state.steps, Engine.state.reminders, Engine.state.log = {}, {}, {}
         if ns.GuideFrame then ns.GuideFrame.Update(Engine.state) end
+        if ns.TargetButton then ns.TargetButton.Update(Engine.state, nil) end
     end
 end
 

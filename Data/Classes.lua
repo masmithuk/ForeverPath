@@ -30,7 +30,7 @@ ns.Data.Classes = {
             "Tame Beast arrives at level 10 - get your pet before leaving the starting area.",
             "Keep your pet fed and its abilities trained; it is your tank.",
         },
-        defaultRoute = "frontier",
+        defaultRoute = "efficient",
     },
     MAGE = {
         name = "Mage",
@@ -43,7 +43,7 @@ ns.Data.Classes = {
             "Conjure food and water before every outing; it removes almost all downtime.",
             "You can teleport to capital cities - use it to train and sell quickly.",
         },
-        defaultRoute = "frontier",
+        defaultRoute = "efficient",
     },
     PALADIN = {
         name = "Paladin",
@@ -55,7 +55,7 @@ ns.Data.Classes = {
             "Righteous Fury is available at level 10 if you want to tank dungeons.",
             "Heal yourself between pulls instead of eating to keep moving.",
         },
-        defaultRoute = "frontier",
+        defaultRoute = "efficient",
     },
     WARLOCK = {
         name = "Warlock",
@@ -67,7 +67,7 @@ ns.Data.Classes = {
             "Pet Stamina scaling was cut at launch, so the Voidwalker tanks less than in beta.",
             "Summoning needs two party members to help - handy for dungeon groups.",
         },
-        defaultRoute = "frontier",
+        defaultRoute = "efficient",
     },
     DRUID = {
         name = "Druid",
@@ -79,7 +79,7 @@ ns.Data.Classes = {
             "Many of the best tools arrive after level 30, so the class gets stronger as you go.",
             "Swap to Bear Form when a pull goes wrong instead of dying in Cat Form.",
         },
-        defaultRoute = "frontier",
+        defaultRoute = "efficient",
     },
     PRIEST = {
         name = "Priest",
@@ -103,7 +103,7 @@ ns.Data.Classes = {
             "Early mana costs are high; melee more and cast less in the first levels.",
             "Tier lists disagree on Shaman (ratings from A to C), so play what feels good.",
         },
-        defaultRoute = "frontier",
+        defaultRoute = "efficient",
     },
     ROGUE = {
         name = "Rogue",
@@ -115,7 +115,7 @@ ns.Data.Classes = {
             "Still fragile - pull one enemy at a time and keep bandages handy.",
             "Stealth past enemies you don't need to kill for a quest.",
         },
-        defaultRoute = "classic",
+        defaultRoute = "story",
     },
     WARRIOR = {
         name = "Warrior",

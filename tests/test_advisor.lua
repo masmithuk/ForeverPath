@@ -10,15 +10,16 @@ return {
     { "route choice: explicit, then class default, then global default", function(T)
         local ns = T.fresh()
         local warrior = { class = ns.Data.Classes.WARRIOR }
-        T.eq(ns.Advisor.ResolveRouteId(warrior, "classic"), "classic")
+        T.eq(ns.Advisor.ResolveRouteId(warrior, "story"), "story")
+        T.eq(ns.Advisor.ResolveRouteId(warrior, "story"), "story", "0.3 id migrated")
         T.eq(ns.Advisor.ResolveRouteId(warrior, nil), "dungeon")
         T.eq(ns.Advisor.ResolveRouteId(warrior, "bogus"), "dungeon")
-        T.eq(ns.Advisor.ResolveRouteId({}, nil), "frontier")
+        T.eq(ns.Advisor.ResolveRouteId({}, nil), "efficient")
     end },
 
     { "band lookup is clamped at both ends", function(T)
         local ns = T.fresh()
-        local route = ns.Data.Routes.classic
+        local route = ns.Data.Routes.story
         T.eq(ns.Advisor.FindBandIndex(route, 0), 1)
         T.eq(ns.Advisor.FindBandIndex(route, 1), 1)
         T.eq(ns.Advisor.FindBandIndex(route, 15), 2)
@@ -29,14 +30,14 @@ return {
     { "starting zone replaces the START token", function(T)
         local ns, mock = T.fresh()
         local p = profileFor(ns, mock, { "Night Elf", "NightElf", 4 }, { "Druid", "DRUID", 11 }, "Alliance", 3)
-        local plan = ns.Advisor.BuildPlan(p, "classic")
+        local plan = ns.Advisor.BuildPlan(p, "story")
         T.eq(plan.current.zones[1], "Teldrassil")
     end },
 
     { "Undead are pointed at Silverpine first at 11-20", function(T)
         local ns, mock = T.fresh()
         local p = profileFor(ns, mock, { "Undead", "Scourge", 5 }, { "Mage", "MAGE", 8 }, "Horde", 14)
-        local plan = ns.Advisor.BuildPlan(p, "classic")
+        local plan = ns.Advisor.BuildPlan(p, "story")
         T.eq(plan.current.zones[1], "Silverpine Forest")
         T.contains(plan.current.zones, "The Barrens")
     end },
@@ -44,25 +45,25 @@ return {
     { "Skyborne stay on Zephras Isle until 12", function(T)
         local ns, mock = T.fresh()
         local p = profileFor(ns, mock, { "Skyborne", "Skyborne", 90 }, { "Rogue", "ROGUE", 4 }, "Alliance", 11)
-        local plan = ns.Advisor.BuildPlan(p, "frontier")
+        local plan = ns.Advisor.BuildPlan(p, "efficient")
         T.eq(plan.current.zones[1], "Zephras Isle")
         p.level = 13
-        plan = ns.Advisor.BuildPlan(p, "frontier")
+        plan = ns.Advisor.BuildPlan(p, "efficient")
         T.truthy(plan.current.zones[1] ~= "Zephras Isle", "moved on at 13")
     end },
 
     { "neutral characters see both factions' zones", function(T)
         local ns, mock = T.fresh()
         local p = profileFor(ns, mock, { "Skyborne", "Skyborne", 90 }, { "Rogue", "ROGUE", 4 }, nil, 15)
-        local plan = ns.Advisor.BuildPlan(p, "classic")
+        local plan = ns.Advisor.BuildPlan(p, "story")
         T.contains(plan.current.zones, "Westfall")
         T.contains(plan.current.zones, "The Barrens")
     end },
 
-    { "frontier route sends mid-30s players to Riverglades", function(T)
+    { "efficient mode sends mid-30s players to Riverglades", function(T)
         local ns, mock = T.fresh()
         local p = profileFor(ns, mock, { "Human", "Human", 1 }, { "Hunter", "HUNTER", 3 }, "Alliance", 38)
-        local plan = ns.Advisor.BuildPlan(p, "frontier")
+        local plan = ns.Advisor.BuildPlan(p, "efficient")
         T.contains(plan.current.zones, "Riverglades")
     end },
 

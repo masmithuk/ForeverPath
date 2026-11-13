@@ -68,6 +68,7 @@ run("tests/test_planner.lua")
 run("tests/test_questiedata.lua")
 run("tests/test_engine.lua")
 run("tests/test_browser.lua")
+run("tests/test_modes.lua")
 
 realPrint(("%d passed, %d failed"):format(T.passed, T.failed))
 for _, f in ipairs(T.failures) do realPrint("FAIL " .. f) end

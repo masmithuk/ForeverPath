@@ -23,10 +23,10 @@ ns.QuestieData = QuestieData
 -- The LibQuestieDB contract this file was written against.
 QuestieData.REQUIRED_CONTRACT = 4
 
--- Quests more than this many levels below you are grey and not worth it.
+-- Default level window when a mode doesn't set one: quests more than
+-- GREY_LEVEL_GAP below you are grey, more than LEVELS_ABOVE above too hard.
 local GREY_LEVEL_GAP = 6
--- How far above your level a quest may be and still be suggested.
-local MAX_LEVELS_ABOVE = 2
+local LEVELS_ABOVE = 2
 -- Quests scanned per frame while building the index.
 local SCAN_BATCH = 250
 
@@ -261,20 +261,27 @@ function QuestieData.GetObjectiveTargets(questID)
     local objectives = get("Quest", questID, "objectives")
     if type(objectives) ~= "table" then return result end
 
+    local function add(kind, entity, id, forItem)
+        result[#result + 1] = {
+            kind = kind, id = id,
+            name = get(entity, id, "name") or "",
+            points = spawnsOf(entity, id),
+            forItem = forItem, -- item name when this drops a quest item
+        }
+    end
     for _, creature in ipairs(objectives[1] or {}) do
-        local id = creature[1]
-        result[#result + 1] = { name = get("Npc", id, "name") or "", points = spawnsOf("Npc", id) }
+        add("npc", "Npc", creature[1])
     end
     for _, object in ipairs(objectives[2] or {}) do
-        local id = object[1]
-        result[#result + 1] = { name = get("Object", id, "name") or "", points = spawnsOf("Object", id) }
+        add("object", "Object", object[1])
     end
     for _, item in ipairs(objectives[3] or {}) do
+        local itemName = get("Item", item[1], "name")
         for _, npcID in ipairs(get("Item", item[1], "npcDrops") or {}) do
-            result[#result + 1] = { name = get("Npc", npcID, "name") or "", points = spawnsOf("Npc", npcID) }
+            add("npc", "Npc", npcID, itemName)
         end
         for _, objectID in ipairs(get("Item", item[1], "objectDrops") or {}) do
-            result[#result + 1] = { name = get("Object", objectID, "name") or "", points = spawnsOf("Object", objectID) }
+            add("object", "Object", objectID, itemName)
         end
     end
     return result
@@ -284,18 +291,37 @@ function QuestieData.GetQuestName(questID)
     return get("Quest", questID, "name")
 end
 
+--- The quest that follows this one in its chain, if any.
+function QuestieData.NextInChain(questID)
+    local nextID = get("Quest", questID, "nextQuestInChain")
+    if type(nextID) == "number" and nextID > 0 then return nextID end
+    return nil
+end
+
+--- True when the quest continues a chain (it has prerequisite quests).
+function QuestieData.IsFollowUp(questID)
+    for _, field in ipairs({ "preQuestSingle", "preQuestGroup" }) do
+        local list = get("Quest", questID, field)
+        if type(list) == "table" and #list > 0 then return true end
+    end
+    return false
+end
+
 ---------------------------------------------------------------------------
 -- Candidate index
 ---------------------------------------------------------------------------
 
 --- Quests in the level window that pass the static race/class filter.
-function QuestieData.GetCandidates(level)
+-- @param rules optional mode rules ({ greyGap, levelsAbove })
+function QuestieData.GetCandidates(level, rules)
+    local greyGap = rules and rules.greyGap or GREY_LEVEL_GAP
+    local above = rules and rules.levelsAbove or LEVELS_ABOVE
     local result = {}
     for _, q in ipairs(state.candidates) do
         local qLevel = q.questLevel or q.requiredLevel or 1
         if (q.requiredLevel or 1) <= level
-            and qLevel <= level + MAX_LEVELS_ABOVE
-            and qLevel >= level - GREY_LEVEL_GAP then
+            and qLevel <= level + above
+            and qLevel >= level - greyGap then
             result[#result + 1] = q.id
         end
     end
@@ -336,6 +362,54 @@ questArea = function(questID)
         end
     end
     return nil
+end
+
+---------------------------------------------------------------------------
+-- Dungeons
+---------------------------------------------------------------------------
+
+local function normaliseName(name)
+    return (name or ""):lower():gsub("^the%s+", ""):gsub("[^%a]", "")
+end
+
+local dungeonByArea = {} -- areaID -> Data.Dungeons entry, or false
+
+--- The dungeon (from Data/Dungeons.lua) an area ID belongs to, matched by
+--- the area's name ("The Deadmines" and "Deadmines" both match).
+function QuestieData.DungeonForArea(areaID)
+    if not areaID then return nil end
+    local cached = dungeonByArea[areaID]
+    if cached ~= nil then return cached or nil end
+    local wanted = normaliseName(ns.GameApi.GetAreaName(areaID))
+    local found = false
+    if wanted ~= "" then
+        for _, d in ipairs(ns.Data.Dungeons) do
+            if normaliseName(d.name) == wanted then found = d; break end
+        end
+    end
+    dungeonByArea[areaID] = found
+    return found or nil
+end
+
+--- The dungeon a quest takes place in, or nil.
+function QuestieData.DungeonOf(questID)
+    local zoneOrSort = get("Quest", questID, "zoneOrSort")
+    if type(zoneOrSort) == "number" and zoneOrSort > 0 then
+        return QuestieData.DungeonForArea(zoneOrSort)
+    end
+    return nil
+end
+
+--- Every indexed quest for this character that takes place in `dungeonName`.
+function QuestieData.GetQuestsForDungeon(dungeonName)
+    local result = {}
+    for _, q in ipairs(state.candidates) do
+        local d = QuestieData.DungeonForArea(q.areaID)
+        if d and d.name == dungeonName then
+            result[#result + 1] = q
+        end
+    end
+    return result
 end
 
 --- Every indexed quest for this character whose zone is `mapID`,
@@ -420,4 +494,5 @@ function QuestieData.Reset()
     state.status = "unknown"
     state.candidates, state.trainers = {}, {}
     spawnCache = {}
+    dungeonByArea = {}
 end

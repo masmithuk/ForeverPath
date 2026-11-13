@@ -15,7 +15,7 @@ return {
     { "show-all mode lists every band", function(T)
         local ns = T.fresh()
         local profile = ns.Character.Detect()
-        local plan = ns.Advisor.BuildPlan(profile, "classic")
+        local plan = ns.Advisor.BuildPlan(profile, "story")
         local text = ns.Text.Render(profile, plan, nil, { showAllBands = true })
         T.contains(text, "Mount Hyjal")
     end },
@@ -28,11 +28,11 @@ return {
         ns.MinimapButton.Click("RightButton")
         T.truthy(ForeverPathMainFrame:IsShown(), "shown")
         ns.MainFrame.ShowTab("plan")
-        T.contains(ns.PlanTab.GetText(), "Forever Frontier")
+        T.contains(ns.PlanTab.GetText(), "Efficient (Speedrun)")
 
-        ns.MainFrame.SetRoute("classic")
-        T.eq(ForeverPathCharDB.routeId, "classic")
-        T.contains(ns.PlanTab.GetText(), "Classic Questing")
+        ns.MainFrame.SetRoute("story")
+        T.eq(ForeverPathCharDB.routeId, "story")
+        T.contains(ns.PlanTab.GetText(), "Story (Completionist)")
 
         ns.MinimapButton.Click("RightButton")
         T.truthy(not ForeverPathMainFrame:IsShown(), "hidden")
@@ -63,7 +63,7 @@ return {
     { "unknown route prints the valid choices", function(T)
         local _, mock = T.fresh()
         SlashCmdList.FOREVERPATH("route nowhere")
-        T.contains(mock.printed[#mock.printed], "frontier, classic, dungeon")
+        T.contains(mock.printed[#mock.printed], "story, efficient, dungeon")
     end },
 
     { "level-up into a new band announces zones and milestones", function(T)
@@ -90,6 +90,13 @@ return {
         T.reload()
         T.eq(ForeverPathDB.showAllBands, true, "kept")
         T.eq(ForeverPathDB.frame.point, "CENTER", "defaults filled")
-        T.eq(ForeverPathDB.schema, 2, "schema stamped")
+        T.eq(ForeverPathDB.schema, 3, "schema stamped")
+    end },
+
+    { "a 0.3 route choice carries over to the new modes", function(T)
+        T.fresh()
+        ForeverPathCharDB = { schema = 2, routeId = "frontier" }
+        T.reload()
+        T.eq(ForeverPathCharDB.routeId, "efficient")
     end },
 }

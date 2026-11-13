@@ -234,9 +234,11 @@ end
 
 --- Save a route choice for this character and redraw everything.
 function MainFrame.SetRoute(routeId)
-    ns.Settings.char.routeId = routeId
+    if ns.Settings.char.routeId ~= routeId then
+        ns.Settings.char.routeId = routeId
+        if ns.Engine then ns.Engine.OnModeChanged() end
+    end
     MainFrame.Refresh()
-    if ns.Engine then ns.Engine.RequestReplan() end
 end
 
 function MainFrame.ResetPosition()

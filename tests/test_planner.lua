@@ -64,7 +64,7 @@ return {
             step("elsewhere", "ACCEPT", 1, 0, { target = { mapID = 2, x = 0, y = 0,
                 world = { continent = 0, x = 1, y = 0 } } }),
             step("accept", "ACCEPT", 30, 0),
-            step("turnin", "TURNIN", 60, 0),
+            step("turnin", "TURNIN", 60, 0, { bonus = 60 }),
             step("unknown", "COMPLETE"),
         })
         T.eq(ordered[1].key, "turnin", "turn-in bonus")
@@ -76,7 +76,7 @@ return {
         local ordered = ns.Planner.Order({ continent = 1, x = 0, y = 0 }, {
             step("z-accept", "ACCEPT", 100, 0),
             step("a-complete", "COMPLETE", 100, 0),
-            step("m-turnin", "TURNIN", 160, 0),
+            step("m-turnin", "TURNIN", 160, 0, { bonus = 60 }),
         })
         T.eq(keys(ordered), "m-turnin,z-accept,a-complete")
     end },

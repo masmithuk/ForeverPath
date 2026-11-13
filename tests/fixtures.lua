@@ -17,6 +17,8 @@ local fixtures = {}
 function fixtures.durotar(mock, opts)
     opts = opts or {}
     mock.player.level = opts.level or 8
+    -- Story mode keeps every quest in range; tests for other modes set it.
+    ForeverPathCharDB.routeId = opts.mode or "story"
     mock.player.position = { mapID = 1411, x = 0.5, y = 0.5 }
 
     return mock.installQuestieDB({

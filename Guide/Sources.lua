@@ -19,9 +19,6 @@ local _, ns = ...
 local Sources = {}
 ns.Sources = Sources
 
--- How many nearby quest givers to consider per planning pass.
-local MAX_ACCEPT_CANDIDATES = 15
-
 ---------------------------------------------------------------------------
 -- Helpers
 ---------------------------------------------------------------------------
@@ -75,44 +72,106 @@ function Sources.AllowedMaps(plan, playerMapID)
 end
 
 ---------------------------------------------------------------------------
+-- Mode helpers
+---------------------------------------------------------------------------
+
+local DEFAULT_MAX_ACCEPT = 15
+
+local function rulesOf(ctx)
+    return ctx.rules or {}
+end
+
+--- Is this quest part of a dungeon the character is ready for (or chosen)?
+--- Counts the dungeon's own quests and the quest just before one in a chain.
+local function dungeonFor(questID, ctx)
+    local data = ns.QuestieData
+    local d = data.DungeonOf(questID)
+    if not d then
+        local nextID = data.NextInChain(questID)
+        d = nextID and data.DungeonOf(nextID) or nil
+    end
+    if not d then return nil end
+    if ctx.chosenDungeon then
+        return d.name == ctx.chosenDungeon and d or nil
+    end
+    local level = ctx.profile.level
+    if level >= d.min - 2 and level <= d.max then return d end
+    return nil
+end
+
+---------------------------------------------------------------------------
 -- Quest log
 ---------------------------------------------------------------------------
 
+local function turnInStep(ctx, questID, quest)
+    local actor, point = nearestActor(ctx.origin,
+        ns.QuestieData.GetFinishers(questID, ctx.profile.faction))
+    return {
+        key = "turnin:" .. questID,
+        kind = "TURNIN",
+        title = actor and ("Turn in to " .. actor.name) or "Turn in",
+        lines = { quest.title },
+        questIDs = { questID },
+        actor = actor and (actor.kind .. ":" .. actor.id) or nil,
+        target = target(point, actor and actor.name),
+        bonus = rulesOf(ctx).turninBonus,
+    }
+end
+
+--- One "Run <dungeon>" step per dungeon, collecting its quests. Blizzard's
+--- quest waypoint for a dungeon quest usually leads to the entrance.
+local function dungeonStep(ctx, questID, quest, dungeon)
+    local point = withWorld(ns.GameApi.GetQuestWaypoint(questID))
+    local lines = { quest.title }
+    if not point then
+        lines[#lines + 1] = "  Entrance: " .. dungeon.zone
+    end
+    return {
+        key = "dungeon:" .. questID,
+        kind = "DUNGEON",
+        title = "Run " .. dungeon.name,
+        lines = lines,
+        questIDs = { questID },
+        actor = "dungeon:" .. dungeon.name,
+        target = target(point, dungeon.name),
+        bonus = rulesOf(ctx).dungeonBonus,
+    }
+end
+
+local function objectiveStep(ctx, questID, quest)
+    local point = withWorld(ns.GameApi.GetQuestWaypoint(questID))
+    local label
+    if not point then
+        local actor
+        actor, point = nearestActor(ctx.origin, ns.QuestieData.GetObjectiveTargets(questID))
+        label = actor and actor.name
+    end
+    local lines = { quest.title }
+    for _, objective in ipairs(ns.GameApi.GetOpenObjectives(questID)) do
+        lines[#lines + 1] = "  " .. objective
+    end
+    return {
+        key = "complete:" .. questID,
+        kind = "COMPLETE",
+        title = "Complete: " .. quest.title,
+        lines = lines,
+        questIDs = { questID },
+        target = target(point, label or quest.title),
+    }
+end
+
 local function questLogSteps(ctx, out)
-    local data = ns.QuestieData
     for questID, quest in pairs(ctx.log) do
         if not ctx.skipped[questID] then
             if quest.complete then
-                local actor, point = nearestActor(ctx.origin, data.GetFinishers(questID, ctx.profile.faction))
-                out[#out + 1] = {
-                    key = "turnin:" .. questID,
-                    kind = "TURNIN",
-                    title = actor and ("Turn in to " .. actor.name) or "Turn in",
-                    lines = { quest.title },
-                    questIDs = { questID },
-                    actor = actor and (actor.kind .. ":" .. actor.id) or nil,
-                    target = target(point, actor and actor.name),
-                }
+                out[#out + 1] = turnInStep(ctx, questID, quest)
             else
-                local point = withWorld(ns.GameApi.GetQuestWaypoint(questID))
-                local label
-                if not point then
-                    local actor
-                    actor, point = nearestActor(ctx.origin, data.GetObjectiveTargets(questID))
-                    label = actor and actor.name
+                local dungeon = ns.QuestieData.DungeonOf(questID)
+                if dungeon then
+                    out[#out + 1] = dungeonStep(ctx, questID, quest, dungeon)
+                else
+                    out[#out + 1] = objectiveStep(ctx, questID, quest)
                 end
-                local lines = { quest.title }
-                for _, objective in ipairs(ns.GameApi.GetOpenObjectives(questID)) do
-                    lines[#lines + 1] = "  " .. objective
-                end
-                out[#out + 1] = {
-                    key = "complete:" .. questID,
-                    kind = "COMPLETE",
-                    title = "Complete: " .. quest.title,
-                    lines = lines,
-                    questIDs = { questID },
-                    target = target(point, label or quest.title),
-                }
             end
         end
     end
@@ -122,13 +181,14 @@ end
 -- Available quests
 ---------------------------------------------------------------------------
 
---- Quest IDs the character can pick up right now. This is the expensive
---- part of planning, so the Engine caches it between quest-state changes.
+--- Quest IDs the character can pick up right now, within the mode's level
+--- window. This is the expensive part of planning, so the Engine caches it
+--- between quest-state changes.
 function Sources.DoableQuests(ctx)
     local data = ns.QuestieData
     local doable = {}
     if not data.IsReady() then return doable end
-    for _, questID in ipairs(data.GetCandidates(ctx.profile.level)) do
+    for _, questID in ipairs(data.GetCandidates(ctx.profile.level, rulesOf(ctx))) do
         if data.IsDoable(questID, ctx) then
             doable[#doable + 1] = questID
         end
@@ -136,30 +196,60 @@ function Sources.DoableQuests(ctx)
     return doable
 end
 
+--- Efficient mode: is the quest's nearest objective too far from its giver?
+local function isDetour(questID, giverPoint, maxDetour)
+    if not maxDetour or not giverPoint or not giverPoint.world then return false end
+    local _, _, dist = nearestActor(giverPoint.world, ns.QuestieData.GetObjectiveTargets(questID))
+    return dist ~= nil and dist > maxDetour
+end
+
+local function acceptBonus(ctx, questID, isDungeon)
+    local rules = rulesOf(ctx)
+    local bonus = 0
+    if isDungeon then bonus = bonus + (rules.dungeonBonus or 0) end
+    if (rules.chainBonus or 0) > 0 and ns.QuestieData.IsFollowUp(questID) then
+        bonus = bonus + rules.chainBonus
+    end
+    return bonus
+end
+
 local function availableSteps(ctx, out)
     local data = ns.QuestieData
+    local rules = rulesOf(ctx)
     local found = {}
+
     for _, questID in ipairs(ctx.doable or Sources.DoableQuests(ctx)) do
         if not ctx.skipped[questID] and not ctx.log[questID] then
+            -- Dungeon mode picks up dungeon quests wherever their giver
+            -- stands; everything else stays inside the allowed zones.
+            local dungeon = rules.dungeons and dungeonFor(questID, ctx) or nil
+            local maps = (not dungeon) and ctx.allowedMaps or nil
             local actor, point, dist = nearestActor(ctx.origin,
-                data.GetStarters(questID, ctx.profile.faction), ctx.allowedMaps)
-            if actor then
-                found[#found + 1] = { questID = questID, actor = actor, point = point, dist = dist }
+                data.GetStarters(questID, ctx.profile.faction), maps)
+            if actor and not isDetour(questID, point, rules.maxDetour) then
+                found[#found + 1] = {
+                    questID = questID, actor = actor, point = point, dist = dist,
+                    dungeon = dungeon,
+                }
             end
         end
     end
 
     table.sort(found, function(a, b) return a.dist < b.dist end)
-    for i = 1, math.min(#found, MAX_ACCEPT_CANDIDATES) do
+    for i = 1, math.min(#found, rules.maxAccept or DEFAULT_MAX_ACCEPT) do
         local f = found[i]
+        local name = data.GetQuestName(f.questID) or ("quest " .. f.questID)
+        local line = "Accept: " .. name
+        if f.dungeon then line = line .. " (" .. f.dungeon.name .. ")" end
         out[#out + 1] = {
             key = "accept:" .. f.questID,
             kind = "ACCEPT",
             title = "Talk to " .. f.actor.name,
-            lines = { "Accept: " .. (data.GetQuestName(f.questID) or ("quest " .. f.questID)) },
+            lines = { line },
             questIDs = { f.questID },
             actor = f.actor.kind .. ":" .. f.actor.id,
             target = target(f.point, f.actor.name),
+            bonus = acceptBonus(ctx, f.questID, f.dungeon ~= nil),
         }
     end
 end
@@ -227,6 +317,7 @@ end
 --     profile, log, isCompleted(id), origin (world pos or nil),
 --     allowedMaps, skipped = { [questID] = true },
 --     doable = optional cached result of Sources.DoableQuests(ctx),
+--     rules = the mode's rules (Data/Routes.lua), chosenDungeon = name or nil,
 --     char = { done = {}, trainedLevel = n } }
 -- @return steps (route candidates), reminders (no route position)
 function Sources.Collect(ctx)

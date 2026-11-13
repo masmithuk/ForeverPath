@@ -18,7 +18,7 @@ L.TITLE                 = "ForeverPath"
 L.TAB_GUIDES            = "Guides"
 L.TAB_PLAN              = "Plan"
 L.TAB_SETTINGS          = "Settings"
-L.ROUTE_LABEL           = "Route:"
+L.ROUTE_LABEL           = "Mode:"
 
 -- Guide browser
 L.GUIDES_FOLLOW         = "Follow this guide"
@@ -26,7 +26,8 @@ L.GUIDES_AUTO           = "Automatic"
 L.GUIDES_FOLLOWING_FMT  = "Following: %s"
 L.GUIDES_FOLLOWING_AUTO = "Following: Automatic (your route's zones for your level)"
 L.GUIDES_PROGRESS_FMT   = "%d of %d quests done"
-L.GUIDES_NO_QUESTS      = "QuestieDB has no quests for you in this zone yet."
+L.GUIDES_NO_QUESTS      = "QuestieDB has no quests for you here yet."
+L.GUIDES_ENTRANCE_FMT   = "Entrance: %s"
 L.GUIDES_NEED_QUESTIE   = "Install Questie (with QuestieDB) to see the quests in each guide."
 L.QUEST_DONE            = "Done"
 L.QUEST_READY           = "Ready to turn in"
@@ -46,10 +47,23 @@ L.SETTING_ANNOUNCE      = "Announce level-ups and milestones in chat"
 L.SETTING_UNSKIP        = "Bring back skipped quests"
 L.SETTING_RESET         = "Reset window positions"
 L.WAYPOINTS_AUTO        = "Automatic"
+L.WAYPOINTS_SHORTESTPATH = "Shortest Path"
 L.WAYPOINTS_TOMTOM      = "TomTom"
 L.WAYPOINTS_BUILTIN     = "Map pin"
 L.WAYPOINTS_OFF         = "Off"
 L.WAYPOINTS_IN_USE_FMT  = "In use: %s"
+
+-- Target button
+L.TARGET_FMT            = "Target: %s"
+L.TARGET_TOOLTIP_TITLE  = "Target nearest quest mob"
+L.TARGET_TOOLTIP_BODY   = "Targets the closest creature you still need for a quest. "
+    .. "It can't change during combat - it updates as soon as combat ends. "
+    .. "Bind a key under Key Bindings > AddOns > ForeverPath. Shift-drag to move."
+L.SETTING_TARGET        = "Show the Target button (nearest quest mob)"
+
+-- Key bindings menu (globals the game reads)
+_G.BINDING_HEADER_FOREVERPATH = "ForeverPath"
+_G["BINDING_NAME_CLICK ForeverPathTargetButton:LeftButton"] = "Target nearest quest mob"
 
 -- Minimap button
 L.MINIMAP_LEFT          = "Left-click: show/hide the step guide"
@@ -79,7 +93,7 @@ L.ALT_SPEC              = "Alternative: %s"
 L.LEVEL_TIER            = "Leveling tier: %s"
 
 -- Route section
-L.ROUTE_HEADER          = "Route: %s"
+L.ROUTE_HEADER          = "Mode: %s"
 L.NOW                   = "Now"
 L.NEXT                  = "Next"
 L.LEVELS                = "Levels"
@@ -103,8 +117,8 @@ L.GENERAL_HEADER        = "Good to know"
 L.LOADED                = "loaded. Click the map button on your minimap to pick a guide."
 L.DING_FMT              = "Level %d! Your route now suggests: %s"
 L.DING_MILESTONE_FMT    = "Level %d unlocks: %s"
-L.ROUTE_SET_FMT         = "Route set to %s."
-L.ROUTE_UNKNOWN         = "Unknown route. Choose one of: %s"
+L.ROUTE_SET_FMT         = "Mode set to %s."
+L.ROUTE_UNKNOWN         = "Unknown mode. Choose one of: %s"
 L.POSITION_RESET        = "Window position reset."
 L.HELP = {
     "/fp - toggle the leveling plan window",
@@ -113,8 +127,8 @@ L.HELP = {
     "/fp skip - skip the current step (its quests stay hidden until /fp unskip)",
     "/fp done - mark the current step done",
     "/fp unskip - bring back every skipped quest",
-    "/fp waypoints auto|tomtom|builtin|off - choose the arrow",
-    "/fp route <classic|frontier|dungeon> - pick a route",
+    "/fp waypoints auto|shortestpath|tomtom|builtin|off - choose the arrow",
+    "/fp route <story|efficient|dungeon> - pick a leveling mode",
     "/fp next - print your current and next zones to chat",
     "/fp reset - reset window positions",
     "/fp help - show this help",
@@ -133,7 +147,7 @@ L.GUIDE_REMINDER_TOOLTIP     = "Click to mark this reminder as done."
 L.GUIDE_NEEDS_QUESTIE        = "Install Questie (with QuestieDB) to be guided to new quest givers. Showing your quest log only."
 L.GUIDE_QUESTIE_INCOMPATIBLE = "This QuestieDB version isn't supported - update ForeverPath or Questie. Showing your quest log only."
 L.GUIDE_INDEXING             = "Reading QuestieDB..."
-L.GUIDE_NO_WAYPOINTS         = "No waypoint provider available - install TomTom for an arrow."
+L.GUIDE_NO_WAYPOINTS         = "No waypoint addon available - install Shortest Path Forever or TomTom."
 L.GUIDE_SKIPPED_FMT          = "Skipped: %s (/fp unskip to undo)"
 L.GUIDE_UNSKIPPED            = "All skipped quests are back in the guide."
 L.GUIDE_ON                   = "Step guide on."
@@ -141,4 +155,4 @@ L.GUIDE_OFF                  = "Step guide off."
 L.GUIDE_NOTHING_TO_SKIP      = "Nothing to skip."
 L.GUIDE_NOTHING_TO_MARK      = "Nothing to mark done - quest steps complete on their own."
 L.WAYPOINTS_SET_FMT          = "Waypoints: %s (using %s)."
-L.WAYPOINTS_UNKNOWN          = "Choose one of: auto, tomtom, builtin, off"
+L.WAYPOINTS_UNKNOWN          = "Choose one of: auto, shortestpath, tomtom, builtin, off"

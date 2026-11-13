@@ -2,6 +2,22 @@
 
 All notable changes are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] - 2026-11-13
+
+### Changed
+- The three routes are now three modes with their own rules, all in `Data/Routes.lua`:
+  - **Story (Completionist):** every zone and every quest in a wide level range, with chain follow-ups first.
+  - **Efficient (Speedrun):** dense zones, worthwhile quests only, no objectives more than 350 yards from their giver, and hand-ins first.
+  - **Dungeon:** every quest for dungeons in your range from anywhere, filler quests only near entrances, and dungeon pickups first.
+- Saved route choices carry over (Classic becomes Story, Frontier becomes Efficient). Switching mode clears the chosen guide.
+- Planner bonuses come from the mode's rules instead of being hard-coded.
+
+### Added
+- Dungeon mode's guide browser lists dungeons, each with its entrance zone and quests.
+- **Run (dungeon)** steps merge your log's quests for the same dungeon.
+- Shortest Path Forever waypoint provider. It's used first when installed and takes the next steps as one held, multi-stop journey, sent again after combat. TomTom, then the map pin, are the fallbacks.
+- Target button with a keybinding. It's a secure macro button that targets the nearest creature you still need for an objective, including droppers of quest items. It updates only out of combat.
+
 ## [0.3.0] - 2026-11-13
 
 ### Added

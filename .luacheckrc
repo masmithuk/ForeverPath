@@ -31,6 +31,8 @@ read_globals = {
     "GameTooltip",
     "GetCursorPosition",
     "GetTime",
+    "InCombatLockdown",
+    "IsShiftKeyDown",
     "IsTradeskillTrainer",
     "Minimap",
     "UiMapPoint",
@@ -48,9 +50,10 @@ read_globals = {
     "LibQuestieDB",
     "QuestieLoader",
     "TomTom",
+    "ShortestPathForever",
 }
 
 files["tests/"] = {
     std = "+lua51",
-    globals = { "_G", "print", "issecretvalue", "ForeverPathMainFrame", "ForeverPathGuideFrame", "ForeverPathMinimapButton" },
+    globals = { "_G", "print", "issecretvalue", "ForeverPathMainFrame", "ForeverPathGuideFrame", "ForeverPathMinimapButton", "ForeverPathTargetButton", "ShortestPathForever" },
 }

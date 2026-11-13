@@ -41,6 +41,7 @@ local STATUS_TEXT = {
 function GuidesTab.RowText(guide, overview)
     local marker = guide.active and C("good", "> ") or ""
     local name = guide.recommended and C("accent", guide.name) or guide.name
+    if guide.isNew then name = name .. C("new", " *") end
     local progress = ""
     if overview and overview.total > 0 then
         progress = C("muted", (" %d/%d"):format(overview.done, overview.total))
@@ -58,6 +59,13 @@ end
 function GuidesTab.DetailText(guide, overview)
     local lines = {}
     lines[#lines + 1] = C("accent", ("%s  (%d-%d)"):format(guide.name, guide.min, guide.max))
+    if guide.isDungeon then
+        local where = L.GUIDES_ENTRANCE_FMT:format(guide.zone)
+        if guide.territory then
+            where = where .. ", " .. L.FACTION_TERRITORY:format(guide.territory)
+        end
+        lines[#lines + 1] = C("muted", where)
+    end
 
     if overview.dataStatus ~= "ready" then
         lines[#lines + 1] = C("warn", L.GUIDES_NEED_QUESTIE)

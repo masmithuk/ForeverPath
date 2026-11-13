@@ -2,13 +2,12 @@
 
 local fixtures = require("fixtures")
 
--- An Orc Mage in Durotar on the Classic route: Durotar is the 1-10 guide
+-- An Orc Mage in Durotar in Story mode: Durotar is the 1-10 guide
 -- and The Barrens the 11-20 guide.
 local function orc(T, level)
     local ns, mock = T.fresh()
     mock.player.race = { "Orc", "Orc", 2 }
     fixtures.durotar(mock, { level = level or 8 })
-    ForeverPathCharDB.routeId = "classic"
     fixtures.login(ns)
     return ns, mock
 end
@@ -29,7 +28,7 @@ end
 return {
     { "lists every zone guide on the route in level order", function(T)
         local ns = orc(T)
-        local guides = ns.Catalog.List(ns.Character.Detect(), "classic")
+        local guides = ns.Catalog.List(ns.Character.Detect(), "story")
         local names = guideNames(guides)
         T.eq(names[1], "Durotar", "racial start zone first")
         T.contains(names, "The Barrens")
@@ -43,7 +42,7 @@ return {
     { "a zone that appears in several bands is one guide spanning them", function(T)
         local ns = orc(T)
         local stv
-        for _, g in ipairs(ns.Catalog.List(ns.Character.Detect(), "frontier")) do
+        for _, g in ipairs(ns.Catalog.List(ns.Character.Detect(), "efficient")) do
             if g.name == "Stranglethorn Vale" then stv = g end
         end
         T.eq(stv.min, 31)

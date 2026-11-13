@@ -4,6 +4,23 @@ A step-by-step leveling guide for **World of Warcraft: Forever**, in the style o
 
 It reads your race, class, faction and level. From those it picks a leveling route, a spec to play and dungeons that fit your level, and it tracks your rested XP.
 
+## Three leveling modes
+
+Pick a mode with the buttons at the top of the main window. Each character remembers its own mode.
+
+| | **Story (Completionist)** | **Efficient (Speedrun)** | **Dungeon** |
+|---|---|---|---|
+| **Goal** | Do every quest and follow each story through | Quickest path through each zone | Level through dungeons |
+| **Zones** | Every zone for your level, Classic and Forever | The densest zones only (Riverglades carries 35-45) | Zones next to dungeon entrances |
+| **Quests offered** | Everything from 10 levels below you to 3 above | Only from 2 below to 2 above you | From 4 below to 3 above, plus every quest for dungeons in your range, wherever its giver stands |
+| **Skipped** | Nothing | Quests whose objectives are more than 350 yards from the quest giver | Non-dungeon quests outside the entrance zones |
+| **Ordering** | Follow-ups in a chain jump the queue (150 yd bonus), so stories are told in order | Hand-ins first (120 yd bonus), then the nearest step | Dungeon quest pickups first (200 yd bonus) |
+| **Guide browser** | One guide per zone | One guide per zone | One guide per dungeon, with its entrance and quests |
+
+In Dungeon mode, quests for the same dungeon in your log merge into one **Run (dungeon)** step. Its arrow points at Blizzard's own waypoint for the quest, which leads to the entrance.
+
+All the numbers live in `rules` in `Data/Routes.lua`, so they're easy to tune.
+
 ## The step guide
 
 The guide window shows your current step, the next few steps and a short list of reminders. Steps are built live from three sources:
@@ -30,16 +47,15 @@ Steps advance on their own:
 ### What it needs
 
 - **[Questie](https://www.curseforge.com/wow/addons/questie) with QuestieDB (Forever bundle): strongly recommended.** QuestieDB is where quest-giver locations come from. ForeverPath reads it through its documented `LibQuestieDB` API (contract 4). If Questie itself is also loaded, ForeverPath uses Questie's own availability check, which knows about hidden and event quests. Without QuestieDB, the guide only covers quests already in your log.
-- **[TomTom](https://www.curseforge.com/wow/addons/tomtom): recommended.** It provides the on-screen arrow. Addons that work from TomTom waypoints, such as Well Trodden (walking trails) and Map Shortcuts, then follow ForeverPath's steps too. Without TomTom, ForeverPath places the game's own map pin instead.
+- **[Shortest Path Forever](https://www.curseforge.com/wow/addons/shortest-path-forever): recommended, and used first when installed.** It plans real routes on foot, by flight path and by boat. ForeverPath hands it the next several steps through its public API (`ShortestPathForever.API.NavigateRoute`, versions 1 and 2) as one journey with numbered, quest-badged stops. The current stop is held until the step really completes, so walking up to a quest giver doesn't skip ahead. Routes refused during combat are sent again when combat ends.
+- **[TomTom](https://www.curseforge.com/wow/addons/tomtom): the fallback.** It provides the on-screen arrow. Addons that work from TomTom waypoints, such as Well Trodden (walking trails) and Map Shortcuts, then follow ForeverPath's steps too. With neither addon installed, ForeverPath places the game's own map pin instead.
 
 ## Features
 
 - **Detects your character automatically.** It covers all 10 Forever races, including the Skyborne and their faction-specific classes. It also points out when you're playing one of the six new race/class combinations, such as an Undead Paladin or a Dwarf Shaman.
-- **Three routes:**
-  - **Forever Frontier.** Sends you through the new content: Zephras Isle, Riverglades, Shen'dralas and Mount Hyjal, plus the new dungeons.
-  - **Classic Questing.** The familiar vanilla path.
-  - **Dungeon Runner.** Quest near dungeon entrances and run every dungeon in your range.
-- **Picks a starting route for your class.** Warriors and Priests start on Dungeon Runner, Rogues on Classic Questing, and everyone else on Forever Frontier. You can switch at any time, and your choice is saved per character.
+- **Three modes: Story, Efficient and Dungeon.** See the table above.
+- **Picks a starting mode for your class.** Warriors and Priests start on Dungeon, Rogues on Story, and everyone else on Efficient. You can switch at any time.
+- **Target button.** Click it, or press its key, to target the nearest creature you still need for a quest.
 - **Gives class advice.** You get a leveling spec, an alternative, the class's launch leveling tier and practical tips.
 - **Suggests dungeons.** All Classic and new Forever dungeons in your level range are listed. Dungeons deep in enemy territory go to the bottom of the list.
 - **Tracks rested XP.** It shows your rested pool as a percentage of the level, how much XP you need for the next level, and whether you're resting.
@@ -70,7 +86,13 @@ Everything runs from the game's own UI.
 - **Reminders:** click one to mark it done.
 - **Header:** names the guide you're following.
 
-**Main window**, with three tabs. The route buttons at the top (Forever Frontier, Classic Questing, Dungeon Runner) apply to Guides and Plan.
+**Target button:** a small button labelled with a creature's name, such as "Target: Vile Familiar". Click it to target the nearest creature you still need for a quest in your log. That includes creatures that drop your quest items, and it skips kill objectives you've already finished. The current step's quest comes first.
+- **Keybinding:** bind a key under *Key Bindings > AddOns > ForeverPath*.
+- **Moving it:** Shift-drag.
+- **Combat:** the game doesn't let addons change targets themselves, or change a secure button during combat. So the button runs a `/targetexact` macro when you press it, and it picks its next creature as soon as combat ends.
+- **Turning it off:** use the checkbox in Settings.
+
+**Main window**, with three tabs. The mode buttons at the top (Story, Efficient, Dungeon) apply to Guides and Plan.
 
 | Tab | What's in it |
 |---|---|
@@ -82,7 +104,7 @@ The minimap's addon compartment also opens the main window, even if you hide the
 
 ### Slash commands (optional)
 
-Everything above can also be done with commands, which is handy for macros: `/fp`, `/fp guide [on|off]`, `/fp skip`, `/fp done`, `/fp unskip`, `/fp waypoints auto|tomtom|builtin|off`, `/fp route frontier|classic|dungeon`, `/fp next`, `/fp reset` and `/fp help`.
+Everything above can also be done with commands, which is handy for macros: `/fp`, `/fp guide [on|off]`, `/fp skip`, `/fp done`, `/fp unskip`, `/fp waypoints auto|shortestpath|tomtom|builtin|off`, `/fp route story|efficient|dungeon`, `/fp next`, `/fp reset` and `/fp help`.
 
 ## Project layout
 
@@ -97,7 +119,7 @@ Core/GameApi.lua     Every quest-log, map and position call, guarded and swappab
 Core/ZoneMap.lua     QuestieDB area IDs (0-100 coordinates) -> uiMapIDs (0-1 coordinates)
 Core/Character.lua   Reads race/class/faction/level into a profile
 Core/Advisor.lua     Pure planning logic: profile -> zone route
-Integrations/        QuestieDB adapter and waypoint providers (TomTom, built-in pin)
+Integrations/        QuestieDB adapter and waypoint providers (Shortest Path Forever, TomTom, map pin)
 Guide/Sources.lua    Live game state -> candidate steps
 Guide/Planner.lua    Pure: merge steps at the same NPC, order as a walking route
 Guide/Engine.lua     Events -> replans, sticky current step, skip/done, chosen guide, caching
@@ -106,6 +128,7 @@ UI/MainFrame.lua     Main window shell: tabs and route picker
 UI/*Tab.lua          Guides (browser), Plan and Settings tabs
 UI/GuideFrame.lua    Step guide window
 UI/MinimapButton.lua Library-free minimap button
+UI/TargetButton.lua  Secure "target nearest quest mob" button (Bindings.xml adds its key)
 Core/Commands.lua    Slash commands
 Core/Bootstrap.lua   Event wiring
 tests/               Lua 5.1 tests with a mocked WoW API, QuestieDB and TomTom
@@ -158,6 +181,7 @@ The data was gathered in November 2026, shortly after Forever launched on 4 Nove
 - Icy Veins and Gfinity for race/class combinations
 - Questie's `Public/` API and `LibQuestieDB` type declarations for the QuestieDB integration
 - TomTom's `AddWaypoint` and `RemoveWaypoint` API for the arrow
+- Shortest Path Forever's `docs/api.md` for journey routing
 
 Where sources disagreed, the Warcraft Wiki range was used. For example, Excavation Site: Wetlands is listed as both 24-29 and 26-31. Shen'dralas had no confirmed level range at launch.
 

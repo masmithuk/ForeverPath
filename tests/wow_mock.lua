@@ -24,6 +24,7 @@ mock.maps = {
 }
 
 local function areaName(areaID)
+    if mock.areaNames and mock.areaNames[areaID] then return mock.areaNames[areaID] end
     for _, m in pairs(mock.maps) do
         if m.areaID == areaID then return m.name end
     end
@@ -47,6 +48,8 @@ function mock.reset()
     mock.completed = {}       -- [questID] = true
     mock.questWaypoints = {}  -- [questID] = { mapID, x, y }
     mock.tradeskillTrainer = false
+    mock.inCombat = false
+    mock.areaNames = nil
     mock.tickers = {}
     mock.tomtom = nil         -- set by mock.installTomTom()
     mock.userWaypoint = nil
@@ -81,6 +84,15 @@ function Frame:GetBottom() return 400 end
 function Frame:CreateFontString() return mock.newFrame() end
 function Frame:CreateTexture() return mock.newFrame() end
 function Frame:SetTexture(t) self.texture = t end
+function Frame:SetAttribute(k, v)
+    local attrs = rawget(self, "attrs") or {}
+    attrs[k] = v
+    rawset(self, "attrs", attrs)
+end
+function Frame:GetAttribute(k)
+    local attrs = rawget(self, "attrs")
+    return attrs and attrs[k]
+end
 
 function mock.newFrame()
     return setmetatable({ events = {}, scripts = {}, shown = true }, Frame)
@@ -158,6 +170,8 @@ function mock.install()
     _G.ForeverPathMainFrame = nil
     _G.ForeverPathGuideFrame = nil
     _G.ForeverPathMinimapButton = nil
+    _G.ForeverPathTargetButton = nil
+    _G.ShortestPathForever = nil
     _G.TomTom = nil
     _G.LibQuestieDB = nil
     _G.QuestieLoader = nil
@@ -174,6 +188,8 @@ function mock.install()
     _G.GameTooltip = mock.newFrame()
     _G.Minimap = mock.newFrame()
     _G.GetCursorPosition = function() return 0, 0 end
+    _G.InCombatLockdown = function() return mock.inCombat end
+    _G.IsShiftKeyDown = function() return false end
 
     _G.UnitRace = function() return unpack(mock.player.race) end
     _G.UnitClass = function() return unpack(mock.player.class) end

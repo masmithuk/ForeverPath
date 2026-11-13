@@ -61,6 +61,19 @@ function GameApi.IsQuestCompleted(questID)
     return false
 end
 
+--- Every objective of a quest in the log: list of { text, finished }.
+function GameApi.GetObjectives(questID)
+    local list = {}
+    local QL = C_QuestLog
+    local objectives = QL and safe(QL.GetQuestObjectives, questID)
+    if type(objectives) ~= "table" then return list end
+    for _, o in ipairs(objectives) do
+        local text = ns.Util.SafeString(o.text)
+        if text then list[#list + 1] = { text = text, finished = o.finished and true or false } end
+    end
+    return list
+end
+
 --- Unfinished objective lines for a quest in the log, e.g. "Bristleback Quilboar slain: 3/8".
 function GameApi.GetOpenObjectives(questID)
     local lines = {}
@@ -145,6 +158,10 @@ end
 ---------------------------------------------------------------------------
 -- Character
 ---------------------------------------------------------------------------
+
+function GameApi.InCombat()
+    return InCombatLockdown and InCombatLockdown() and true or false
+end
 
 --- True when the open trainer window is a profession trainer.
 function GameApi.IsTradeskillTrainer()

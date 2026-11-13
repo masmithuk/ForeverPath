@@ -30,6 +30,7 @@ return {
         local ns, mock = T.fresh()
         local tt = mock.installTomTom()
         fixtures.durotar(mock)
+        mock.completed[108] = true -- Story mode would keep us at the Foreman for it
         fixtures.login(ns)
         T.eq(#tt.waypoints, 1)
         T.eq(tt.waypoints[1].title, "Talk to Foreman Thazz'ril")
@@ -175,7 +176,7 @@ return {
         T.eq(ForeverPathDB.guide.waypoints, "builtin")
         T.eq(mock.userWaypoint.uiMapID, 1411)
         SlashCmdList.FOREVERPATH("waypoints sideways")
-        T.contains(mock.printed[#mock.printed], "auto, tomtom, builtin, off")
+        T.contains(mock.printed[#mock.printed], "auto, shortestpath, tomtom, builtin, off")
     end },
 
     { "guide window renders the current step and distance", function(T)
