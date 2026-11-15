@@ -121,4 +121,27 @@ return {
         T.eq(#ns.TargetButton.GetNames(), 0)
         T.truthy(not button:IsShown())
     end },
+
+    { "several creatures: one extra button each, under the main one", function(T)
+        local ns, mock, button = setup(T)
+        local extras = ns.TargetButton.GetExtraButtons()
+        T.eq(#extras, 2, "three creatures: main button plus two")
+        T.eq(extras[1]:GetAttribute("macrotext"), "/targetexact Vile Familiar")
+        T.eq(extras[2]:GetAttribute("macrotext"), "/targetexact Distant Boar")
+        T.contains(extras[1]:GetText(), "Vile Familiar")
+        T.eq(button:GetAttribute("fp-count"), 3, "the main button still cycles through all")
+        T.eq(mock.click(button)[1], target("Near Scorpid"))
+    end },
+
+    { "extra buttons go when the creatures do, and wait out combat", function(T)
+        local ns, mock = setup(T)
+        mock.inCombat = true
+        mock.questLog[1].objectives[2] = { text = "Distant Boar slain: 5/5", finished = true }
+        mock.questLog[1].objectives[3] = { text = "Near Scorpid slain: 6/6", finished = true }
+        ns:FireEvent("QUEST_LOG_UPDATE")
+        T.eq(#ns.TargetButton.GetExtraButtons(), 2, "unchanged in combat")
+        mock.inCombat = false
+        ns:FireEvent("PLAYER_REGEN_ENABLED")
+        T.eq(#ns.TargetButton.GetExtraButtons(), 0, "one creature left: no extras")
+    end },
 }

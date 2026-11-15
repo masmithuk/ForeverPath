@@ -218,6 +218,9 @@ L.SETTING_TARGET        = "Show the Target button (nearest quest mob)"
 -- Key bindings menu (globals the game reads)
 _G.BINDING_HEADER_FOREVERPATH = "ForeverPath"
 _G["BINDING_NAME_CLICK ForeverPathTargetButton:LeftButton"] = "Target nearest quest mob"
+for i = 2, 6 do
+    _G["BINDING_NAME_CLICK ForeverPathTargetButton" .. i .. ":LeftButton"] = "Target quest mob " .. i
+end
 
 -- Minimap button
 L.MINIMAP_LEFT          = "Left-click: show/hide the step guide"

@@ -14,6 +14,7 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 - **Hold to pause** for quest automation.
 
 ### Added
+- **A Target button per creature:** when the current step needs several creatures, one extra button for each appears under the main Target button (up to 6 creatures in all), each with its own optional key binding. The main button still cycles through all of them.
 - **Abandon unrelated quests** in Settings > Tools: abandons log quests that aren't on your guide's list or in its zones for your level and the next. Hand-ins, class quests and quests QuestieDB doesn't know are kept. Two clicks: the first lists them in chat.
 
 ### Changed (getting you from quest to quest)

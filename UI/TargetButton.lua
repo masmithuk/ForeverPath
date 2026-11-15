@@ -24,6 +24,12 @@
     protected button inside the guide window would stop that window from
     resizing during combat.
 
+    Several creatures (e.g. a group of quests in the same area): the main
+    button still cycles through all of them, and one extra button per
+    creature appears underneath it (ForeverPathTargetButton2..6), each
+    targeting just that creature. They follow the main button when it's
+    moved, and can have their own key bindings.
+
     The creature list (pure; tested):
       * only the guide's current step, and only when it's a "complete
         objectives" step (pick-ups, hand-ins and trainers hide the button)
@@ -43,6 +49,9 @@ local L = ns.L
 
 local FRAME_NAME = "ForeverPathTargetButton" -- referenced by Bindings.xml
 local MAX_TARGETS = 8
+local MAX_EXTRA = 5 -- extra per-creature buttons (2nd to 6th creature)
+
+local extras = {} -- per-creature buttons, created on first need
 
 local button, header
 local pendingList     -- chosen in combat, applied after
@@ -192,6 +201,51 @@ local function create()
     return b
 end
 
+--- One extra button for a single creature, stacked under the previous one.
+local function createExtra(i)
+    local anchor = i == 1 and button or extras[i - 1]
+    local b = CreateFrame("Button", FRAME_NAME .. (i + 1), UIParent, "SecureActionButtonTemplate,UIPanelButtonTemplate")
+    b:SetSize(220, 22)
+    b:SetAttribute("type", "macro")
+    b:SetAttribute("macrotext", "")
+    b:SetPoint("TOP", anchor, "BOTTOM", 0, -2)
+    b:EnableMouse(true)
+    b:RegisterForDrag("LeftButton")
+    -- Shift + left-drag on any of them moves the whole stack.
+    b:SetScript("OnDragStart", function()
+        if IsShiftKeyDown() and not ns.GameApi.InCombat() then button:StartMoving() end
+    end)
+    b:SetScript("OnDragStop", function()
+        button:StopMovingOrSizing()
+        savePosition(button)
+    end)
+    b:Hide()
+    return b
+end
+
+--- Show one extra button for each creature after the first.
+local function applyExtras(names, useDown)
+    for i = 1, MAX_EXTRA do
+        local name = #names > 1 and names[i + 1] or nil
+        local b = extras[i]
+        if name and not b then
+            b = createExtra(i)
+            extras[i] = b
+        end
+        if b then
+            if name then
+                b:SetAttribute("macrotext", "/targetexact " .. name)
+                b:RegisterForClicks(useDown and "AnyDown" or "AnyUp")
+                b:SetText(L.TARGET_FMT:format(name))
+                b:Show()
+            else
+                b:SetAttribute("macrotext", "")
+                b:Hide()
+            end
+        end
+    end
+end
+
 --- Store a creature list on the button (out of combat only).
 local function apply(names)
     if ns.GameApi.InCombat() then
@@ -210,10 +264,12 @@ local function apply(names)
     for i = 1, math.max(oldCount, #names) do
         button:SetAttribute("fp-name" .. i, names[i])
     end
+    local useDown = GetCVarBool and GetCVarBool("ActionButtonUseKeyDown") or false
     button:SetAttribute("fp-count", #names)
     button:SetAttribute("fp-index", 0) -- next press: the nearest again
-    button:SetAttribute("fp-usedown", GetCVarBool and GetCVarBool("ActionButtonUseKeyDown") or false)
+    button:SetAttribute("fp-usedown", useDown)
     button:SetAttribute("macrotext", names[1] and ("/targetexact " .. names[1]) or "")
+    applyExtras(names, useDown)
 
     if #names > 0 then
         updateLabel(button)
@@ -257,4 +313,13 @@ end
 
 function TargetButton.GetMacro()
     return button and button:GetAttribute("macrotext")
+end
+
+--- For tests: the extra per-creature buttons that are showing.
+function TargetButton.GetExtraButtons()
+    local out = {}
+    for _, b in ipairs(extras) do
+        if b:IsShown() then out[#out + 1] = b end
+    end
+    return out
 end
