@@ -84,6 +84,30 @@ local subcommands = {
         local entry = ns.Engine.Back()
         Util.Print(entry and L.GUIDE_RESTORED_FMT:format(entry.title) or L.GUIDE_BACK_NONE)
     end,
+    debug = function()
+        local ctx = ns.Engine.BuildContext()
+        local pos = ns.GameApi.GetPlayerPosition()
+        local doable, fromList = ns.Sources.DoableQuests(ctx)
+        local p = ctx.profile
+        Util.Print(("debug: %s %s level %d (%s), guide %s"):format(
+            tostring(p.race and p.race.name), tostring(p.classFile), p.level, tostring(p.faction),
+            tostring(ctx.guide.id)))
+        Util.Print(("debug: QuestieDB %s, %d quests indexed, Questie started: %s"):format(
+            ns.QuestieData.Status(), ns.QuestieData.CandidateCount(), tostring(ns.QuestieData.QuestieStarted())))
+        Util.Print(("debug: map %s (%s) at %.1f, %.1f; zones: %s"):format(
+            tostring(pos and pos.mapID), tostring(pos and ns.GameApi.GetMapName(pos.mapID)),
+            pos and pos.x * 100 or -1, pos and pos.y * 100 or -1,
+            table.concat(ctx.route.current and ctx.route.current.zones or {}, ", ")))
+        Util.Print(("debug: %d quests available now%s, %d steps planned"):format(
+            #doable, fromList and " (from the guide's list)" or "", #ns.Engine.state.steps))
+        for i = 1, math.min(5, #doable) do
+            local id = doable[i]
+            local givers = ns.QuestieData.GetStarters(id, p.faction)
+            local pt = givers[1] and givers[1].points[1]
+            Util.Print(("debug:   %d %s - %s, %s"):format(id, ns.QuestieData.Describe(id).name,
+                tostring(givers[1] and givers[1].name), pt and ("map " .. pt.mapID) or "no location"))
+        end
+    end,
     best = function() ns.GuideFrame.BestStep() end,
     lost = function() ns.GuideFrame.BestStep() end,
     unskip = function()

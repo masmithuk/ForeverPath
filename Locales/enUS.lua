@@ -257,6 +257,7 @@ L.HELP = {
     "/fp skip - skip the current step",
     "/fp back - undo the last skip (repeat to go further back)",
     "/fp done - mark the current step done",
+    "/fp debug - what the guide sees (handy for bug reports)",
     "/fp best (or /fp lost) - go to the best step from where you are",
     "/fp unskip - bring back every skipped quest",
     "/fp waypoints auto|shortestpath|tomtom|builtin|off - choose the arrow",

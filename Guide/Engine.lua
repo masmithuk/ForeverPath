@@ -35,6 +35,7 @@ local ticker
 -- turned in or abandoned, or you level or change zone - not on every
 -- QUEST_LOG_UPDATE (which fires for each kill and loot). Cache it.
 local doableCache = nil
+local questieStarted = nil -- was Questie ready when the last plan was made?
 local function invalidateDoable() doableCache = nil end
 
 ---------------------------------------------------------------------------
@@ -106,6 +107,7 @@ function Engine.Replan()
     replanPending = false
     if not guideSettings().enabled then return end
 
+    questieStarted = ns.QuestieData.QuestieStarted()
     local ctx = Engine.BuildContext()
     local origin = ctx.origin
     local char = charGuide()
@@ -176,8 +178,28 @@ function Engine.Arrived(step, origin)
     return ns.Util.Distance(origin, to) <= step.arriveRadius
 end
 
+--- When Questie finishes starting up, its availability and zone data
+--- become usable: drop everything worked out without it and plan again.
+--- (questieStarted is recorded by each Replan.)
+local function checkQuestieStarted()
+    local started = ns.QuestieData.QuestieStarted()
+    if started and questieStarted == false then
+        questieStarted = true
+        ns.ZoneMap.Reset()
+        ns.QuestieData.ResetSpawns()
+        invalidateDoable()
+        Engine.state.currentKey = nil
+        Engine.Replan()
+        return true
+    end
+    questieStarted = started
+    return false
+end
+Engine._checkQuestieStarted = checkQuestieStarted
+
 local function onTick()
     if not guideSettings().enabled then return end
+    if checkQuestieStarted() then return end
     local origin = currentOrigin()
     local current = Engine.state.steps[1]
     if Engine.Arrived(current, origin) then

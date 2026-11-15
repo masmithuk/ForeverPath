@@ -58,7 +58,20 @@ local function get(entity, id, field)
 end
 
 --- Questie's own availability check, if the full addon is loaded.
+--- Has the full Questie addon finished starting up? Questie fills its
+--- availability and zone tables during startup, which can finish a few
+--- seconds after login - after ForeverPath's first plan. Until then its
+--- answers aren't reliable, so they're not used.
+--- How many quests suit this character (for /fp debug).
+function QuestieData.CandidateCount() return #state.candidates end
+
+function QuestieData.QuestieStarted()
+    local questie = _G.Questie
+    return type(questie) == "table" and questie.started == true
+end
+
 local function questieIsDoable(questID)
+    if not QuestieData.QuestieStarted() then return nil end
     local loader = _G.QuestieLoader
     if type(loader) ~= "table" or type(loader.ImportModule) ~= "function" then return nil end
     local ok, db = pcall(loader.ImportModule, loader, "QuestieDB")
@@ -580,6 +593,12 @@ function QuestieData.Search(query, limit)
 end
 
 --- Forget everything (tests, or after a level-up changes the race/class view).
+--- Forget converted spawn points (after map lookups get better, e.g. when
+--- Questie finishes starting up).
+function QuestieData.ResetSpawns()
+    spawnCache = {}
+end
+
 function QuestieData.Reset()
     state.status = "unknown"
     state.candidates, state.byTitle, state.classTitle = {}, {}, nil

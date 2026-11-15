@@ -237,6 +237,7 @@ function mock.install()
     _G.TomTom = nil
     _G.LibQuestieDB = nil
     _G.QuestieLoader = nil
+    _G.Questie = nil
 
     _G.CreateFrame = function(_, name)
         local f = mock.newFrame()

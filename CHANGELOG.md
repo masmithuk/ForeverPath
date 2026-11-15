@@ -4,6 +4,11 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 
 ## [0.8.0] - 2026-11-15
 
+### Fixed
+- A brand-new character could see "No steps right now" instead of its first quest. Questie finishes starting up a few seconds after login, and until then its quest-availability and zone answers are empty. ForeverPath used those answers and remembered them. Now it uses its own checks until Questie has started, doesn't remember failed zone lookups made in the meantime, and plans again the moment Questie is ready.
+- Quest givers listed under a starting sub-zone (Valley of Trials, Echo Isles, Northshire, ...) are placed on their zone's map.
+- `/fp debug` prints what the guide sees (guide, QuestieDB state, your map, quests available) for bug reports.
+
 ### Added
 - **Steps that aren't quests in your own guides**: note, buy, train, set hearth and go to a spot, placed anywhere in the quest list. Add them in the editor's Quests tab (with **Use my location**) or in JSON as `{ "step": "goto", "text": "...", "zone": "Durotar", "x": 52.0, "y": 41.5 }`. They come up in order once the quests before them are dealt with. Train and hearth clear themselves at the trainer or innkeeper, go to clears when you arrive, and the rest are ticked off with Done. They're listed in the Steps tab too.
 - **Best step** button in the guide window and the Steps tab (and `/fp best` or `/fp lost`): if you're lost, it drops any chosen or held step and picks the best one from where you're standing.
