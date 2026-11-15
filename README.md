@@ -36,7 +36,7 @@ Your guides are saved account-wide, so every character can use them. If you edit
 |---|---|
 | **Quests** | Your guide's quests, in order, with level and zone. Select one and use **Top**, **Up**, **Down**, **Bottom** or **Remove**. On the right, type part of a quest's name ("famil") or a quest ID to search QuestieDB, select a result, and click **Add after selected**. Quests already in the guide are marked. |
 | **Details** | Name, author, description, and whether it's based on **Story** or **Efficient**, which sets the default rules. |
-| **JSON** | The whole guide as JSON, for the less common settings: zones per level, rules, skipped quests and reminder steps. Changes here carry over to the other tabs. If the JSON doesn't parse, the editor keeps you here and shows the line and column. |
+| **JSON** | The whole guide as JSON, for the less common settings: zones per level, rules, skipped quests and extra steps. Changes here carry over to the other tabs. If the JSON doesn't parse, the editor keeps you here and shows the line and column. |
 
 **Check** validates the guide without saving. **Save** always validates, so a broken guide is never stored.
 
@@ -82,7 +82,7 @@ JSON is easier to share than XML: it's shorter to paste, any text editor or onli
 | `quests` | Your quests, in order. Each is `{ "id": 788, "name": "..." }` or just `788`. Only the id matters; the name is there for people reading the file. |
 | `bands` | Zones per level range, covering 1-60 in order with no gaps or overlaps. `levels` is `[from, to]`. `zones` sets both factions; otherwise use `alliance` and `horde`. `"START"` means your race's starting zone. `notes` show in the Plan tab. |
 | `skipQuests` | Quest IDs the guide never picks up or auto-accepts. |
-| `steps` | Reminders from a level. `kind` is `train`, `buy`, `note` or `hearth`. `train` clears when you open your class trainer, `hearth` when you set your hearthstone. You click the others off. |
+| `steps` | Extra steps from a level. `kind` is `train`, `buy`, `note` or `hearth`. `train` makes class training due from that level (it shows up when your trainer is nearby). `buy`, `note` and `hearth` become a step in the guide that you tick off with **Done**. |
 
 Quest IDs are the numbers in Wowhead and Questie quest links, or search for the quest in the editor.
 
@@ -92,22 +92,25 @@ Guides are read as data only, never run as code. Sizes are capped, and `|` is re
 
 ## The step guide
 
-The guide window shows your current step, the next few steps and a short list of reminders. Steps are built live from three sources:
+The guide window shows your current step and the next few steps. Steps are built live from your quest log, QuestieDB and what's nearby:
 
 | Step | Where it comes from |
 |---|---|
 | **Talk to (NPC) - Accept: (quests)** | Quests you can pick up now in your guide's zones. QuestieDB supplies the quest givers and checks prerequisites, race, class, faction and level. |
 | **Complete: (quest)** | Quests in your log. The step shows live objective progress, and the arrow points to Blizzard's own quest waypoint or the nearest QuestieDB spawn. |
 | **Turn in to (NPC)** | Finished quests in your log, pointing to the NPC who ends the quest. |
-| **Train at (trainer)** | Every two levels from level 4, pointing to your nearest class trainer. |
-| **Reminders** | Setting your hearthstone, buying bags, spending talents, learning First Aid, Riding and dual spec, plus class-specific steps. |
+| **Train at (trainer)** | When new class abilities are due (every two levels from 4) **and** your class trainer is within about 400 yards. |
+| **Set your hearthstone at (innkeeper)** | When an innkeeper is nearby and your hearthstone is bound somewhere else. Skip it and that inn won't ask again. |
+| **Train (profession) at (trainer)** | For professions you've learned, when you're close to your skill cap, old enough for the next rank (Journeyman 10, Expert 20, Artisan 35) and a trainer for it is nearby. |
+
+There's no separate reminders list: these service steps only appear in the route when they matter and you're close by.
 
 Steps advance on their own:
 
 - Accepting, progressing, handing in or abandoning a quest updates the guide immediately.
 - Opening your class trainer completes the training step.
-- Binding your hearthstone completes the hearth reminder.
-- Reminders the game can't detect, like buying bags, are ticked off by clicking them or typing `/fp done`.
+- Binding your hearthstone or training a profession removes that step.
+- A guide's own `note` and `buy` steps are ticked off with **Done** or `/fp done`.
 
 **Route order.** Steps are ordered as a walking route. From where you're standing, the guide always picks the nearest next step, and hand-ins get a small head start. The current step stays first until you finish or skip it, so the arrow doesn't jump around as you walk. Once you've walked about 150 yards, the rest of the list is re-sorted.
 
@@ -147,16 +150,23 @@ Everything runs from the game's own UI.
 - **Right-click:** open or close the main window.
 - **Drag:** move the button around the minimap.
 
-**Step guide window:** shows your current step, the next few steps and your reminders.
+**Step guide window:** shows your current step and the next few steps.
+- **Steps** opens the Steps list (below).
 - **Skip** hides the current step's quests.
-- **Back** undoes the last skip, or a reminder you ticked off by mistake, and makes that step current again. Press it repeatedly to go further back. The last 50 are remembered per character, even after a `/reload`. Hover over it to see what it will bring back.
 - **Done** appears on steps you tick off yourself.
-- **Guides** opens the guide browser.
-- **Reminders:** click one to mark it done.
+- **Zones** opens the zone browser.
 - **Header:** names the guide you're following.
 
+**Steps tab** (first tab of the main window): every quest in your guide, in order.
+- **Header:** where you are ("You're at quest 12 of 40") and how many are done, skipped and missed.
+- **List:** number, level, quest, quest giver and status (Done, Ready, In log, Skipped, Missed, Available, Level n, Locked). The step the guide is showing now is marked with `>`.
+- **Missed** means an available quest you've already moved past in the guide.
+- **Filters:** All, To do, Skipped & missed, Done.
+- **Go to this step** (or double-click) makes the selected quest the current step until it's done. If you can't do it yet, it says why.
+- **Skip / Unskip** the selected quest, and **Undo last skip** to step back through your last 50 skips (kept per character, even after a `/reload`).
+
 **Target button:** a small button labelled with a creature's name, such as "Target: Near Scorpid (1/3)". **Each press targets the next creature you still need for a quest, from nearest to furthest, then starts again at the nearest.** The label shows which creature the next press targets.
-- **Which creatures:** those from your unfinished quests, including creatures that drop quest items. It skips kill objectives you've already finished. Each creature appears once, sorted by its nearest spawn, up to 8.
+- **Which creatures:** only those for the **current step**, including creatures that drop its quest items. The button hides on steps without creatures to kill, such as picking up or handing in quests. It skips kill objectives you've already finished. Each creature appears once, sorted by its nearest spawn, up to 8.
 - **In combat:** cycling works in combat because a secure snippet inside the button steps through the list. The list itself only refreshes out of combat, because the game forbids changing it during a fight. A new list starts again at the nearest creature.
 - **Keybinding:** bind a key under *Key Bindings > AddOns > ForeverPath*. Don't include Shift in that key, because Shift-clicks are ignored so you can drag the button. One press is one step, whether or not you use "cast on key down".
 - **Moving it:** Shift + left-drag, out of combat. Its position is saved.
@@ -237,7 +247,7 @@ Leveling data is opinion-based and goes out of date with balance patches. All of
 - **Changing a class spec or tip:** edit `Data/Classes.lua`.
 - **Changing zones in a route:** edit `Data/Routes.lua`. The tests check that every route still covers levels 1 to 60 with no gaps.
 - **Adding a race:** add it to `Data/Races.lua`, keyed by the `raceFile` from `UnitRace("player")`.
-- **Adding a reminder step:** add a row to `Data/Suggestions.lua`. `detect = "trainer"` or `"hearth"` makes it complete on its own. Without `detect`, the player clicks it off.
+- **Tuning service steps:** `Data/Services.lua` has the "nearby" distance, the training cadence, the professions list and the levels for each profession rank.
 
 ### Notes on the Forever client
 
@@ -250,8 +260,8 @@ Leveling data is opinion-based and goes out of date with balance patches. All of
 ### Known limits
 
 - **Data depends on QuestieDB.** Forever's newer quests, especially the new zones above level 40, are still being added to QuestieDB. Where it has no entry, the guide only knows about those quests once they're in your log.
-- **Training cadence is assumed.** The every-two-levels training reminder follows Classic. Forever's trainer schedule isn't published, so the cadence is a setting in `Data/Suggestions.lua`.
-- **Only English trainers are found.** Class trainers are matched by their English title, such as "Mage Trainer", so other locales don't get a trainer location. They still get the reminder.
+- **Training cadence is assumed.** Class training every two levels and the profession rank levels follow Classic. Forever's schedule isn't published, so they're settings in `Data/Services.lua`.
+- **Only English titles are found.** Trainers and innkeepers are matched by their English title, such as "Mage Trainer" or "Innkeeper", so other locales don't get these steps.
 - **Not tested in the game yet.** It has been tested against a mocked client only.
 
 ## Data sources

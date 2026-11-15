@@ -82,9 +82,6 @@ function fixtures.findStep(state, key)
     for _, s in ipairs(state.steps) do
         if s.key == key then return s end
     end
-    for _, s in ipairs(state.reminders) do
-        if s.key == key then return s end
-    end
     return nil
 end
 

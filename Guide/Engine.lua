@@ -22,7 +22,6 @@ local REPLAN_DISTANCE = 150       -- yards walked before re-ordering steps
 
 Engine.state = {
     steps = {},
-    reminders = {},
     currentKey = nil,
     origin = nil,       -- world position the plan was made from
     dataStatus = "unknown",
@@ -94,6 +93,7 @@ function Engine.BuildContext()
         allowedMaps = allowedMaps(route, mapID),
         skipped = char.skipped,
         char = char,
+        focusQuest = char.focus,
     }
 end
 
@@ -104,6 +104,13 @@ function Engine.Replan()
 
     local ctx = Engine.BuildContext()
     local origin = ctx.origin
+    local char = charGuide()
+
+    -- A quest chosen in the Steps list stays the focus until it's handed in.
+    if char.focus and isCompleted(char.focus) then
+        char.focus = nil
+        ctx.focusQuest = nil
+    end
 
     local questsChanged = false
     if not doableCache and ns.QuestieData.IsReady() then
@@ -114,10 +121,18 @@ function Engine.Replan()
     ctx.doable = doableCache and doableCache.list
     ctx.doableFromList = doableCache and doableCache.fromList
 
-    local candidates, reminders = ns.Sources.Collect(ctx)
+    local candidates = ns.Sources.Collect(ctx)
     local state = Engine.state
-    state.steps = ns.Planner.Build(origin, candidates, state.currentKey, guideSettings().maxSteps)
-    state.reminders = reminders
+    local merged = ns.Planner.Merge(candidates)
+    local pinned = state.currentKey
+    if ctx.focusQuest then
+        for _, step in ipairs(merged) do
+            for _, id in ipairs(step.questIDs or {}) do
+                if id == ctx.focusQuest then pinned = step.key end
+            end
+        end
+    end
+    state.steps = ns.Planner.Order(origin, merged, pinned, guideSettings().maxSteps)
     state.origin = origin
     state.log = ctx.log
     state.dataStatus = ns.QuestieData.Status()
@@ -128,8 +143,11 @@ function Engine.Replan()
 
     if ns.GuideFrame then ns.GuideFrame.Update(state) end
     if ns.TargetButton then ns.TargetButton.Update(state, origin) end
-    -- Quest statuses in the guide browser only change with quest state.
-    if questsChanged and ns.MainFrame then ns.MainFrame.RefreshIf("guides") end
+    -- Quest statuses in the Zones and Steps tabs only change with quest state.
+    if questsChanged and ns.MainFrame then
+        ns.MainFrame.RefreshIf("zones")
+        ns.MainFrame.RefreshIf("steps")
+    end
 end
 
 --- Ask for a replan soon; many events arrive in bursts.
@@ -158,7 +176,7 @@ end
 ---------------------------------------------------------------------------
 
 ---------------------------------------------------------------------------
--- History: every skip and every hand-ticked reminder is recorded, so Back
+-- History: every skip and every hand-ticked step is recorded, so Back
 -- can undo them one at a time (newest first). Saved per character.
 ---------------------------------------------------------------------------
 
@@ -170,8 +188,9 @@ local function history()
     return char.history
 end
 
---- Mark a step's reminder/training as done and return what was changed,
---- so it can be undone.
+--- Record a step as dealt with (a guide note ticked off, training done,
+--- an inn or profession trainer passed) and note what changed in `entry`
+--- so Back can undo it.
 local function markSuggestion(step, entry)
     local char = charGuide()
     if step.suggestionID and not char.done[step.suggestionID] then
@@ -182,6 +201,10 @@ local function markSuggestion(step, entry)
         entry.trainedLevelBefore = char.trainedLevel or 0
         char.trainedLevel = step.trainingLevel
     end
+    if step.serviceKey and not char.skippedSteps[step.serviceKey] then
+        char.skippedSteps[step.serviceKey] = true
+        entry.serviceKey = step.serviceKey
+    end
 end
 
 local function record(entry)
@@ -190,17 +213,16 @@ local function record(entry)
     while #list > MAX_HISTORY do table.remove(list, 1) end
 end
 
---- Mark a step as done by hand (reminders, or anything the game can't detect).
+--- Mark a step as done by hand (a guide's note/buy steps, which the game
+--- can't detect).
 function Engine.MarkDone(key)
-    for _, list in ipairs({ Engine.state.reminders, Engine.state.steps }) do
-        for _, step in ipairs(list) do
-            if step.key == key then
-                local entry = { action = "done", key = step.key, title = step.title, questIDs = {} }
-                markSuggestion(step, entry)
-                record(entry)
-                Engine.Replan()
-                return true
-            end
+    for _, step in ipairs(Engine.state.steps) do
+        if step.key == key then
+            local entry = { action = "done", key = step.key, title = step.title, questIDs = {} }
+            markSuggestion(step, entry)
+            record(entry)
+            Engine.Replan()
+            return true
         end
     end
     return false
@@ -221,10 +243,64 @@ function Engine.SkipCurrent()
     end
     markSuggestion(step, entry)
     record(entry)
+    for _, questID in ipairs(step.questIDs or {}) do
+        if char.focus == questID then char.focus = nil end
+    end
     invalidateDoable()
     Engine.state.currentKey = nil
     Engine.Replan()
     return step
+end
+
+---------------------------------------------------------------------------
+-- Working with one quest (the Steps list)
+---------------------------------------------------------------------------
+
+--- Make the step guide take you through one quest next: pick it up, do
+--- it, hand it in. A skipped quest is unskipped.
+-- @return true, or false and a reason ("done" | "level" | "locked"), level
+function Engine.FocusQuest(questID)
+    local ctx = Engine.BuildContext()
+    local info = ns.QuestieData.Describe(questID)
+    local status = ns.Catalog.QuestStatus({ id = questID, requiredLevel = info.requiredLevel }, ctx)
+    if status == "done" or status == "level" or status == "locked" then
+        return false, status, info.requiredLevel
+    end
+    local char = charGuide()
+    char.skipped[questID] = nil
+    char.focus = questID
+    invalidateDoable()
+    Engine.state.currentKey = nil
+    Engine.Replan()
+    return true
+end
+
+--- The quest chosen in the Steps list, if any.
+function Engine.FocusedQuest()
+    return charGuide().focus
+end
+
+--- Skip one quest (from the Steps list). Back can undo it.
+function Engine.SkipQuest(questID, title)
+    local char = charGuide()
+    if char.skipped[questID] then return false end
+    char.skipped[questID] = true
+    record({ action = "skip", key = "accept:" .. questID, title = title or ("Quest " .. questID),
+             questIDs = { questID } })
+    if char.focus == questID then char.focus = nil end
+    invalidateDoable()
+    Engine.Replan()
+    return true
+end
+
+--- Bring one skipped quest back (from the Steps list).
+function Engine.UnskipQuest(questID)
+    local char = charGuide()
+    if not char.skipped[questID] then return false end
+    char.skipped[questID] = nil
+    invalidateDoable()
+    Engine.Replan()
+    return true
 end
 
 --- The step Back would bring back, or nil.
@@ -233,7 +309,7 @@ function Engine.LastSkipped()
     return list[#list]
 end
 
---- Undo the most recent skip or hand-ticked reminder, and make that step
+--- Undo the most recent skip or hand-ticked step, and make that step
 --- the current one again. Can be pressed repeatedly.
 -- @return the history entry that was undone, or nil
 function Engine.Back()
@@ -246,6 +322,7 @@ function Engine.Back()
     end
     if entry.suggestionID then char.done[entry.suggestionID] = nil end
     if entry.trainedLevelBefore then char.trainedLevel = entry.trainedLevelBefore end
+    if entry.serviceKey then char.skippedSteps[entry.serviceKey] = nil end
     invalidateDoable()
     -- Pin it so it comes back as the current step (if it still applies).
     Engine.state.currentKey = entry.key
@@ -285,7 +362,8 @@ end
 function Engine.UnskipAll()
     local char = charGuide()
     char.skipped = {}
-    -- Skips are all undone; keep only hand-ticked reminders in the history.
+    char.skippedSteps = {}
+    -- Skips are all undone; keep only hand-ticked steps in the history.
     local kept = {}
     for _, e in ipairs(history()) do
         if e.action == "done" then
@@ -302,20 +380,13 @@ end
 -- Game events
 ---------------------------------------------------------------------------
 
+--- Visiting your class trainer counts as training for your level.
+--- Profession trainers and hearthstone binding change game state the
+--- service steps read directly, so a replan is enough for those.
 local function onTrainerShow()
-    if ns.GameApi.IsTradeskillTrainer() then return end
-    local level = ns.Character.Detect().level
-    local char = charGuide()
-    char.trainedLevel = math.max(char.trainedLevel or 0, level)
-    for _, s in ipairs(ns.Sources.AllSuggestions(Engine.CurrentGuide())) do
-        if s.detect == "trainer" and level >= s.level then char.done[s.id] = true end
-    end
-    Engine.RequestReplan()
-end
-
-local function onHearthBound()
-    for _, s in ipairs(ns.Sources.AllSuggestions(Engine.CurrentGuide())) do
-        if s.detect == "hearth" then charGuide().done[s.id] = true end
+    if not ns.GameApi.IsTradeskillTrainer() then
+        local char = charGuide()
+        char.trainedLevel = math.max(char.trainedLevel or 0, ns.Character.Detect().level)
     end
     Engine.RequestReplan()
 end
@@ -352,7 +423,8 @@ function Engine.Start()
         if ns.TargetButton then ns.TargetButton.OnCombatEnded() end
         Engine.RequestReplan()
     end)
-    ns:RegisterEvent("HEARTHSTONE_BOUND", onHearthBound)
+    ns:RegisterEvent("HEARTHSTONE_BOUND", Engine.RequestReplan)
+    ns:RegisterEvent("SKILL_LINES_CHANGED", Engine.RequestReplan)
 
     invalidateDoable()
     buildIndex()
@@ -369,7 +441,7 @@ function Engine.SetEnabled(enabled)
         Engine.Replan()
     else
         ns.Waypoints.Clear()
-        Engine.state.steps, Engine.state.reminders, Engine.state.log = {}, {}, {}
+        Engine.state.steps, Engine.state.log = {}, {}
         if ns.GuideFrame then ns.GuideFrame.Update(Engine.state) end
         if ns.TargetButton then ns.TargetButton.Update(Engine.state, nil) end
     end
@@ -382,5 +454,5 @@ Engine._reset = function()
     doableCache = nil
     replanPending = false
     ticker = nil
-    Engine.state = { steps = {}, reminders = {}, dataStatus = "unknown" }
+    Engine.state = { steps = {}, dataStatus = "unknown" }
 end

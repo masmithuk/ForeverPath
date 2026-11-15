@@ -1,4 +1,4 @@
--- Going back after skipping steps (or ticking off reminders) by mistake.
+-- Going back after skipping steps (or ticking off a step) by mistake.
 
 local fixtures = require("fixtures")
 
@@ -35,18 +35,6 @@ return {
         T.eq(ns.Engine.Back(), nil, "nothing left to undo")
     end },
 
-    { "Back also undoes a reminder ticked off by mistake", function(T)
-        local ns = setup(T)
-        local function hasBags()
-            return fixtures.findStep(ns.Engine.state, "suggest:bags-1") ~= nil
-        end
-        T.truthy(hasBags())
-        ns.Engine.MarkDone("suggest:bags-1")
-        T.truthy(not hasBags(), "ticked off")
-        ns.Engine.Back()
-        T.truthy(hasBags(), "back again")
-    end },
-
     { "undoing a skipped training step restores the training level", function(T)
         local ns = setup(T)
         ForeverPathCharDB.guide.trainedLevel = 6
@@ -81,24 +69,6 @@ return {
         fixtures.login(reloaded)
         reloaded.Engine.SkipCurrent()
         T.eq(#ForeverPathCharDB.guide.history, 50)
-    end },
-
-    { "the Back button is enabled only when there's something to undo", function(T)
-        local ns = setup(T)
-        local back = ForeverPathGuideFrame.back
-        T.eq(back:IsEnabled(), false)
-        ForeverPathGuideFrame.skip:GetScript("OnClick")()
-        T.eq(back:IsEnabled(), true)
-        back:GetScript("OnClick")()
-        T.eq(first(ns), "Talk to Foreman Thazz'ril")
-        T.eq(back:IsEnabled(), false)
-    end },
-
-    { "Back still shows when every step has been skipped", function(T)
-        local ns = setup(T)
-        while first(ns) do ns.Engine.SkipCurrent() end
-        T.truthy(ForeverPathGuideFrame.back:IsShown())
-        T.eq(ForeverPathGuideFrame.back:IsEnabled(), true)
     end },
 
     { "/fp back works too", function(T)

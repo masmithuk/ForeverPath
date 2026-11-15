@@ -33,7 +33,8 @@ local SCAN_BATCH = 250
 local state = {
     status = "unknown",   -- "unknown" | "missing" | "incompatible" | "indexing" | "ready"
     candidates = {},      -- list of { id, requiredLevel, questLevel }
-    trainers = {},        -- list of NpcIds for the player's class trainer
+    byTitle = {},         -- NPC title ("Mage Trainer", "Innkeeper"...) -> list of NpcIds
+    classTitle = nil,     -- "<Class> Trainer" for this character
 }
 
 ---------------------------------------------------------------------------
@@ -336,19 +337,31 @@ function QuestieData.GetCandidates(level, rules)
     return result
 end
 
---- Class trainers for the player's class: list of actors with points.
-function QuestieData.GetTrainers(faction)
+--- NPCs with a given title (QuestieDB "subName"), friendly to `faction`,
+--- as actors with spawn points. Titles are indexed at login: your class
+--- trainer, innkeepers and every profession trainer.
+function QuestieData.GetNpcsByTitle(title, faction)
     local result = {}
-    for _, npcID in ipairs(state.trainers) do
+    for _, npcID in ipairs(state.byTitle[title] or {}) do
         if friendlyTo(npcID, faction) then
             result[#result + 1] = {
                 kind = "npc", id = npcID,
-                name = get("Npc", npcID, "name") or "Trainer",
+                name = get("Npc", npcID, "name") or title,
                 points = spawnsOf("Npc", npcID),
             }
         end
     end
     return result
+end
+
+--- "<Class> Trainer" for this character (set when the index is built).
+function QuestieData.ClassTrainerTitle()
+    return state.classTitle
+end
+
+--- Class trainers for the player's class.
+function QuestieData.GetTrainers(faction)
+    return state.classTitle and QuestieData.GetNpcsByTitle(state.classTitle, faction) or {}
 end
 
 --- The zone a quest belongs to: its zoneOrSort when that's a real area,
@@ -438,9 +451,14 @@ function QuestieData.BuildIndex(profile, schedule, onDone)
         return
     end
     state.status = "indexing"
-    state.candidates, state.trainers = {}, {}
+    state.candidates, state.byTitle = {}, {}
 
-    local trainerTitle = profile.class and (profile.class.name .. " Trainer") or nil
+    -- NPC titles worth indexing: class trainer, innkeepers, profession trainers.
+    local services = ns.Data.Services
+    local titles = { [services.innkeeperTitle] = true }
+    state.classTitle = profile.class and (profile.class.name .. " Trainer") or nil
+    if state.classTitle then titles[state.classTitle] = true end
+    for _, p in ipairs(services.professions) do titles[p .. " Trainer"] = true end
     local work = coroutine.create(function()
         local count = 0
         for _, id in ipairs(allIds("Quest")) do
@@ -458,14 +476,14 @@ function QuestieData.BuildIndex(profile, schedule, onDone)
             count = count + 1
             if count % SCAN_BATCH == 0 then coroutine.yield() end
         end
-        if trainerTitle then
-            for _, id in ipairs(allIds("Npc")) do
-                if get("Npc", id, "subName") == trainerTitle then
-                    state.trainers[#state.trainers + 1] = id
-                end
-                count = count + 1
-                if count % SCAN_BATCH == 0 then coroutine.yield() end
+        for _, id in ipairs(allIds("Npc")) do
+            local title = get("Npc", id, "subName")
+            if title and titles[title] then
+                state.byTitle[title] = state.byTitle[title] or {}
+                table.insert(state.byTitle[title], id)
             end
+            count = count + 1
+            if count % SCAN_BATCH == 0 then coroutine.yield() end
         end
     end)
 
@@ -564,7 +582,7 @@ end
 --- Forget everything (tests, or after a level-up changes the race/class view).
 function QuestieData.Reset()
     state.status = "unknown"
-    state.candidates, state.trainers = {}, {}
+    state.candidates, state.byTitle, state.classTitle = {}, {}, nil
     spawnCache = {}
     dungeonByArea = {}
     searchIndex = nil

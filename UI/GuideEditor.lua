@@ -9,7 +9,7 @@
                QuestieDB by part of a quest's name (or its ID) and add
                results after the selected quest.
       Details  name, author, description and what it's based on.
-      JSON     the whole guide as JSON: zones, rules, reminder steps and
+      JSON     the whole guide as JSON: zones, rules, extra steps and
                anything else. Also used to export and import.
 
     Modes

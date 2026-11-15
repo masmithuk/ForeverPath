@@ -70,16 +70,10 @@ local subcommands = {
         Util.Print(step and L.GUIDE_SKIPPED_FMT:format(step.title) or L.GUIDE_NOTHING_TO_SKIP)
     end,
     done = function()
-        local state = ns.Engine.state
-        -- Manual reminders first, then a manual current step. Quest steps
-        -- complete themselves from game events, so they can't be ticked off.
-        local target
-        for _, r in ipairs(state.reminders) do
-            if r.manual then target = r; break end
-        end
-        if not target and state.steps[1] and state.steps[1].manual then
-            target = state.steps[1]
-        end
+        -- Only a guide's note/buy steps are ticked off by hand; everything
+        -- else completes itself from game events.
+        local current = ns.Engine.state.steps[1]
+        local target = current and current.manual and current or nil
         if target then
             ns.Engine.MarkDone(target.key)
         else

@@ -34,6 +34,7 @@ MainFrame.BUTTON_HEIGHT = 22
 MainFrame.CONTENT_TOP = -32 - 2 * (22 + 6)
 
 local TABS = {
+    { id = "steps",    label = "TAB_STEPS",    module = "StepsTab" },
     { id = "library",  label = "TAB_LIBRARY",  module = "LibraryTab" },
     { id = "zones",    label = "TAB_ZONES",    module = "ZonesTab" },
     { id = "plan",     label = "TAB_PLAN",     module = "PlanTab" },

@@ -2,6 +2,24 @@
 
 All notable changes are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.8.0] - 2026-11-15
+
+### Added
+- **Steps tab**, the first tab of the main window: every quest in your guide in order, with where you are, what's done, skipped and missed (available quests you've moved past). Filter by All, To do, Skipped & missed or Done.
+- **Go to this step** (or double-click) makes any quest in the list the current step until it's done, and says why if you can't do it yet. Skip, Unskip and Undo last skip work from the list.
+- **Service steps** in the route, only when they're due and you're within about 400 yards:
+  - Train at your class trainer.
+  - Set your hearthstone at a nearby innkeeper when it's bound elsewhere.
+  - Train a profession you've learned when you're near its skill cap and old enough for the next rank.
+
+### Changed
+- The **Target button** only shows the current step's creatures and hides on steps without any.
+- The guide window's Back button is now **Steps**, which opens the list. Undo last skip lives in the Steps tab.
+- A guide's `note`, `buy` and `hearth` steps are now steps in the route that you tick off with Done. Its `train` steps make class training due from that level.
+
+### Removed
+- The reminders list and the built-in reminders (bags, talents, First Aid, Riding, dual spec). Level milestones are still announced in chat.
+
 ## [0.7.0] - 2026-11-15
 
 ### Added

@@ -48,6 +48,9 @@ function mock.reset()
     mock.completed = {}       -- [questID] = true
     mock.questWaypoints = {}  -- [questID] = { mapID, x, y }
     mock.tradeskillTrainer = false
+    mock.bindLocation = "Razor Hill"   -- where the hearthstone is set
+    mock.zone, mock.subzone = "Durotar", "Valley of Trials"
+    mock.skills = {}                   -- learned professions: { name, skill, max }
     mock.inCombat = false
     mock.areaNames = nil
     mock.keys = { shift = false, ctrl = false, alt = false }
@@ -268,6 +271,16 @@ function mock.install()
     _G.GetXPExhaustion = function() return mock.player.rested end
     _G.IsResting = function() return mock.player.resting end
     _G.IsTradeskillTrainer = function() return mock.tradeskillTrainer end
+    _G.GetBindLocation = function() return mock.bindLocation end
+    _G.GetZoneText = function() return mock.zone end
+    _G.GetSubZoneText = function() return mock.subzone end
+    -- The Classic skill list (header rows are skipped by the addon).
+    _G.GetNumSkillLines = function() return #mock.skills + 1 end
+    _G.GetSkillLineInfo = function(i)
+        if i == 1 then return "Professions", true end
+        local s = mock.skills[i - 1]
+        if s then return s.name, false, nil, s.skill, 0, 0, s.max end
+    end
     _G.GetMoney = function() return 0 end
     _G.GetTime = function() return 0 end
 
@@ -298,8 +311,12 @@ function mock.install()
             for _, q in ipairs(mock.questLog) do
                 if q.id == id then
                     local out = {}
-                    for _, text in ipairs(q.objectives or {}) do
-                        out[#out + 1] = { text = text, finished = false }
+                    for _, o in ipairs(q.objectives or {}) do
+                        if type(o) == "table" then
+                            out[#out + 1] = { text = o.text, finished = o.finished and true or false }
+                        else
+                            out[#out + 1] = { text = o, finished = false }
+                        end
                     end
                     return out
                 end

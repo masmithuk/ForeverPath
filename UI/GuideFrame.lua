@@ -8,8 +8,6 @@
              [Skip]
       Then:  Talk to Brave Windfeather - Accept: ...
              Complete: Break the Quilboar ...
-      Reminders (click when done):
-             Buy bags from a general goods vendor ...
 
     It only displays Engine state; all decisions live in Guide/Engine.lua.
 ]]
@@ -24,7 +22,6 @@ local Util = ns.Util
 
 local WIDTH = 320
 local PADDING = 10
-local MAX_REMINDERS = 3
 
 local ICONS = {
     ACCEPT   = "Interface\\GossipFrame\\AvailableQuestIcon",
@@ -134,31 +131,6 @@ local function newButton(parent, label, onClick)
     return b
 end
 
-local function createReminderRows(f)
-    f.reminderRows = {}
-    for i = 1, MAX_REMINDERS do
-        local row = CreateFrame("Button", nil, f)
-        row:SetSize(WIDTH - PADDING * 2, 16)
-        row.text = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        row.text:SetAllPoints()
-        row.text:SetJustifyH("LEFT")
-        row:SetScript("OnClick", function(self)
-            if self.stepKey then ns.Engine.MarkDone(self.stepKey) end
-        end)
-        row:SetScript("OnEnter", function(self)
-            if GameTooltip then
-                GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-                GameTooltip:SetText(L.GUIDE_REMINDER_TOOLTIP)
-                GameTooltip:Show()
-            end
-        end)
-        row:SetScript("OnLeave", function()
-            if GameTooltip then GameTooltip:Hide() end
-        end)
-        f.reminderRows[i] = row
-    end
-end
-
 local function create()
     local f = CreateFrame("Frame", "ForeverPathGuideFrame", UIParent, "BackdropTemplate")
     f:SetSize(WIDTH, 120)
@@ -200,26 +172,16 @@ local function create()
     f.current = newText(f, "GameFontHighlight")
     f.current:SetPoint("TOPLEFT", f.icon, "TOPRIGHT", 6, 0)
 
-    -- Button row: [Back] [Skip] [Done] [Zones]
-    f.back = newButton(f, L.GUIDE_BACK, function()
-        local entry = ns.Engine.Back()
-        if entry then Util.Print(L.GUIDE_RESTORED_FMT:format(entry.title)) end
-    end)
-    f.back:SetPoint("TOPLEFT", f.current, "BOTTOMLEFT", 0, -6)
-    f.back:SetScript("OnEnter", function(self)
-        if not GameTooltip then return end
-        local last = ns.Engine.LastSkipped()
-        GameTooltip:SetOwner(self, "ANCHOR_TOP")
-        GameTooltip:SetText(last and L.GUIDE_BACK_TOOLTIP_FMT:format(last.title) or L.GUIDE_BACK_NONE, 1, 1, 1, 1, true)
-        GameTooltip:Show()
-    end)
-    f.back:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
+    -- Button row: [Steps] [Skip] [Done] [Zones]. Steps opens the full list
+    -- (where you are, done, skipped, missed) to pick any step.
+    f.list = newButton(f, L.GUIDE_LIST, function() ns.MainFrame.ShowTab("steps") end)
+    f.list:SetPoint("TOPLEFT", f.current, "BOTTOMLEFT", 0, -6)
 
     f.skip = newButton(f, L.GUIDE_SKIP, function()
         local skipped = ns.Engine.SkipCurrent()
         if skipped then Util.Print(L.GUIDE_SKIPPED_FMT:format(skipped.title)) end
     end)
-    f.skip:SetPoint("LEFT", f.back, "RIGHT", 4, 0)
+    f.skip:SetPoint("LEFT", f.list, "RIGHT", 4, 0)
 
     f.done = newButton(f, L.GUIDE_DONE, function()
         local step = ns.Engine.state.steps[1]
@@ -233,11 +195,7 @@ local function create()
     f.guides:SetWidth(66)
 
     f.upcoming = newText(f, "GameFontHighlightSmall")
-    f.upcoming:SetPoint("TOPLEFT", f.back, "BOTTOMLEFT", 0, -8)
-
-    f.remindersHeader = newText(f, "GameFontNormalSmall")
-    f.remindersHeader:SetText(L.GUIDE_REMINDERS)
-    createReminderRows(f)
+    f.upcoming:SetPoint("TOPLEFT", f.list, "BOTTOMLEFT", 0, -8)
 
     f.status = newText(f, "GameFontHighlightSmall")
 
@@ -293,31 +251,11 @@ function GuideFrame.Update(state)
     f.upcoming:SetText(GuideFrame.UpcomingText(state.steps))
     setShown(f.upcoming, #state.steps > 1)
 
-    local reminders = state.reminders or {}
-    setShown(f.remindersHeader, #reminders > 0)
-    local rowWidgets = {}
-    for i, row in ipairs(f.reminderRows) do
-        local r = reminders[i]
-        if r then
-            row.stepKey = r.key
-            row.text:SetText("- " .. r.title)
-            row:Show()
-        else
-            row.stepKey = nil
-            row:Hide()
-        end
-        rowWidgets[i] = row
-    end
-
     local status = GuideFrame.StatusText(state.dataStatus, ns.Settings.account.guide.waypoints)
     f.status:SetText(status or "")
     setShown(f.status, status ~= nil)
 
-    local widgets = { f.upcoming, f.remindersHeader }
-    for _, row in ipairs(rowWidgets) do widgets[#widgets + 1] = row end
-    widgets[#widgets + 1] = f.status
-    if ns.Engine.LastSkipped() then f.back:Enable() else f.back:Disable() end
-    local last = layoutBelow(f.back, widgets)
+    local last = layoutBelow(f.list, { f.upcoming, f.status })
 
     local top = f:GetTop()
     local bottom = last:GetBottom()

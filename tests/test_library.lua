@@ -166,7 +166,7 @@ return {
         local ns = setup(T)
         local id = save(ns, MINE:gsub('"steps"', '"skipQuests": [103], "steps"'))
         ns.MainFrame.SetRoute(id)
-        T.truthy(fixtures.findStep(ns.Engine.state, "suggest:guide:" .. id .. ":8:BUY:Buy a Small Brown Pouch."))
+        T.truthy(fixtures.findStep(ns.Engine.state, "guide:" .. id .. ":8:BUY:Buy a Small Brown Pouch."))
         T.eq(ns.Engine.WantsQuest(103), false)
     end },
 

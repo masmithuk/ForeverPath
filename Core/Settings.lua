@@ -30,7 +30,7 @@ local ACCOUNT_DEFAULTS = {
     },
     showAllBands = false,
     announceLevelUp = true,
-    tab = "library",                      -- main window tab last shown
+    tab = "steps",                      -- main window tab last shown
     guides = {},                          -- player-made guides: [id] = guide text
     minimap = { angle = 225, hide = false },
     targetButton = true,                  -- show the Target button
@@ -58,9 +58,11 @@ local CHAR_DEFAULTS = {
     guideId = nil, -- zone name of the guide being followed; nil = Automatic
     guide = {
         skipped = {},      -- [questID] = true, hidden until /fp unskip
-        done = {},         -- [suggestionID] = true
+        done = {},         -- [guide note step id] = true
+        skippedSteps = {}, -- [service step key] = true (an inn or profession trainer you skipped)
         trainedLevel = 0,  -- last level you visited your class trainer at
-        history = {},      -- recent skips / ticked reminders, for Back
+        history = {},      -- recent skips / ticked steps, for Back
+        focus = nil,       -- quest chosen with "Go to this step", until handed in
     },
 }
 

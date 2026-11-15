@@ -25,7 +25,9 @@
     resizing during combat.
 
     The creature list (pure; tested):
-      * quests in your log that aren't ready to hand in
+      * only the guide's current step, and only when it's a "complete
+        objectives" step (pick-ups, hand-ins and trainers hide the button)
+      * that step's quests that aren't ready to hand in yet
       * their creature objectives and creatures that drop their quest items
         (objects can't be targeted)
       * skipping creatures whose kill objective is already finished
@@ -95,13 +97,19 @@ local function collectForQuest(questID, origin, found)
     end
 end
 
---- Creature names to cycle through, nearest first.
+--- Creature names to cycle through for the current step, nearest first.
+--- Only a step that sends you to do objectives has targets; turn-ins,
+--- pick-ups and trainer visits leave the button hidden.
+-- @param step   the guide's current step (may be nil)
 -- @param log    quest log from GameApi.GetQuestLog()
 -- @param origin player's world position (may be nil)
-function TargetButton.BuildList(log, origin)
+function TargetButton.BuildList(step, log, origin)
     local found = {}
-    for questID, quest in pairs(log) do
-        if not quest.complete then collectForQuest(questID, origin, found) end
+    if step and step.kind == "COMPLETE" then
+        for _, questID in ipairs(step.questIDs or {}) do
+            local quest = log[questID]
+            if quest and not quest.complete then collectForQuest(questID, origin, found) end
+        end
     end
     local list = {}
     for name, dist in pairs(found) do list[#list + 1] = { name = name, dist = dist } end
@@ -215,11 +223,11 @@ local function apply(names)
     end
 end
 
---- Rebuild the creature list from the guide's current state.
--- @param state Engine.state (uses .log)
+--- Rebuild the creature list from the guide's current step.
+-- @param state Engine.state (uses .steps[1] and .log)
 -- @param origin player's world position
 function TargetButton.Update(state, origin)
-    apply(TargetButton.BuildList(state.log or {}, origin))
+    apply(TargetButton.BuildList(state.steps and state.steps[1], state.log or {}, origin))
 end
 
 --- Apply a list chosen during combat.

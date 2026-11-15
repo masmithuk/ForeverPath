@@ -174,6 +174,7 @@ return {
         local ns, mock = setup(T, "story")
         fixtures.addToLog(mock, 101, "Vile Familiars", false, { "Vile Familiar slain: 2/8" })
         fixtures.login(ns)
+        ns.Engine.FocusQuest(101)
         T.eq(ns.TargetButton.GetMacro(), "/targetexact Vile Familiar")
         T.truthy(ForeverPathTargetButton:IsShown())
         T.contains(ForeverPathTargetButton:GetText(), "Vile Familiar")
@@ -200,6 +201,7 @@ return {
         mock.db.Quest[101].objectives = { nil, nil, { { 5001 } } }
         fixtures.addToLog(mock, 101, "Vile Familiars", false, { "Familiar Fang: 0/4" })
         fixtures.login(ns)
+        ns.Engine.FocusQuest(101)
         T.eq(ns.TargetButton.GetMacro(), "/targetexact Distant Boar")
     end },
 
@@ -207,6 +209,7 @@ return {
         local ns, mock = setup(T, "story")
         fixtures.addToLog(mock, 101, "Vile Familiars", false, { "Vile Familiar slain: 2/8" })
         fixtures.login(ns)
+        ns.Engine.FocusQuest(101)
         mock.inCombat = true
         mock.db.Quest[101].objectives = { { { 2002 } } }
         ns.QuestieData.Reset()

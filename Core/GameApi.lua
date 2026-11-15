@@ -20,9 +20,9 @@ ns.GameApi = GameApi
 
 local function safe(fn, ...)
     if type(fn) ~= "function" then return nil end
-    local ok, a, b, c, d = pcall(fn, ...)
+    local ok, a, b, c, d, e, f, g = pcall(fn, ...)
     if not ok then return nil end
-    return a, b, c, d
+    return a, b, c, d, e, f, g
 end
 
 local function num(v) return ns.Util.SafeNumber(v) end
@@ -158,6 +158,44 @@ end
 ---------------------------------------------------------------------------
 -- Character
 ---------------------------------------------------------------------------
+
+--- Where your hearthstone is bound (a town or subzone name), or nil.
+function GameApi.GetBindLocation()
+    return ns.Util.SafeString(safe(GetBindLocation))
+end
+
+--- The zone and subzone you're standing in.
+function GameApi.GetZoneNames()
+    return ns.Util.SafeString(safe(GetZoneText)), ns.Util.SafeString(safe(GetSubZoneText))
+end
+
+--- Professions you've learned: list of { name, skill, max }.
+--- Uses the modern profession API, or the Classic skill list.
+function GameApi.GetProfessions()
+    local list = {}
+    if GetProfessions and GetProfessionInfo then
+        local indices = { safe(GetProfessions) }
+        for i = 1, 6 do
+            local index = indices[i]
+            if index then
+                local name, _, skill, max = safe(GetProfessionInfo, index)
+                if ns.Util.SafeString(name) and num(skill) and num(max) then
+                    list[#list + 1] = { name = name, skill = skill, max = max }
+                end
+            end
+        end
+        return list
+    end
+    if GetNumSkillLines and GetSkillLineInfo then
+        for i = 1, num(safe(GetNumSkillLines)) or 0 do
+            local name, isHeader, _, skill, _, _, max = safe(GetSkillLineInfo, i)
+            if not isHeader and ns.Util.SafeString(name) and num(skill) and num(max) then
+                list[#list + 1] = { name = name, skill = skill, max = max }
+            end
+        end
+    end
+    return list
+end
 
 function GameApi.InCombat()
     return InCombatLockdown and InCombatLockdown() and true or false

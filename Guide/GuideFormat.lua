@@ -33,7 +33,7 @@
                 "alliance"/"horde" set one side. Used when the quest list
                 has nothing available, and for the Zones and Plan tabs.
     skipQuests  quests the guide never picks up.
-    steps       reminders from a level: train, buy, note or hearth.
+    steps       extra steps from a level: train, buy, note or hearth.
 
     Inside the addon a guide is a plain table:
       name, author, description, base, rules, quests = { {id, name} },

@@ -114,24 +114,69 @@ return {
         T.eq(ns.Sources.DueTrainingLevel(10, 8), 10)
     end },
 
-    { "reminders: hearth completes itself, bags by clicking", function(T)
+    { "class training is a step only when the trainer is near", function(T)
         local ns, mock = T.fresh()
         fixtures.durotar(mock)
         local state = fixtures.login(ns)
-        T.truthy(hasKey(state, "suggest:hearth-start"), "hearth reminder")
-        T.truthy(hasKey(state, "suggest:bags-1"), "bags reminder")
-        ns:FireEvent("HEARTHSTONE_BOUND")
-        T.truthy(not hasKey(ns.Engine.state, "suggest:hearth-start"), "hearth done")
-        SlashCmdList.FOREVERPATH("done")
-        T.truthy(not hasKey(ns.Engine.state, "suggest:bags-1"), "bags ticked off")
+        T.truthy(hasKey(state, "train:8"), "Mai'ah is ~30 yards away")
+        mock.player.position = { mapID = 1411, x = 0.05, y = 0.95 }
+        ns.Engine.Replan()
+        T.truthy(not hasKey(ns.Engine.state, "train:8"), "too far away - no step")
     end },
 
-    { "class-specific reminders only for that class", function(T)
+    { "set hearthstone when an innkeeper is near and it's bound elsewhere", function(T)
         local ns, mock = T.fresh()
-        fixtures.durotar(mock, { level = 10 })
+        local db = fixtures.durotar(mock)
+        db.Npc[3002] = { name = "Innkeeper Grosk", subName = "Innkeeper", friendlyToFaction = "H",
+                         spawns = { [14] = { { 49, 49 } } } }
         local state = fixtures.login(ns)
-        T.truthy(not hasKey(state, "suggest:pet-10"), "mage gets no pet reminder")
-        T.truthy(hasKey(state, "suggest:talents-10"))
+        local step = fixtures.findStep(state, "hearth:npc:3002")
+        T.truthy(step, "hearth step")
+        T.contains(step.lines[1], "Razor Hill")
+        mock.bindLocation = "Valley of Trials"
+        ns:FireEvent("HEARTHSTONE_BOUND")
+        T.truthy(not hasKey(ns.Engine.state, "hearth:npc:3002"), "bound here - step gone")
+    end },
+
+    { "skipping an inn keeps it skipped, and Back brings it back", function(T)
+        local ns, mock = T.fresh()
+        local db = fixtures.durotar(mock)
+        ForeverPathCharDB.guide.trainedLevel = 60
+        db.Npc[3002] = { name = "Innkeeper Grosk", subName = "Innkeeper", friendlyToFaction = "H",
+                         spawns = { [14] = { { 50, 50 } } } }
+        local state = fixtures.login(ns)
+        T.eq(state.steps[1].key, "hearth:npc:3002", "standing next to the innkeeper")
+        ns.Engine.SkipCurrent()
+        T.truthy(not hasKey(ns.Engine.state, "hearth:npc:3002"))
+        ns.Engine.Back()
+        T.truthy(hasKey(ns.Engine.state, "hearth:npc:3002"))
+    end },
+
+    { "profession training follows the professions you've learned", function(T)
+        local ns, mock = T.fresh()
+        local db = fixtures.durotar(mock, { level = 12 })
+        db.Npc[3003] = { name = "Miao'zan", subName = "Alchemy Trainer", friendlyToFaction = "H",
+                         spawns = { [14] = { { 51, 51 } } } }
+        db.Npc[3004] = { name = "Krunn", subName = "Mining Trainer", friendlyToFaction = "H",
+                         spawns = { [14] = { { 51, 49 } } } }
+        mock.skills = { { name = "Alchemy", skill = 70, max = 75 } }
+        local state = fixtures.login(ns)
+        T.truthy(hasKey(state, "profession:Alchemy:75"), "Alchemy 70/75, trainer nearby")
+        T.truthy(not hasKey(state, "profession:Mining:75"), "you don't know Mining")
+        mock.skills[1].max = 150
+        ns:FireEvent("SKILL_LINES_CHANGED")
+        T.truthy(not hasKey(ns.Engine.state, "profession:Alchemy:150"), "70/150 - not ready yet")
+    end },
+
+    { "profession rank rules", function(T)
+        local ns = T.fresh()
+        local need = ns.Sources.ProfessionNeedsTraining
+        T.truthy(need({ skill = 50, max = 75 }, 10), "close to the cap")
+        T.truthy(not need({ skill = 50, max = 75 }, 9), "Journeyman needs level 10")
+        T.truthy(not need({ skill = 20, max = 75 }, 10), "far from the cap")
+        T.truthy(not need({ skill = 140, max = 150 }, 19), "Expert needs level 20")
+        T.truthy(need({ skill = 140, max = 150 }, 20))
+        T.truthy(not need({ skill = 300, max = 300 }, 60), "maxed")
     end },
 
     { "without QuestieDB the guide still follows your quest log", function(T)

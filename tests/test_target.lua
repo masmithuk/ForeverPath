@@ -1,19 +1,26 @@
--- Target button: cycling nearest to furthest, one step per press, Shift.
+-- Target button: cycling nearest to furthest, one step per press, Shift,
+-- and only the current step's creatures.
 
 local fixtures = require("fixtures")
 
--- Three quests whose creatures are 20, ~141 and ~636 yards away.
+-- The current step is "Vile Familiars", which needs three creatures that are
+-- 20, ~141 and ~636 yards away. Another quest in the log ("Boars") has its
+-- own creature, which the button should leave alone.
 local function setup(T)
     local ns, mock = T.fresh()
     local db = fixtures.durotar(mock)
     db.Npc[2002] = { name = "Distant Boar", spawns = { [14] = { { 95, 95 } } } }
     db.Npc[2003] = { name = "Near Scorpid", spawns = { [14] = { { 52, 50 } } } }
-    db.Quest[112] = { name = "Boars", startedBy = { { 1002 } }, objectives = { { { 2002 } } } }
-    db.Quest[113] = { name = "Scorpids", startedBy = { { 1002 } }, objectives = { { { 2003 } } } }
-    fixtures.addToLog(mock, 101, "Vile Familiars", false, { "Vile Familiar slain: 2/8" })
-    fixtures.addToLog(mock, 112, "Boars", false, { "Distant Boar slain: 0/5" })
-    fixtures.addToLog(mock, 113, "Scorpids", false, { "Near Scorpid slain: 1/6" })
+    db.Npc[2004] = { name = "Other Quest Raptor", spawns = { [14] = { { 51, 50 } } } }
+    db.Quest[101].objectives = { { { 2001 }, { 2002 }, { 2003 } } }
+    db.Quest[112] = { name = "Boars", startedBy = { { 1002 } }, objectives = { { { 2004 } } } }
+    fixtures.addToLog(mock, 101, "Vile Familiars", false,
+        { "Vile Familiar slain: 2/8", "Distant Boar slain: 0/5", "Near Scorpid slain: 1/6" })
+    fixtures.addToLog(mock, 112, "Boars", false, { "Other Quest Raptor slain: 0/5" })
+    ForeverPathCharDB = ForeverPathCharDB or {}
     fixtures.login(ns)
+    ForeverPathCharDB.guide.trainedLevel = 60
+    T.truthy(ns.Engine.FocusQuest(101), "focus the Vile Familiars step")
     return ns, mock, ForeverPathTargetButton
 end
 
@@ -91,17 +98,27 @@ return {
         local ns, mock, button = setup(T)
         mock.click(button)
         mock.click(button)
-        fixtures.removeFromLog(mock, 113) -- scorpids done and handed in
-        ns:FireEvent("QUEST_REMOVED", 113)
+        -- All the scorpids are dead now.
+        mock.questLog[1].objectives[3] = { text = "Near Scorpid slain: 6/6", finished = true }
+        ns:FireEvent("QUEST_LOG_UPDATE")
         T.eq(table.concat(ns.TargetButton.GetNames(), ","), "Vile Familiar,Distant Boar")
         T.eq(mock.click(button)[1], target("Vile Familiar"))
     end },
 
-    { "the same creature for two quests is listed once", function(T)
-        local ns, mock = setup(T)
-        mock.db.Quest[114] = { name = "More Familiars", startedBy = { { 1001 } }, objectives = { { { 2001 } } } }
-        fixtures.addToLog(mock, 114, "More Familiars", false, { "Vile Familiar slain: 0/3" })
-        ns:FireEvent("QUEST_ACCEPTED", 114)
-        T.eq(#ns.TargetButton.GetNames(), 3)
+    { "other quests' creatures aren't listed", function(T)
+        local ns = setup(T)
+        for _, name in ipairs(ns.TargetButton.GetNames()) do
+            T.truthy(name ~= "Other Quest Raptor", "only the current step's creatures")
+        end
+    end },
+
+    { "hidden when the current step isn't about objectives", function(T)
+        local ns, _, button = setup(T)
+        T.truthy(button:IsShown())
+        -- Focus a quest that still has to be picked up.
+        T.truthy(ns.Engine.FocusQuest(102))
+        T.eq(ns.Engine.state.steps[1].kind, "ACCEPT")
+        T.eq(#ns.TargetButton.GetNames(), 0)
+        T.truthy(not button:IsShown())
     end },
 }
