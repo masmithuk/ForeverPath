@@ -1,25 +1,35 @@
 --[[
     ForeverPath - UI/TargetButton.lua
 
-    "Target" button: one click (or one key) targets the nearest creature
-    you still need for a quest in your log.
+    "Target" button: each press targets the next quest creature, from the
+    nearest to the furthest, then starts again at the nearest.
 
-    Addons may not call TargetUnit themselves; targeting has to come from a
-    hardware click on a secure button. So this is a SecureActionButton that
-    runs the macro "/targetexact <name>", and ForeverPath only decides the
-    name. The game also forbids changing a secure button's macro in combat,
-    so a new name chosen mid-fight is applied as soon as combat ends.
+    Why it's built this way
+      * Addons may not call TargetUnit; targeting has to come from a
+        hardware click on a secure button. So this is a
+        SecureActionButton running the macro "/targetexact <name>".
+      * Addon code can't change a secure button during combat, but a
+        secure snippet running inside the button can. So, out of combat,
+        ForeverPath stores the sorted creature list on the button as
+        attributes (fp-name1..N, fp-count), and a secure pre-click snippet
+        steps to the next name and rewrites the macro on every press -
+        which keeps working mid-fight.
+      * The button listens to both mouse-down and mouse-up (so key bindings
+        work whatever your "cast on key down" setting is); the snippet lets
+        exactly one of them through so each press moves one step.
+      * Shift is reserved for moving: Shift + left-drag moves the button and
+        a Shift-click doesn't target anything.
 
     It is its own small frame rather than part of the guide window: a
     protected button inside the guide window would stop that window from
     resizing during combat.
 
-    Picking the creature (pure; tested):
+    The creature list (pure; tested):
       * quests in your log that aren't ready to hand in
       * their creature objectives and creatures that drop their quest items
         (objects can't be targeted)
       * skipping creatures whose kill objective is already finished
-      * the current guide step's quest first, then the nearest spawn
+      * one entry per creature, sorted by its nearest spawn
 ]]
 
 local _, ns = ...
@@ -30,12 +40,29 @@ ns.TargetButton = TargetButton
 local L = ns.L
 
 local FRAME_NAME = "ForeverPathTargetButton" -- referenced by Bindings.xml
-local button
-local pendingName -- chosen in combat, applied after
-local appliedName
+local MAX_TARGETS = 8
+
+local button, header
+local pendingList     -- chosen in combat, applied after
+local appliedKey      -- signature of the list on the button
+
+-- Runs in the secure (restricted) environment before every click.
+-- `self` is the button; returning false cancels the click.
+local PRE_CLICK = [[
+    if IsShiftKeyDown() then return false end
+    if (down and true or false) ~= (self:GetAttribute("fp-usedown") and true or false) then
+        return false
+    end
+    local count = self:GetAttribute("fp-count") or 0
+    if count == 0 then return false end
+    local index = (self:GetAttribute("fp-index") or 0) % count + 1
+    self:SetAttribute("fp-index", index)
+    self:SetAttribute("macrotext", "/targetexact " .. self:GetAttribute("fp-name" .. index))
+]]
+TargetButton.PRE_CLICK = PRE_CLICK
 
 ---------------------------------------------------------------------------
--- Choosing the creature (pure)
+-- Choosing the creatures (pure)
 ---------------------------------------------------------------------------
 
 --- Is the objective naming this creature already done?
@@ -49,47 +76,42 @@ local function killDone(name, objectives)
     return finished and not open
 end
 
---- Nearest targetable creature for one quest: name, distance.
-local function nearestForQuest(questID, origin)
+--- Add each targetable creature for one quest to `found` (name -> distance).
+local function collectForQuest(questID, origin, found)
     local objectives = ns.GameApi.GetObjectives(questID)
-    local bestName, bestDist
     for _, t in ipairs(ns.QuestieData.GetObjectiveTargets(questID)) do
         if t.kind == "npc" and t.name ~= "" and not killDone(t.name, objectives) then
-            local points = {}
             for _, p in ipairs(t.points) do
                 if p.world == nil then
                     p.world = ns.GameApi.GetWorldPosition(p.mapID, p.x, p.y) or false
                 end
-                points[#points + 1] = p
             end
-            local _, dist = ns.Planner.Nearest(origin, points)
-            if dist and (not bestDist or dist < bestDist) then
-                bestName, bestDist = t.name, dist
+            local _, dist = ns.Planner.Nearest(origin, t.points)
+            dist = dist or math.huge
+            if not found[t.name] or dist < found[t.name] then
+                found[t.name] = dist
             end
         end
     end
-    return bestName, bestDist
 end
 
---- Name of the creature to target, or nil.
--- @param log      quest log from GameApi.GetQuestLog()
--- @param origin   player's world position (may be nil)
--- @param preferID quest ID of the current guide step, tried first
-function TargetButton.Pick(log, origin, preferID)
-    if preferID and log[preferID] and not log[preferID].complete then
-        local name = nearestForQuest(preferID, origin)
-        if name then return name end
-    end
-    local bestName, bestDist
+--- Creature names to cycle through, nearest first.
+-- @param log    quest log from GameApi.GetQuestLog()
+-- @param origin player's world position (may be nil)
+function TargetButton.BuildList(log, origin)
+    local found = {}
     for questID, quest in pairs(log) do
-        if not quest.complete then
-            local name, dist = nearestForQuest(questID, origin)
-            if name and (not bestDist or dist < bestDist) then
-                bestName, bestDist = name, dist
-            end
-        end
+        if not quest.complete then collectForQuest(questID, origin, found) end
     end
-    return bestName
+    local list = {}
+    for name, dist in pairs(found) do list[#list + 1] = { name = name, dist = dist } end
+    table.sort(list, function(a, b)
+        if a.dist ~= b.dist then return a.dist < b.dist end
+        return a.name < b.name
+    end)
+    local names = {}
+    for i = 1, math.min(#list, MAX_TARGETS) do names[i] = list[i].name end
+    return names
 end
 
 ---------------------------------------------------------------------------
@@ -108,26 +130,42 @@ local function restorePosition(f)
     f:SetPoint(saved.point, UIParent, saved.relativePoint, saved.x, saved.y)
 end
 
+--- "Target: Vile Familiar (2/4)" for the creature the next press targets.
+local function updateLabel(b)
+    local count = b:GetAttribute("fp-count") or 0
+    if count == 0 then return end
+    local index = (b:GetAttribute("fp-index") or 0) % count + 1
+    local name = b:GetAttribute("fp-name" .. index)
+    if count > 1 then
+        b:SetText(L.TARGET_CYCLE_FMT:format(name, index, count))
+    else
+        b:SetText(L.TARGET_FMT:format(name))
+    end
+end
+
 local function create()
     local b = CreateFrame("Button", FRAME_NAME, UIParent, "SecureActionButtonTemplate,UIPanelButtonTemplate")
-    b:SetSize(190, 24)
+    b:SetSize(220, 24)
     b:SetAttribute("type", "macro")
     b:SetAttribute("macrotext", "")
-    -- Both, so it works whether the "cast on key down" option is on or off.
     b:RegisterForClicks("AnyUp", "AnyDown")
     b:SetMovable(true)
+    b:EnableMouse(true)
     b:SetClampedToScreen(true)
     b:RegisterForDrag("LeftButton")
-    -- Moving a secure frame is only allowed out of combat.
+
+    -- Shift + left-drag moves it (secure frames can only move out of combat).
     b:SetScript("OnDragStart", function(self)
-        if not ns.GameApi.InCombat() and IsShiftKeyDown and IsShiftKeyDown() then
-            self:StartMoving()
-        end
+        if IsShiftKeyDown() and not ns.GameApi.InCombat() then self:StartMoving() end
     end)
     b:SetScript("OnDragStop", function(self)
         self:StopMovingOrSizing()
         savePosition(self)
     end)
+
+    -- Show which creature the *next* press will target.
+    b:HookScript("PostClick", updateLabel)
+
     b:SetScript("OnEnter", function(self)
         if not GameTooltip then return end
         GameTooltip:SetOwner(self, "ANCHOR_TOP")
@@ -136,50 +174,62 @@ local function create()
         GameTooltip:Show()
     end)
     b:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
+
+    -- The secure snippet needs a secure handler "header" to run from.
+    header = CreateFrame("Frame", nil, UIParent, "SecureHandlerBaseTemplate")
+    SecureHandlerWrapScript(b, "OnClick", header, PRE_CLICK)
+
     restorePosition(b)
     b:Hide()
     return b
 end
 
---- Point the button at `name` (nil hides it). Deferred while in combat.
-local function apply(name)
+--- Store a creature list on the button (out of combat only).
+local function apply(names)
     if ns.GameApi.InCombat() then
-        pendingName = name or false
+        pendingList = names
         return
     end
-    pendingName = nil
+    pendingList = nil
     if not button then button = create() end
-    local wanted = ns.Settings.account.targetButton and name or nil
-    if wanted == appliedName then return end
-    appliedName = wanted
+    if not ns.Settings.account.targetButton then names = {} end
 
-    if wanted then
-        button:SetAttribute("macrotext", "/targetexact " .. wanted)
-        button:SetText(L.TARGET_FMT:format(wanted))
+    local key = table.concat(names, "\n")
+    if key == appliedKey then return end
+    appliedKey = key
+
+    local oldCount = button:GetAttribute("fp-count") or 0
+    for i = 1, math.max(oldCount, #names) do
+        button:SetAttribute("fp-name" .. i, names[i])
+    end
+    button:SetAttribute("fp-count", #names)
+    button:SetAttribute("fp-index", 0) -- next press: the nearest again
+    button:SetAttribute("fp-usedown", GetCVarBool and GetCVarBool("ActionButtonUseKeyDown") or false)
+    button:SetAttribute("macrotext", names[1] and ("/targetexact " .. names[1]) or "")
+
+    if #names > 0 then
+        updateLabel(button)
         button:Show()
     else
-        button:SetAttribute("macrotext", "")
         button:Hide()
     end
 end
 
---- Re-pick the creature from the guide's current state.
--- @param state Engine.state (uses .log, .steps)
+--- Rebuild the creature list from the guide's current state.
+-- @param state Engine.state (uses .log)
 -- @param origin player's world position
 function TargetButton.Update(state, origin)
-    local first = state.steps and state.steps[1]
-    local preferID = first and first.kind == "COMPLETE" and first.questIDs[1] or nil
-    apply(TargetButton.Pick(state.log or {}, origin, preferID))
+    apply(TargetButton.BuildList(state.log or {}, origin))
 end
 
---- Apply a name chosen during combat.
+--- Apply a list chosen during combat.
 function TargetButton.OnCombatEnded()
-    if pendingName ~= nil then apply(pendingName or nil) end
+    if pendingList then apply(pendingList) end
 end
 
 function TargetButton.SetEnabled(enabled)
     ns.Settings.account.targetButton = enabled and true or false
-    appliedName = "\0" -- force the next apply to redraw
+    appliedKey = nil -- force the next apply to redraw
     TargetButton.Update(ns.Engine.state, ns.Engine.state.origin)
 end
 
@@ -187,7 +237,16 @@ function TargetButton.ResetPosition()
     if button and not ns.GameApi.InCombat() then restorePosition(button) end
 end
 
---- For tests.
+--- For tests: the creature names stored on the button, in order.
+function TargetButton.GetNames()
+    local names = {}
+    if not button then return names end
+    for i = 1, button:GetAttribute("fp-count") or 0 do
+        names[i] = button:GetAttribute("fp-name" .. i)
+    end
+    return names
+end
+
 function TargetButton.GetMacro()
     return button and button:GetAttribute("macrotext")
 end

@@ -86,10 +86,11 @@ Everything runs from the game's own UI.
 - **Reminders:** click one to mark it done.
 - **Header:** names the guide you're following.
 
-**Target button:** a small button labelled with a creature's name, such as "Target: Vile Familiar". Click it to target the nearest creature you still need for a quest in your log. That includes creatures that drop your quest items, and it skips kill objectives you've already finished. The current step's quest comes first.
-- **Keybinding:** bind a key under *Key Bindings > AddOns > ForeverPath*.
-- **Moving it:** Shift-drag.
-- **Combat:** the game doesn't let addons change targets themselves, or change a secure button during combat. So the button runs a `/targetexact` macro when you press it, and it picks its next creature as soon as combat ends.
+**Target button:** a small button labelled with a creature's name, such as "Target: Near Scorpid (1/3)". **Each press targets the next creature you still need for a quest, from nearest to furthest, then starts again at the nearest.** The label shows which creature the next press targets.
+- **Which creatures:** those from your unfinished quests, including creatures that drop quest items. It skips kill objectives you've already finished. Each creature appears once, sorted by its nearest spawn, up to 8.
+- **In combat:** cycling works in combat because a secure snippet inside the button steps through the list. The list itself only refreshes out of combat, because the game forbids changing it during a fight. A new list starts again at the nearest creature.
+- **Keybinding:** bind a key under *Key Bindings > AddOns > ForeverPath*. Don't include Shift in that key, because Shift-clicks are ignored so you can drag the button. One press is one step, whether or not you use "cast on key down".
+- **Moving it:** Shift + left-drag, out of combat. Its position is saved.
 - **Turning it off:** use the checkbox in Settings.
 
 **Quest automation:** talking to a quest giver accepts their quests and hands in finished ones, with the reward taken for you.
@@ -135,7 +136,7 @@ UI/MainFrame.lua     Main window shell: tabs and route picker
 UI/*Tab.lua          Guides (browser), Plan and Settings tabs
 UI/GuideFrame.lua    Step guide window
 UI/MinimapButton.lua Library-free minimap button
-UI/TargetButton.lua  Secure "target nearest quest mob" button (Bindings.xml adds its key)
+UI/TargetButton.lua  Secure button cycling quest mobs nearest-to-furthest (Bindings.xml adds its key)
 Core/Commands.lua    Slash commands
 Core/Bootstrap.lua   Event wiring
 tests/               Lua 5.1 tests with a mocked WoW API, QuestieDB and TomTom

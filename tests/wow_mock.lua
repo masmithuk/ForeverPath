@@ -93,6 +93,11 @@ function Frame:GetBottom() return 400 end
 function Frame:CreateFontString() return mock.newFrame() end
 function Frame:CreateTexture() return mock.newFrame() end
 function Frame:SetTexture(t) self.texture = t end
+function Frame:HookScript(name, fn)
+    local hooks = rawget(self, "hooks") or {}
+    hooks[name] = fn
+    rawset(self, "hooks", hooks)
+end
 function Frame:SetAttribute(k, v)
     local attrs = rawget(self, "attrs") or {}
     attrs[k] = v
@@ -243,6 +248,12 @@ function mock.install()
     _G.IsShiftKeyDown = function() return mock.keys.shift end
     _G.IsControlKeyDown = function() return mock.keys.ctrl end
     _G.IsAltKeyDown = function() return mock.keys.alt end
+    _G.GetCVarBool = function(name) return name == "ActionButtonUseKeyDown" and mock.useKeyDown end
+    mock.useKeyDown = false
+    _G.SecureHandlerWrapScript = function(frame, script, _, preBody)
+        rawset(frame, "wrapped", rawget(frame, "wrapped") or {})
+        rawget(frame, "wrapped")[script] = preBody
+    end
     mock.installQuestDialog()
 
     _G.UnitRace = function() return unpack(mock.player.race) end
@@ -342,6 +353,35 @@ function mock.install()
         for i = 1, select("#", ...) do parts[#parts + 1] = tostring(select(i, ...)) end
         mock.printed[#mock.printed + 1] = table.concat(parts, " ")
     end
+end
+
+---------------------------------------------------------------------------
+-- Pressing a secure button: runs its wrapped pre-click snippet the way the
+-- game's restricted environment would, then the PostClick hook.
+-- Returns the macro that would run, or nil if the snippet cancelled it.
+---------------------------------------------------------------------------
+
+function mock.press(frame, down)
+    local body = rawget(frame, "wrapped") and rawget(frame, "wrapped").OnClick
+    if body then
+        local fn = assert(loadstring("local self, button, down = ...\n" .. body))
+        setfenv(fn, { IsShiftKeyDown = function() return mock.keys.shift end })
+        if fn(frame, "LeftButton", down) == false then return nil end
+    end
+    local macro = frame:GetAttribute("macrotext")
+    local hooks = rawget(frame, "hooks")
+    if hooks and hooks.PostClick then hooks.PostClick(frame, "LeftButton", down) end
+    return macro
+end
+
+--- A full mouse click: down then up. Returns the macros that ran.
+function mock.click(frame)
+    local ran = {}
+    for _, down in ipairs({ true, false }) do
+        local macro = mock.press(frame, down)
+        if macro then ran[#ran + 1] = macro end
+    end
+    return ran
 end
 
 ---------------------------------------------------------------------------

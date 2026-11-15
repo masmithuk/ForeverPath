@@ -4,6 +4,10 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 
 ## [0.5.0] - 2026-11-15
 
+### Changed
+- The Target button now cycles. Each press targets the next quest creature, from nearest to furthest, then starts again. It works in combat through a secure pre-click snippet and moves one step per press in either key-down mode. The label shows the next target and its position, such as "(2/3)".
+- Shift + left-drag moves the Target button, and Shift-clicks no longer target anything.
+
 ### Added
 - Auto accept and auto turn-in when talking to quest givers. Finished quests are handed in first. Handles the gossip list, the older quest greeting, quest text, the progress check and the reward window.
 - Safeguards:

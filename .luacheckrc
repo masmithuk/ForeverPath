@@ -36,6 +36,8 @@ read_globals = {
     "Enum",
     "GameTooltip",
     "GetCursorPosition",
+    "GetCVarBool",
+    "SecureHandlerWrapScript",
     "GetTime",
     "InCombatLockdown",
     "IsShiftKeyDown",

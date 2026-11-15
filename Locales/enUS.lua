@@ -73,10 +73,12 @@ L.AUTO_COSTS_GOLD        = "This quest costs gold to complete, so ForeverPath le
 
 -- Target button
 L.TARGET_FMT            = "Target: %s"
+L.TARGET_CYCLE_FMT      = "Target: %s (%d/%d)"
 L.TARGET_TOOLTIP_TITLE  = "Target nearest quest mob"
-L.TARGET_TOOLTIP_BODY   = "Targets the closest creature you still need for a quest. "
-    .. "It can't change during combat - it updates as soon as combat ends. "
-    .. "Bind a key under Key Bindings > AddOns > ForeverPath. Shift-drag to move."
+L.TARGET_TOOLTIP_BODY   = "Each press targets the next creature you still need for a quest, "
+    .. "nearest first, then starts again. Works in combat; the list refreshes when combat ends. "
+    .. "Bind a key under Key Bindings > AddOns > ForeverPath (without Shift). "
+    .. "Shift + left-drag to move."
 L.SETTING_TARGET        = "Show the Target button (nearest quest mob)"
 
 -- Key bindings menu (globals the game reads)
