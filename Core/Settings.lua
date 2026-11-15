@@ -60,6 +60,7 @@ local CHAR_DEFAULTS = {
         skipped = {},      -- [questID] = true, hidden until /fp unskip
         done = {},         -- [suggestionID] = true
         trainedLevel = 0,  -- last level you visited your class trainer at
+        history = {},      -- recent skips / ticked reminders, for Back
     },
 }
 

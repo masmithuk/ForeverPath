@@ -217,7 +217,8 @@ L.HELP = {
     "/fp - toggle the leveling plan window",
     "/fp guide - toggle the step-by-step guide window",
     "/fp guide on|off - turn the step guide (and its waypoints) on or off",
-    "/fp skip - skip the current step (its quests stay hidden until /fp unskip)",
+    "/fp skip - skip the current step",
+    "/fp back - undo the last skip (repeat to go further back)",
     "/fp done - mark the current step done",
     "/fp unskip - bring back every skipped quest",
     "/fp waypoints auto|shortestpath|tomtom|builtin|off - choose the arrow",
@@ -232,6 +233,10 @@ L.GUIDE_TITLE                = "ForeverPath Guide"
 L.GUIDE_AUTOMATIC            = "Automatic"
 L.GUIDE_BROWSE               = "Zones"
 L.GUIDE_SKIP                 = "Skip"
+L.GUIDE_BACK                 = "Back"
+L.GUIDE_BACK_TOOLTIP_FMT     = "Undo skipping: %s"
+L.GUIDE_BACK_NONE            = "Nothing to go back to."
+L.GUIDE_RESTORED_FMT         = "Back to: %s"
 L.GUIDE_DONE                 = "Done"
 L.GUIDE_NOTHING              = "No steps right now. Check the leveling plan (/fp) for where to head next."
 L.GUIDE_NO_LOCATION          = "No map location known for this step."
@@ -241,7 +246,7 @@ L.GUIDE_NEEDS_QUESTIE        = "Install Questie (with QuestieDB) to be guided to
 L.GUIDE_QUESTIE_INCOMPATIBLE = "This QuestieDB version isn't supported - update ForeverPath or Questie. Showing your quest log only."
 L.GUIDE_INDEXING             = "Reading QuestieDB..."
 L.GUIDE_NO_WAYPOINTS         = "No waypoint addon available - install Shortest Path Forever or TomTom."
-L.GUIDE_SKIPPED_FMT          = "Skipped: %s (/fp unskip to undo)"
+L.GUIDE_SKIPPED_FMT          = "Skipped: %s (press Back to undo)"
 L.GUIDE_UNSKIPPED            = "All skipped quests are back in the guide."
 L.GUIDE_ON                   = "Step guide on."
 L.GUIDE_OFF                  = "Step guide off."

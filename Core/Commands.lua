@@ -86,6 +86,10 @@ local subcommands = {
             Util.Print(L.GUIDE_NOTHING_TO_MARK)
         end
     end,
+    back = function()
+        local entry = ns.Engine.Back()
+        Util.Print(entry and L.GUIDE_RESTORED_FMT:format(entry.title) or L.GUIDE_BACK_NONE)
+    end,
     unskip = function()
         ns.Engine.UnskipAll()
         Util.Print(L.GUIDE_UNSKIPPED)

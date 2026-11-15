@@ -200,11 +200,26 @@ local function create()
     f.current = newText(f, "GameFontHighlight")
     f.current:SetPoint("TOPLEFT", f.icon, "TOPRIGHT", 6, 0)
 
+    -- Button row: [Back] [Skip] [Done] [Zones]
+    f.back = newButton(f, L.GUIDE_BACK, function()
+        local entry = ns.Engine.Back()
+        if entry then Util.Print(L.GUIDE_RESTORED_FMT:format(entry.title)) end
+    end)
+    f.back:SetPoint("TOPLEFT", f.current, "BOTTOMLEFT", 0, -6)
+    f.back:SetScript("OnEnter", function(self)
+        if not GameTooltip then return end
+        local last = ns.Engine.LastSkipped()
+        GameTooltip:SetOwner(self, "ANCHOR_TOP")
+        GameTooltip:SetText(last and L.GUIDE_BACK_TOOLTIP_FMT:format(last.title) or L.GUIDE_BACK_NONE, 1, 1, 1, 1, true)
+        GameTooltip:Show()
+    end)
+    f.back:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
+
     f.skip = newButton(f, L.GUIDE_SKIP, function()
         local skipped = ns.Engine.SkipCurrent()
         if skipped then Util.Print(L.GUIDE_SKIPPED_FMT:format(skipped.title)) end
     end)
-    f.skip:SetPoint("TOPLEFT", f.current, "BOTTOMLEFT", 0, -6)
+    f.skip:SetPoint("LEFT", f.back, "RIGHT", 4, 0)
 
     f.done = newButton(f, L.GUIDE_DONE, function()
         local step = ns.Engine.state.steps[1]
@@ -215,9 +230,10 @@ local function create()
     f.guides = newButton(f, L.GUIDE_BROWSE, function() ns.MainFrame.ShowTab("zones") end)
     -- Sits after Done's slot so it doesn't move when Done is hidden.
     f.guides:SetPoint("LEFT", f.skip, "RIGHT", 78, 0)
+    f.guides:SetWidth(66)
 
     f.upcoming = newText(f, "GameFontHighlightSmall")
-    f.upcoming:SetPoint("TOPLEFT", f.skip, "BOTTOMLEFT", 0, -8)
+    f.upcoming:SetPoint("TOPLEFT", f.back, "BOTTOMLEFT", 0, -8)
 
     f.remindersHeader = newText(f, "GameFontNormalSmall")
     f.remindersHeader:SetText(L.GUIDE_REMINDERS)
@@ -300,7 +316,8 @@ function GuideFrame.Update(state)
     local widgets = { f.upcoming, f.remindersHeader }
     for _, row in ipairs(rowWidgets) do widgets[#widgets + 1] = row end
     widgets[#widgets + 1] = f.status
-    local last = layoutBelow(step and f.skip or f.current, widgets)
+    if ns.Engine.LastSkipped() then f.back:Enable() else f.back:Disable() end
+    local last = layoutBelow(f.back, widgets)
 
     local top = f:GetTop()
     local bottom = last:GetBottom()

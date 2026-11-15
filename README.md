@@ -149,6 +149,7 @@ Everything runs from the game's own UI.
 
 **Step guide window:** shows your current step, the next few steps and your reminders.
 - **Skip** hides the current step's quests.
+- **Back** undoes the last skip, or a reminder you ticked off by mistake, and makes that step current again. Press it repeatedly to go further back. The last 50 are remembered per character, even after a `/reload`. Hover over it to see what it will bring back.
 - **Done** appears on steps you tick off yourself.
 - **Guides** opens the guide browser.
 - **Reminders:** click one to mark it done.
@@ -180,7 +181,7 @@ The minimap's addon compartment also opens the main window, even if you hide the
 
 ### Slash commands (optional)
 
-Everything above can also be done with commands, which is handy for macros: `/fp`, `/fp guide [on|off]`, `/fp skip`, `/fp done`, `/fp unskip`, `/fp waypoints auto|shortestpath|tomtom|builtin|off`, `/fp route <guide id or name>`, `/fp next`, `/fp reset` and `/fp help`.
+Everything above can also be done with commands, which is handy for macros: `/fp`, `/fp guide [on|off]`, `/fp skip`, `/fp back`, `/fp done`, `/fp unskip`, `/fp waypoints auto|shortestpath|tomtom|builtin|off`, `/fp route <guide id or name>`, `/fp next`, `/fp reset` and `/fp help`.
 
 ## Project layout
 

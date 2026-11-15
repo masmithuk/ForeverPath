@@ -157,12 +157,37 @@ end
 -- Completing and skipping steps
 ---------------------------------------------------------------------------
 
-local function markSuggestion(step)
+---------------------------------------------------------------------------
+-- History: every skip and every hand-ticked reminder is recorded, so Back
+-- can undo them one at a time (newest first). Saved per character.
+---------------------------------------------------------------------------
+
+local MAX_HISTORY = 50
+
+local function history()
     local char = charGuide()
-    if step.suggestionID then char.done[step.suggestionID] = true end
-    if step.trainingLevel then
-        char.trainedLevel = math.max(char.trainedLevel or 0, step.trainingLevel)
+    char.history = char.history or {}
+    return char.history
+end
+
+--- Mark a step's reminder/training as done and return what was changed,
+--- so it can be undone.
+local function markSuggestion(step, entry)
+    local char = charGuide()
+    if step.suggestionID and not char.done[step.suggestionID] then
+        char.done[step.suggestionID] = true
+        entry.suggestionID = step.suggestionID
     end
+    if step.trainingLevel and (char.trainedLevel or 0) < step.trainingLevel then
+        entry.trainedLevelBefore = char.trainedLevel or 0
+        char.trainedLevel = step.trainingLevel
+    end
+end
+
+local function record(entry)
+    local list = history()
+    list[#list + 1] = entry
+    while #list > MAX_HISTORY do table.remove(list, 1) end
 end
 
 --- Mark a step as done by hand (reminders, or anything the game can't detect).
@@ -170,7 +195,9 @@ function Engine.MarkDone(key)
     for _, list in ipairs({ Engine.state.reminders, Engine.state.steps }) do
         for _, step in ipairs(list) do
             if step.key == key then
-                markSuggestion(step)
+                local entry = { action = "done", key = step.key, title = step.title, questIDs = {} }
+                markSuggestion(step, entry)
+                record(entry)
                 Engine.Replan()
                 return true
             end
@@ -179,18 +206,51 @@ function Engine.MarkDone(key)
     return false
 end
 
---- Skip the current step. Quests it covers stay hidden until /fp unskip.
+--- Skip the current step. Quests it covers stay hidden until Back (or
+--- "Bring back skipped quests").
 function Engine.SkipCurrent()
     local step = Engine.state.steps[1]
     if not step then return nil end
     local char = charGuide()
+    local entry = { action = "skip", key = step.key, title = step.title, questIDs = {} }
     for _, questID in ipairs(step.questIDs or {}) do
-        char.skipped[questID] = true
+        if not char.skipped[questID] then
+            char.skipped[questID] = true
+            entry.questIDs[#entry.questIDs + 1] = questID
+        end
     end
-    markSuggestion(step)
+    markSuggestion(step, entry)
+    record(entry)
+    invalidateDoable()
     Engine.state.currentKey = nil
     Engine.Replan()
     return step
+end
+
+--- The step Back would bring back, or nil.
+function Engine.LastSkipped()
+    local list = history()
+    return list[#list]
+end
+
+--- Undo the most recent skip or hand-ticked reminder, and make that step
+--- the current one again. Can be pressed repeatedly.
+-- @return the history entry that was undone, or nil
+function Engine.Back()
+    local list = history()
+    local entry = table.remove(list)
+    if not entry then return nil end
+    local char = charGuide()
+    for _, questID in ipairs(entry.questIDs or {}) do
+        char.skipped[questID] = nil
+    end
+    if entry.suggestionID then char.done[entry.suggestionID] = nil end
+    if entry.trainedLevelBefore then char.trainedLevel = entry.trainedLevelBefore end
+    invalidateDoable()
+    -- Pin it so it comes back as the current step (if it still applies).
+    Engine.state.currentKey = entry.key
+    Engine.Replan()
+    return entry
 end
 
 --- Would the current mode pick this quest up? (for auto-accept)
@@ -223,7 +283,17 @@ function Engine.SetGuide(guideId)
 end
 
 function Engine.UnskipAll()
-    charGuide().skipped = {}
+    local char = charGuide()
+    char.skipped = {}
+    -- Skips are all undone; keep only hand-ticked reminders in the history.
+    local kept = {}
+    for _, e in ipairs(history()) do
+        if e.action == "done" then
+            e.questIDs = {}
+            kept[#kept + 1] = e
+        end
+    end
+    char.history = kept
     invalidateDoable()
     Engine.Replan()
 end

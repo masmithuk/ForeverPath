@@ -5,6 +5,9 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 ## [0.7.0] - 2026-11-15
 
 ### Added
+- **Back** button in the step guide window, plus `/fp back`. It undoes the most recent skip, or a hand-ticked reminder, and makes that step current again. Press it repeatedly to keep going back. Undoing a skipped training step restores your training level. The last 50 actions are kept per character.
+
+### Added
 - Guides can have their own **quest list**. The step guide follows it in order: the next three listed quests get a strong head start, and hand-ins and objectives still fit in by distance. When nothing on the list is available, the guide's zones take over.
 - New guide editor:
   - **Quests** tab: the guide's quests with level and zone, Top/Up/Down/Bottom/Remove, and QuestieDB search by partial name or quest ID with "Add after selected".
