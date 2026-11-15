@@ -48,6 +48,7 @@ ns:RegisterEvent("PLAYER_LOGIN", function()
     end
     ns.MinimapButton.Init()
     ns.Engine.Start()
+    ns.AutoQuest.Start()
 end)
 
 ns:RegisterEvent("PLAYER_LEVEL_UP", onLevelUp)

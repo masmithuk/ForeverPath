@@ -92,13 +92,19 @@ Everything runs from the game's own UI.
 - **Combat:** the game doesn't let addons change targets themselves, or change a secure button during combat. So the button runs a `/targetexact` macro when you press it, and it picks its next creature as soon as combat ends.
 - **Turning it off:** use the checkbox in Settings.
 
+**Quest automation:** talking to a quest giver accepts their quests and hands in finished ones, with the reward taken for you.
+- **Pausing:** hold **Shift** while you open the NPC and nothing is automated for that conversation. The pause key can be changed in Settings.
+- **Never automated:** choosing between several rewards, quests that cost gold to complete, quests shared by other players, and escort confirmations are always left to you.
+- **Accept filters**, all set in Settings: quests you skipped in the guide, grey quests and repeatable quests are skipped. By default it also only accepts quests your mode would pick, so Efficient won't load you up with low-value quests. Quests QuestieDB doesn't know yet are accepted.
+- **Questie:** if Questie's own auto-accept or auto-complete is on, ForeverPath stands aside and Settings tells you, so the two don't fight over the same window.
+
 **Main window**, with three tabs. The mode buttons at the top (Story, Efficient, Dungeon) apply to Guides and Plan.
 
 | Tab | What's in it |
 |---|---|
 | **Guides** | A list of every zone guide on your route. Each guide shows its level range and how many of its quests you've done, guides for your level are gold, and the one you're following has an arrow. Click a guide to see all its quests: level, quest giver and your status (Done, Ready to turn in, In your log, Available, the level you need, or Requirements not met yet). **Follow this guide** keeps the step guide in that zone. **Automatic** goes back to following your route for your level. |
 | **Plan** | Leveling spec and tips for your class, your route's level bands, dungeons for your level, upcoming milestones and rested XP. |
-| **Settings** | Turn step-by-step guiding on or off, show or hide the guide window and the minimap button, and turn level-up announcements on or off. Choose the waypoint arrow (Automatic, TomTom, Map pin, Off). Bring back skipped quests, and reset window positions. |
+| **Settings** | Quest automation: accept, turn in, only quests your mode wants, skip grey or repeatable quests, and the pause key. Also: turn step-by-step guiding on or off, show or hide the guide window and the minimap button, and turn level-up announcements on or off. Choose the waypoint arrow (Automatic, TomTom, Map pin, Off). Bring back skipped quests, and reset window positions. |
 
 The minimap's addon compartment also opens the main window, even if you hide the minimap button.
 
@@ -124,6 +130,7 @@ Guide/Sources.lua    Live game state -> candidate steps
 Guide/Planner.lua    Pure: merge steps at the same NPC, order as a walking route
 Guide/Engine.lua     Events -> replans, sticky current step, skip/done, chosen guide, caching
 Guide/Catalog.lua    Zone guides per route and their quest overviews (guide browser data)
+Guide/AutoQuest.lua  Auto accept / turn in: pure decisions plus the quest dialog events
 UI/MainFrame.lua     Main window shell: tabs and route picker
 UI/*Tab.lua          Guides (browser), Plan and Settings tabs
 UI/GuideFrame.lua    Step guide window

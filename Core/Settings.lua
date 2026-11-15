@@ -33,6 +33,14 @@ local ACCOUNT_DEFAULTS = {
     tab = "guides",                       -- main window tab last shown
     minimap = { angle = 225, hide = false },
     targetButton = true,                  -- show the Target button
+    auto = {
+        accept = true,          -- accept quests when talking to quest givers
+        turnIn = true,          -- hand in finished quests and take the reward
+        followMode = true,      -- only accept quests the current mode would pick
+        skipTrivial = true,     -- never auto-accept grey quests
+        skipRepeatable = true,  -- never auto-accept repeatable quests
+        pauseKey = "SHIFT",     -- hold while talking to pause: SHIFT | CTRL | ALT | NONE
+    },
     target = { point = "RIGHT", relativePoint = "RIGHT", x = -80, y = 40 },
     guide = {
         enabled = true,

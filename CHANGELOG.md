@@ -2,6 +2,19 @@
 
 All notable changes are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] - 2026-11-15
+
+### Added
+- Auto accept and auto turn-in when talking to quest givers. Finished quests are handed in first. Handles the gossip list, the older quest greeting, quest text, the progress check and the reward window.
+- Safeguards:
+  - Hold Shift (configurable) to pause for a conversation.
+  - Never picks between several rewards or pays gold.
+  - Ignores quests shared by players.
+  - Tries each quest once per conversation, so a full log can't loop.
+  - Stands aside when Questie's own automation is on.
+- Accept filters: skipped quests, grey quests, repeatable quests, and "only quests my mode would pick", which uses the mode's level window, Efficient's detour limit and Dungeon mode's dungeon quests.
+- Quest automation column in the Settings tab.
+
 ## [0.4.0] - 2026-11-13
 
 ### Changed

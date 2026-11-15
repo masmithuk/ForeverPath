@@ -199,6 +199,11 @@ function Engine.SkipCurrent()
     return step
 end
 
+--- Would the current mode pick this quest up? (for auto-accept)
+function Engine.WantsQuest(questID)
+    return ns.Sources.WantsQuest(Engine.BuildContext(), questID)
+end
+
 --- The mode changed: different zones and rules, so rebuild everything.
 --- A guide chosen in the old mode no longer applies.
 function Engine.OnModeChanged()

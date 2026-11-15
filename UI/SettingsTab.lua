@@ -63,6 +63,25 @@ local function heading(parent, text, anchor, offset)
     return fs
 end
 
+-- Right column: quest automation.
+local AUTO_CHECKBOXES = {}
+for _, entry in ipairs({
+    { "SETTING_AUTO_ACCEPT", "accept" },
+    { "SETTING_AUTO_TURNIN", "turnIn" },
+    { "SETTING_AUTO_FOLLOW", "followMode" },
+    { "SETTING_AUTO_TRIVIAL", "skipTrivial" },
+    { "SETTING_AUTO_REPEAT", "skipRepeatable" },
+}) do
+    local key = entry[2]
+    AUTO_CHECKBOXES[#AUTO_CHECKBOXES + 1] = {
+        label = entry[1],
+        get = function() return ns.Settings.account.auto[key] end,
+        set = function(v) ns.Settings.account.auto[key] = v end,
+    }
+end
+
+local RIGHT_COLUMN_X = 360
+
 local function createCheckbox(parent, def, anchor)
     local cb = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
     cb:SetSize(26, 26)
@@ -127,6 +146,36 @@ function SettingsTab.Create(parent)
     end)
     panel.reset:SetPoint("LEFT", panel.unskip, "RIGHT", 6, 0)
 
+    -- Quest automation (right column).
+    local autoHeading = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    autoHeading:SetText(L.SETTINGS_AUTO)
+    autoHeading:SetPoint("TOPLEFT", panel, "TOPLEFT", RIGHT_COLUMN_X, 0)
+    anchor = autoHeading
+    for _, def in ipairs(AUTO_CHECKBOXES) do
+        local cb = createCheckbox(panel, def, anchor)
+        panel.checkboxes[#panel.checkboxes + 1] = cb
+        anchor = cb
+    end
+
+    local pauseLabel = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    pauseLabel:SetText(L.AUTO_PAUSE_LABEL)
+    pauseLabel:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, -10)
+    panel.pauseButtons = {}
+    for i, key in ipairs(ns.AutoQuest.MODIFIERS) do
+        local b = MF.NewButton(panel, L["AUTO_KEY_" .. key], 70, function()
+            ns.Settings.account.auto.pauseKey = key
+            SettingsTab.Refresh()
+        end)
+        b:SetPoint("TOPLEFT", pauseLabel, "BOTTOMLEFT", (i - 1) * 74, -6)
+        b.key = key
+        panel.pauseButtons[i] = b
+    end
+
+    panel.autoNote = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    panel.autoNote:SetPoint("TOPLEFT", panel.pauseButtons[1], "BOTTOMLEFT", 0, -10)
+    panel.autoNote:SetWidth(320)
+    panel.autoNote:SetJustifyH("LEFT")
+
     return panel
 end
 
@@ -139,6 +188,15 @@ function SettingsTab.Refresh()
     for _, b in ipairs(panel.waypointButtons) do
         if b.choice == setting then b:LockHighlight() else b:UnlockHighlight() end
     end
+    for _, b in ipairs(panel.pauseButtons) do
+        if b.key == ns.Settings.account.auto.pauseKey then b:LockHighlight() else b:UnlockHighlight() end
+    end
+    if ns.AutoQuest.QuestieAutomationOn() then
+        panel.autoNote:SetText(ns.Util.Color("warn", L.AUTO_QUESTIE_ON))
+    else
+        panel.autoNote:SetText(ns.Util.Color("muted", L.AUTO_NOTES))
+    end
+
     local inUse = ns.Waypoints.Resolve(setting)
     panel.waypointStatus:SetText(L.WAYPOINTS_IN_USE_FMT:format(L["WAYPOINTS_" .. inUse:upper()]))
 end

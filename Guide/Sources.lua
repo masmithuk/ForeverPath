@@ -203,6 +203,29 @@ local function isDetour(questID, giverPoint, maxDetour)
     return dist ~= nil and dist > maxDetour
 end
 
+--- Would the current mode pick this quest up? Used by auto-accept.
+--- A quest an NPC offers is clearly available, so prerequisites aren't
+--- re-checked - only what the mode itself filters on.
+function Sources.WantsQuest(ctx, questID)
+    if ctx.skipped[questID] then return false end
+    local data = ns.QuestieData
+    if not data.IsReady() then return true end
+
+    local rules = rulesOf(ctx)
+    -- Dungeon mode always wants the quests for dungeons you're ready for.
+    if rules.dungeons and dungeonFor(questID, ctx) then return true end
+
+    local inWindow = data.InLevelWindow(questID, ctx.profile.level, rules)
+    if inWindow == nil then return true end -- unknown to QuestieDB: allow
+    if not inWindow then return false end
+
+    if rules.maxDetour then
+        local _, point = nearestActor(ctx.origin, data.GetStarters(questID, ctx.profile.faction))
+        if isDetour(questID, point, rules.maxDetour) then return false end
+    end
+    return true
+end
+
 local function acceptBonus(ctx, questID, isDungeon)
     local rules = rulesOf(ctx)
     local bonus = 0

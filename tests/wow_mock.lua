@@ -50,6 +50,15 @@ function mock.reset()
     mock.tradeskillTrainer = false
     mock.inCombat = false
     mock.areaNames = nil
+    mock.keys = { shift = false, ctrl = false, alt = false }
+    -- The NPC conversation currently on screen (see installQuestDialog).
+    mock.dialog = {
+        gossipActive = {}, gossipAvailable = {},       -- C_GossipInfo lists
+        greetingActive = {}, greetingAvailable = {},   -- QUEST_GREETING lists
+        questID = 0, completable = true, choices = 0, cost = 0,
+        autoAccepted = false, sharedByPlayer = false,
+    }
+    mock.calls = {}                                    -- "AcceptQuest", "SelectActiveQuest:101", ...
     mock.tickers = {}
     mock.tomtom = nil         -- set by mock.installTomTom()
     mock.userWaypoint = nil
@@ -160,6 +169,48 @@ function mock.installQuestieDB(db, contractOk)
 end
 
 ---------------------------------------------------------------------------
+-- The quest dialog API, recording every action into mock.calls.
+---------------------------------------------------------------------------
+
+function mock.installQuestDialog()
+    local d = function() return mock.dialog end
+    local function record(name, arg)
+        mock.calls[#mock.calls + 1] = arg ~= nil and (name .. ":" .. tostring(arg)) or name
+    end
+    _G.C_GossipInfo = {
+        GetActiveQuests = function() return d().gossipActive end,
+        GetAvailableQuests = function() return d().gossipAvailable end,
+        SelectActiveQuest = function(id) record("SelectActiveQuest", id) end,
+        SelectAvailableQuest = function(id) record("SelectAvailableQuest", id) end,
+    }
+    _G.GetNumActiveQuests = function() return #d().greetingActive end
+    _G.GetActiveTitle = function(i) local q = d().greetingActive[i]; return q.title, q.isComplete end
+    _G.GetActiveQuestID = function(i) return d().greetingActive[i].questID end
+    _G.GetNumAvailableQuests = function() return #d().greetingAvailable end
+    _G.GetAvailableQuestInfo = function(i)
+        local q = d().greetingAvailable[i]
+        return q.isTrivial, 1, q.repeatable, false, q.questID
+    end
+    _G.SelectActiveQuest = function(i) record("SelectActiveQuest#", i) end
+    _G.SelectAvailableQuest = function(i) record("SelectAvailableQuest#", i) end
+    _G.GetQuestID = function() return d().questID end
+    _G.QuestGetAutoAccept = function() return d().autoAccepted end
+    _G.AcknowledgeAutoAcceptQuest = function() record("AcknowledgeAutoAcceptQuest") end
+    _G.UnitIsPlayer = function() return d().sharedByPlayer end
+    _G.AcceptQuest = function() record("AcceptQuest") end
+    _G.IsQuestCompletable = function() return d().completable end
+    _G.CompleteQuest = function() record("CompleteQuest") end
+    _G.GetNumQuestChoices = function() return d().choices end
+    _G.GetQuestMoneyToGet = function() return d().cost end
+    _G.GetQuestReward = function(choice) record("GetQuestReward", choice) end
+    _G.GossipFrame = mock.newFrame()
+    _G.QuestFrame = mock.newFrame()
+    _G.GossipFrame:Hide()
+    _G.QuestFrame:Hide()
+    _G.Questie = nil
+end
+
+---------------------------------------------------------------------------
 -- Install globals
 ---------------------------------------------------------------------------
 
@@ -189,7 +240,10 @@ function mock.install()
     _G.Minimap = mock.newFrame()
     _G.GetCursorPosition = function() return 0, 0 end
     _G.InCombatLockdown = function() return mock.inCombat end
-    _G.IsShiftKeyDown = function() return false end
+    _G.IsShiftKeyDown = function() return mock.keys.shift end
+    _G.IsControlKeyDown = function() return mock.keys.ctrl end
+    _G.IsAltKeyDown = function() return mock.keys.alt end
+    mock.installQuestDialog()
 
     _G.UnitRace = function() return unpack(mock.player.race) end
     _G.UnitClass = function() return unpack(mock.player.class) end

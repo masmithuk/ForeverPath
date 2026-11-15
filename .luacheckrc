@@ -21,6 +21,12 @@ globals = {
 
 -- WoW API used by the addon.
 read_globals = {
+    -- Quest dialog (auto accept / turn in)
+    "AcceptQuest", "AcknowledgeAutoAcceptQuest", "C_GossipInfo", "CompleteQuest",
+    "GetActiveQuestID", "GetActiveTitle", "GetAvailableQuestInfo", "GetNumActiveQuests",
+    "GetNumAvailableQuests", "GetNumQuestChoices", "GetQuestID", "GetQuestMoneyToGet",
+    "GetQuestReward", "IsAltKeyDown", "IsControlKeyDown", "IsQuestCompletable",
+    "QuestGetAutoAccept", "SelectActiveQuest", "SelectAvailableQuest", "UnitIsPlayer",
     "BreakUpLargeNumbers",
     "C_Map",
     "C_QuestLog",

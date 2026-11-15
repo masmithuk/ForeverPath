@@ -311,6 +311,15 @@ end
 -- Candidate index
 ---------------------------------------------------------------------------
 
+--- Is a quest inside a mode's level window? nil when QuestieDB doesn't know it.
+function QuestieData.InLevelWindow(questID, level, rules)
+    local qLevel = get("Quest", questID, "questLevel") or get("Quest", questID, "requiredLevel")
+    if not qLevel or qLevel <= 0 then return nil end
+    local greyGap = rules and rules.greyGap or GREY_LEVEL_GAP
+    local above = rules and rules.levelsAbove or LEVELS_ABOVE
+    return qLevel >= level - greyGap and qLevel <= level + above
+end
+
 --- Quests in the level window that pass the static race/class filter.
 -- @param rules optional mode rules ({ greyGap, levelsAbove })
 function QuestieData.GetCandidates(level, rules)
