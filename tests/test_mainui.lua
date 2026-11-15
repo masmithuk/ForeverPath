@@ -155,12 +155,10 @@ return {
         T.eq(#mock.tomtom.removed, #mock.tomtom.waypoints, "arrow removed")
     end },
 
-    { "the pause key is a dropdown too", function(T)
+    { "there's no hold-to-pause setting", function(T)
         local ns = login(T)
         ns.MainFrame.ShowTab("settings")
-        ns.SettingsTab.ChoosePauseKey("CTRL")
-        T.eq(ForeverPathDB.auto.pauseKey, "CTRL")
-        T.contains(ns.SettingsTab.GetPanel().pauseKey:GetText(), "Ctrl")
+        T.eq(rawget(ns.SettingsTab.GetPanel(), "pauseKey"), nil)
     end },
 
     { "settings checkboxes: guide window and minimap button", function(T)

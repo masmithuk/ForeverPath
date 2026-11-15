@@ -8,7 +8,7 @@
                          level-up messages; the waypoint arrow (dropdown);
                          bring back skipped quests, abandon quests the guide
                          doesn't use (two clicks), reset window positions
-      Quest automation   auto accept / hand in, and the key that pauses it
+      Quest automation   auto accept / hand in and what to skip
 
     The two columns sit side by side when the window is wide enough and
     stack when it's narrow.
@@ -178,15 +178,6 @@ function SettingsTab.Create(parent)
         panel.checkboxes[#panel.checkboxes + 1] = cb
         panel.right[#panel.right + 1] = cb
     end
-    panel.pauseLabel = label(panel, L.AUTO_PAUSE_LABEL, "GameFontNormal")
-    local keys = {}
-    for _, key in ipairs(ns.AutoQuest.MODIFIERS) do keys[#keys + 1] = { id = key, label = L["AUTO_KEY_" .. key] } end
-    panel.pauseKey = MF.NewDropdown(panel, 140, keys,
-        function() return ns.Settings.account.auto.pauseKey end,
-        function(id)
-            ns.Settings.account.auto.pauseKey = id
-            SettingsTab.Refresh()
-        end)
     panel.autoNote = label(panel, "", "GameFontHighlightSmall")
     panel:SetScript("OnHide", disarm) -- leaving the tab cancels a half-done abandon
     return panel
@@ -217,8 +208,6 @@ local function layout()
     end
     local rightItems = {}
     for i, cb in ipairs(panel.right) do rightItems[i] = { cb, i == 1 and -6 or -2 } end
-    rightItems[#rightItems + 1] = { panel.pauseLabel, -14 }
-    rightItems[#rightItems + 1] = { panel.pauseKey, -6 }
     rightItems[#rightItems + 1] = { panel.autoNote, -10 }
     stack(panel.autoHeading, rightItems)
     panel.autoNote:SetWidth(columnWidth)
@@ -261,7 +250,6 @@ function SettingsTab.Refresh()
         cb:SetChecked(cb.def.get() and true or false)
     end
     panel.waypoints.Update()
-    panel.pauseKey.Update()
     if ns.AutoQuest.QuestieAutomationOn() then
         panel.autoNote:SetText(ns.Util.Color("warn", L.AUTO_QUESTIE_ON))
     else
@@ -292,11 +280,6 @@ function SettingsTab.ChooseWaypoints(id)
     for _, item in ipairs(panel.waypoints.items) do
         if item.choice == id then item:GetScript("OnClick")(item) end
     end
-end
-
---- For tests: pick the hold-to-pause key.
-function SettingsTab.ChoosePauseKey(key)
-    panel.pauseKey:Choose(key)
 end
 
 function SettingsTab.GetPanel() return panel end

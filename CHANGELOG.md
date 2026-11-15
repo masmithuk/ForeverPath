@@ -4,6 +4,14 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 
 ## [0.8.0] - 2026-11-15
 
+### Fixed
+- **Auto accept** could silently turn quests down: "only quests my guide would pick" was on by default and Speedrun's filters rejected many quests. It's now off by default (and turned off once on upgrade), so every offered quest is taken unless it's grey, repeatable or skipped.
+- Auto accept no longer relies on Blizzard's gossip and quest windows to tell when a conversation ends, so dialog replacements such as DialogueUI don't stop it.
+- `/fp debug` reports the auto accept settings and whether Questie's own automation is in charge.
+
+### Removed
+- **Hold to pause** for quest automation.
+
 ### Added
 - **Abandon unrelated quests** in Settings > Tools: abandons log quests that aren't on your guide's list or in its zones for your level and the next. Hand-ins, class quests and quests QuestieDB doesn't know are kept. Two clicks: the first lists them in chat.
 

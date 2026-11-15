@@ -50,8 +50,17 @@ return {
         T.eq(calls(mock), "SelectAvailableQuest:102")
     end },
 
-    { "Efficient mode won't accept quests it would skip", function(T)
+    { "accepts every quest by default, even ones the guide wouldn't pick", function(T)
         local ns, mock = setup(T, "efficient", 6)
+        T.eq(ForeverPathDB.auto.followMode, false, "off by default")
+        mock.dialog.gossipAvailable = { { questID = 108 }, { questID = 101 } }
+        ns:FireEvent("GOSSIP_SHOW")
+        T.eq(calls(mock), "SelectAvailableQuest:108")
+    end },
+
+    { "with 'only quests my guide uses', Speedrun won't accept quests it would skip", function(T)
+        local ns, mock = setup(T, "efficient", 6)
+        ForeverPathDB.auto.followMode = true
         -- 108 is level 1: outside Efficient's 2-levels-below window, even if
         -- the client doesn't flag it grey.
         mock.dialog.gossipAvailable = { { questID = 108 }, { questID = 101 } }
@@ -158,40 +167,35 @@ return {
     ---------------------------------------------------------------------
     -- Pausing and switching off
     ---------------------------------------------------------------------
-    { "holding Shift pauses for the whole conversation", function(T)
+    { "a quest is tried again in the next conversation, whatever the quest windows say", function(T)
         local ns, mock = setup(T)
-        mock.keys.shift = true
+        -- A dialog replacement (DialogueUI) can leave Blizzard's frames
+        -- "shown"; the conversation still ends when the events stop.
+        _G.GossipFrame = _G.GossipFrame or CreateFrame("Frame")
+        _G.GossipFrame:Show()
         mock.dialog.gossipAvailable = { { questID = 102 } }
         ns:FireEvent("GOSSIP_SHOW")
-        mock.keys.shift = false
-        mock.dialog.questID = 102
-        ns:FireEvent("QUEST_DETAIL")
-        T.eq(calls(mock), "", "still paused after letting go")
-        endConversation(ns)
-        ns:FireEvent("QUEST_DETAIL")
-        T.eq(calls(mock), "AcceptQuest", "next conversation is automatic again")
-    end },
-
-    { "the pause key can be changed", function(T)
-        local ns, mock = setup(T)
-        ns.MainFrame.ShowTab("settings")
-        ForeverPathDB.auto.pauseKey = "CTRL"
-        mock.keys.shift = true
-        mock.dialog.questID = 102
-        ns:FireEvent("QUEST_DETAIL")
-        T.eq(calls(mock), "AcceptQuest", "Shift no longer pauses")
-    end },
-
-    { "a conversation that's still open isn't reset", function(T)
-        local ns, mock = setup(T)
-        mock.keys.shift = true
+        T.eq(calls(mock), "SelectAvailableQuest:102")
         ns:FireEvent("GOSSIP_SHOW")
-        mock.keys.shift = false
-        _G.QuestFrame:Show() -- moved on to the quest text
+        T.eq(calls(mock), "SelectAvailableQuest:102", "not retried in the same conversation")
         endConversation(ns)
+        ns:FireEvent("GOSSIP_SHOW")
+        T.eq(calls(mock), "SelectAvailableQuest:102,SelectAvailableQuest:102", "tried again next time")
+    end },
+
+    { "Shift no longer pauses anything", function(T)
+        local ns, mock = setup(T)
+        mock.keys.shift = true
         mock.dialog.questID = 102
         ns:FireEvent("QUEST_DETAIL")
-        T.eq(calls(mock), "", "still the same conversation")
+        T.eq(calls(mock), "AcceptQuest")
+        T.eq(ForeverPathDB.auto.pauseKey, nil)
+    end },
+
+    { "/fp debug explains auto accept", function(T)
+        local _, mock = setup(T)
+        SlashCmdList.FOREVERPATH("debug")
+        T.contains(table.concat(mock.printed, "\n"), "auto accept on, hand in on, only guide quests off")
     end },
 
     { "Settings checkboxes switch accepting and turning in off", function(T)

@@ -17,7 +17,7 @@ local Settings = {}
 ns.Settings = Settings
 
 -- Bump when the shape of saved data changes, and add a migration below.
-Settings.SCHEMA_VERSION = 5
+Settings.SCHEMA_VERSION = 6
 
 local ACCOUNT_DEFAULTS = {
     schema = Settings.SCHEMA_VERSION,
@@ -38,10 +38,9 @@ local ACCOUNT_DEFAULTS = {
     auto = {
         accept = true,          -- accept quests when talking to quest givers
         turnIn = true,          -- hand in finished quests and take the reward
-        followMode = true,      -- only accept quests the current mode would pick
+        followMode = false,     -- only accept quests the guide would pick
         skipTrivial = true,     -- never auto-accept grey quests
         skipRepeatable = true,  -- never auto-accept repeatable quests
-        pauseKey = "SHIFT",     -- hold while talking to pause: SHIFT | CTRL | ALT | NONE
     },
     target = { point = "RIGHT", relativePoint = "RIGHT", x = -80, y = 40 },
     editor = {},                          -- guide editor size (width, height) once resized
@@ -94,6 +93,12 @@ local function migrate(db)
         -- The "guide me step by step" switch is gone: the guide window's
         -- show/hide is the one control now, so turn the guide back on.
         if type(db.guide) == "table" and db.guide.waypoints then db.guide.enabled = true end
+    end
+    -- Schema 6 (0.8.0): "hold to pause" is gone, and auto accept takes every
+    -- quest again (only-guide-quests turned too many down without a word).
+    if from < 6 and type(db.auto) == "table" then
+        db.auto.pauseKey = nil
+        db.auto.followMode = false
     end
     db.schema = Settings.SCHEMA_VERSION
 end

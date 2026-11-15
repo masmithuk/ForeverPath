@@ -11,8 +11,6 @@
       QUEST_COMPLETE                rewards shown: take the reward
 
     Safety rules
-      * Hold the pause key (Shift by default) while opening the NPC and
-        nothing is automated until every quest window has closed.
       * A choice between several rewards is always left to you.
       * Quests that cost gold to complete are left to you.
       * Quests shared by other players, and escort-quest confirmations,
@@ -22,12 +20,15 @@
       * If Questie's own auto-accept or auto-complete is on, ForeverPath
         stands aside so the two don't fight over the same dialog.
 
-    What gets accepted (all optional, Settings tab):
+    What gets accepted (Settings tab):
       * not quests you skipped in the guide
-      * not grey (trivial) quests
-      * not repeatable quests
-      * only quests your current mode would pick (level window, Efficient's
-        detour limit, Dungeon mode's dungeon quests)
+      * not grey (trivial) quests, not repeatable quests (both optional)
+      * optionally, only quests your guide would pick (off by default)
+
+    A conversation ends when no quest dialog event has arrived for a
+    moment after a window closed. This doesn't depend on Blizzard's
+    GossipFrame / QuestFrame, so dialog replacements such as DialogueUI
+    work too.
 ]]
 
 local _, ns = ...
@@ -39,8 +40,8 @@ local L = ns.L
 
 local RESET_DELAY = 0.5 -- windows briefly all close between dialog steps
 
-local paused = false
 local tried = {}        -- [questID] = true, this conversation
+local activity = 0      -- bumped by every dialog event
 
 ---------------------------------------------------------------------------
 -- Settings and conflicts
@@ -58,30 +59,20 @@ function AutoQuest.QuestieAutomationOn()
     return ok and on and true or false
 end
 
-local MODIFIERS = {
-    SHIFT = function() return IsShiftKeyDown and IsShiftKeyDown() end,
-    CTRL  = function() return IsControlKeyDown and IsControlKeyDown() end,
-    ALT   = function() return IsAltKeyDown and IsAltKeyDown() end,
-    NONE  = function() return false end,
-}
-AutoQuest.MODIFIERS = { "SHIFT", "CTRL", "ALT", "NONE" }
-
-local function pauseKeyHeld()
-    local check = MODIFIERS[settings().pauseKey] or MODIFIERS.SHIFT
-    return check() and true or false
-end
-
 --- Should anything be automated right now?
 local function active(kind)
-    local s = settings()
-    if not s[kind] then return false end
+    activity = activity + 1
+    if not settings()[kind] then return false end
     if AutoQuest.QuestieAutomationOn() then return false end
-    if paused then return false end
-    if pauseKeyHeld() then
-        paused = true -- stay paused for the rest of this conversation
-        return false
-    end
     return true
+end
+
+--- Why auto accept is or isn't working, for /fp debug.
+function AutoQuest.Describe()
+    local s = settings()
+    return ("auto accept %s, hand in %s, only guide quests %s, Questie's own automation %s"):format(
+        s.accept and "on" or "off", s.turnIn and "on" or "off", s.followMode and "on" or "off",
+        AutoQuest.QuestieAutomationOn() and "ON (ForeverPath stands aside)" or "off")
 end
 
 ---------------------------------------------------------------------------
@@ -250,19 +241,12 @@ end
 -- Conversation lifetime
 ---------------------------------------------------------------------------
 
-local function windowsOpen()
-    local gossip = _G.GossipFrame
-    local quest = _G.QuestFrame
-    return (gossip and gossip:IsShown()) or (quest and quest:IsShown())
-end
-
---- The conversation is over once every window has stayed closed briefly.
+--- The conversation is over once a window has closed and no other
+--- dialog event followed for a moment.
 local function onWindowClosed()
+    local seen = activity
     C_Timer.After(RESET_DELAY, function()
-        if not windowsOpen() then
-            paused = false
-            tried = {}
-        end
+        if activity == seen then tried = {} end
     end)
 end
 
@@ -278,6 +262,5 @@ end
 
 -- Exposed for tests.
 AutoQuest._reset = function()
-    paused = false
     tried = {}
 end

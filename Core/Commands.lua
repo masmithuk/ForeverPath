@@ -101,6 +101,7 @@ local subcommands = {
             tostring(pos and pos.mapID), tostring(pos and ns.GameApi.GetMapName(pos.mapID)),
             pos and pos.x * 100 or -1, pos and pos.y * 100 or -1,
             table.concat(ctx.route.current and ctx.route.current.zones or {}, ", ")))
+        Util.Print("debug: " .. ns.AutoQuest.Describe())
         Util.Print(("debug: %d quests available now%s, %d steps planned"):format(
             #doable, fromList and " (from the guide's list)" or "", #ns.Engine.state.steps))
         for i = 1, math.min(5, #doable) do

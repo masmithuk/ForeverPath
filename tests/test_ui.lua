@@ -66,11 +66,11 @@ return {
     { "saved variables survive a relog and gain new defaults", function(T)
         T.fresh()
         -- Pretend an older install saved only one field.
-        ForeverPathDB = { schema = 5, announceLevelUp = false }
+        ForeverPathDB = { schema = 6, announceLevelUp = false }
         T.reload()
         T.eq(ForeverPathDB.announceLevelUp, false, "kept")
         T.eq(ForeverPathDB.frame.point, "CENTER", "defaults filled")
-        T.eq(ForeverPathDB.schema, 5, "schema stamped")
+        T.eq(ForeverPathDB.schema, 6, "schema stamped")
     end },
 
     { "a 0.3 route choice carries over to the new modes", function(T)
@@ -101,5 +101,14 @@ return {
         T.eq(ForeverPathDB.showAllBands, nil)
         T.eq(ForeverPathDB.guide.enabled, true, "guide back on (there's no switch for it now)")
         T.eq(ns.Engine.CurrentGuide().id, "speedrun-undead", "efficient -> your race's Speedrun")
+    end },
+
+    { "0.8 upgrade: hold-to-pause removed, auto accept takes every quest", function(T)
+        T.fresh()
+        ForeverPathDB = { schema = 5, auto = { accept = true, followMode = true, pauseKey = "SHIFT" } }
+        T.reload()
+        T.eq(ForeverPathDB.auto.pauseKey, nil)
+        T.eq(ForeverPathDB.auto.followMode, false)
+        T.eq(ForeverPathDB.auto.accept, true, "kept")
     end },
 }
