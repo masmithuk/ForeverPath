@@ -61,6 +61,7 @@ local CHAR_DEFAULTS = {
         skipped = {},      -- [questID] = true, hidden until /fp unskip
         done = {},         -- [guide note step id] = true
         skippedSteps = {}, -- [service step key] = true (an inn or profession trainer you skipped)
+        notOffered = {},   -- [questID] = level: its giver didn't offer it (cleared on level up)
         trainedLevel = 0,  -- last level you visited your class trainer at
         history = {},      -- recent skips / ticked steps, for Back
         focus = nil,       -- quest chosen with "Go to this step", until handed in

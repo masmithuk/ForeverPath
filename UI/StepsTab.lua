@@ -43,6 +43,7 @@ local STATUS = {
     level    = { "muted",  "QUEST_LEVEL_FMT" },
     locked   = { "muted",  "QUEST_LOCKED" },
     later    = { "muted",  "STEPS_LATER" },
+    notoffered = { "muted", "STEPS_NOT_OFFERED" },
 }
 local STEP_UPCOMING = { "accent", "STEPS_STEP_NEXT" }
 

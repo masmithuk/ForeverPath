@@ -90,6 +90,7 @@ function Engine.BuildContext()
         playerMapID = mapID,
         allowedMaps = allowedMaps(route, mapID),
         skipped = char.skipped,
+        notOffered = char.notOffered,
         char = char,
         focusQuest = char.focus,
         -- Last planning pass's available quests (the Steps list uses them
@@ -409,6 +410,7 @@ function Engine.FocusQuest(questID)
     end
     local char = charGuide()
     char.skipped[questID] = nil
+    char.notOffered[questID] = nil
     char.focus = questID
     char.focusStep = nil
     invalidateDoable()
@@ -536,6 +538,7 @@ function Engine.UnskipAll()
     local char = charGuide()
     char.skipped = {}
     char.skippedSteps = {}
+    char.notOffered = {}
     -- Skips are all undone; keep only hand-ticked steps in the history.
     local kept = {}
     for _, e in ipairs(history()) do
@@ -578,7 +581,57 @@ local function buildIndex()
     end)
 end
 
+--- You're talking to an NPC: if the guide sent you here for quests it
+--- doesn't offer (they need an item, reputation or something QuestieDB
+--- doesn't know about), note them so the guide moves on. They're checked
+--- again after you level up.
+-- @param npcID     the NPC's creature ID
+-- @param offered   { [questID] = true } for every quest it lists
+-- @return list of quest IDs that weren't offered
+function Engine.NoteOffered(npcID, offered)
+    if not npcID then return {} end
+    local char = charGuide()
+    local log = Engine.state.log or {}
+    local actor = "npc:" .. npcID
+    local missing, names = {}, {}
+    for _, step in ipairs(Engine.state.steps) do
+        if step.actor == actor and step.kind == "ACCEPT" then
+            for _, id in ipairs(step.questIDs or {}) do
+                if not log[id] and not offered[id] and not char.notOffered[id]
+                    and not ns.GameApi.IsQuestCompleted(id) then
+                    missing[#missing + 1] = id
+                    names[#names + 1] = ns.QuestieData.GetQuestName(id) or ("quest " .. id)
+                end
+            end
+        end
+    end
+    if #missing == 0 then return missing end
+    local level = ns.Character.Detect().level
+    for _, id in ipairs(missing) do char.notOffered[id] = level end
+    ns.Util.Print(ns.L.NOT_OFFERED_FMT:format(table.concat(names, ", ")))
+    invalidateDoable()
+    Engine.state.currentKey = nil
+    Engine.RequestReplan()
+    return missing
+end
+
+local function onQuestList(kind)
+    return function()
+        local activeList, availableList = ns.AutoQuest.ReadOffers(kind)
+        local offered = {}
+        for _, q in ipairs(activeList) do if q.questID then offered[q.questID] = true end end
+        for _, q in ipairs(availableList) do if q.questID then offered[q.questID] = true end end
+        Engine.NoteOffered(ns.GameApi.GetDialogNpcID(), offered)
+    end
+end
+
 function Engine.Start()
+    -- What an NPC really offers (its full list; a lone quest's text isn't
+    -- enough to tell, as more may follow).
+    ns:RegisterEvent("GOSSIP_SHOW", onQuestList("gossip"))
+    ns:RegisterEvent("QUEST_GREETING", onQuestList("greeting"))
+    -- A new level can make those quests available.
+    ns:RegisterEvent("PLAYER_LEVEL_UP", function() charGuide().notOffered = {} end)
     ns:RegisterEvent("QUEST_TURNED_IN", function(_, questID)
         if ns.Util.SafeNumber(questID) then turnedInThisSession[questID] = true end
         invalidateDoable()

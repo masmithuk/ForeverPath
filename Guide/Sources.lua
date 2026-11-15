@@ -90,6 +90,7 @@ local LIST_BONUSES = { 1500, 1200, 900 }
 --- that you skipped in the step guide.
 local function isSkipped(ctx, questID)
     if ctx.skipped[questID] then return true end
+    if ctx.notOffered and ctx.notOffered[questID] then return true end
     return ctx.guide ~= nil and ctx.guide.skipSet ~= nil and ctx.guide.skipSet[questID] == true
 end
 
@@ -200,6 +201,7 @@ local function doableListed(ctx)
     for _, q in ipairs(ctx.guide and ctx.guide.quests or {}) do
         local id = q.id
         if id and not ctx.log[id] and not ctx.isCompleted(id) and not ctx.skipped[id]
+            and not (ctx.notOffered and ctx.notOffered[id])
             and data.MeetsLevel(id, ctx.profile.level) and data.IsDoable(id, ctx) then
             listed[#listed + 1] = id
         end

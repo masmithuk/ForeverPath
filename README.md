@@ -182,6 +182,7 @@ Everything runs from the game's own UI.
 - **Header:** where you are ("You're at quest 12 of 40") and how many are done, skipped and missed.
 - **List:** number, level, quest, quest giver and status (Done, Ready, In log, Skipped, Missed, Available, Level n, Locked). The step the guide is showing now is marked with `>`.
 - **Missed** means an available quest you've already moved past in the guide.
+- **Not offered** means you talked to the quest giver and the quest wasn't on offer: it needs an item, reputation or an earlier quest that QuestieDB doesn't know about. The guide moves on, and checks again when you level up.
 - **Filters:** All, To do, Skipped & missed, Done.
 - **Go to this step** (or double-click) makes the selected quest the current step until it's done. If you can't do it yet, it says why.
 - **Skip / Unskip** the selected quest, and **Undo last skip** to step back through your last 50 skips (kept per character, even after a `/reload`).

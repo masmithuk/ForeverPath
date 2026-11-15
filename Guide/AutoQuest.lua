@@ -144,6 +144,16 @@ local function greetingLists()
     return activeList, availableList
 end
 
+--- The NPC's quest lists for the dialog that's open ("gossip" or
+--- "greeting"), for the guide to check what's actually offered.
+function AutoQuest.ReadOffers(kind)
+    if kind == "gossip" then
+        if not C_GossipInfo then return {}, {} end
+        return gossipLists()
+    end
+    return greetingLists()
+end
+
 local function decisionOptions()
     local s = settings()
     return {

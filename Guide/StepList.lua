@@ -15,6 +15,8 @@
       level     you're not high enough yet
       locked    needs an earlier quest (or other requirement) first
       later     a guide step (note, buy, train...) you haven't reached yet
+      notoffered  its quest giver didn't offer it to you (needs an item,
+                reputation, ...); checked again when you level up
 
     Guide steps that aren't quests are rows too (isStep = true, with key
     and kind); they can be done, upcoming (reached), missed or later.
@@ -69,6 +71,8 @@ local function questRow(ctx, i, q, inCurrent)
         row.status = logEntry.complete and "ready" or "active"
     elseif ctx.skipped[q.id] or (ctx.guide.skipSet and ctx.guide.skipSet[q.id]) then
         row.status = "skipped"
+    elseif ctx.notOffered and ctx.notOffered[q.id] then
+        row.status = "notoffered"
     else
         local status = ns.Catalog.QuestStatus({ id = q.id, requiredLevel = info.requiredLevel }, ctx)
         row.status = status == "available" and "upcoming" or status

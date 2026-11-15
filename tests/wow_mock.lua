@@ -221,6 +221,15 @@ function mock.installQuestDialog()
     _G.QuestGetAutoAccept = function() return d().autoAccepted end
     _G.AcknowledgeAutoAcceptQuest = function() record("AcknowledgeAutoAcceptQuest") end
     _G.UnitIsPlayer = function() return d().sharedByPlayer end
+    _G.UnitGUID = function(unit)
+        if unit == "npc" and d().npcID then return ("Creature-0-1465-0-2105-%d-0000ABCDEF"):format(d().npcID) end
+        return nil
+    end
+    _G.strsplit = function(sep, s)
+        local out = {}
+        for part in (s .. sep):gmatch("(.-)" .. sep:gsub("%p", "%%%0")) do out[#out + 1] = part end
+        return unpack(out)
+    end
     _G.AcceptQuest = function() record("AcceptQuest") end
     _G.IsQuestCompletable = function() return d().completable end
     _G.CompleteQuest = function() record("CompleteQuest") end

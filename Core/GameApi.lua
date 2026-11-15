@@ -53,6 +53,16 @@ function GameApi.GetQuestLog()
     return log
 end
 
+--- The creature ID of the NPC you're talking to ("npc" unit), or nil.
+--- GUIDs look like "Creature-0-1465-0-2105-211022-0000ABCDEF".
+function GameApi.GetDialogNpcID()
+    local guid = ns.Util.SafeString(safe(UnitGUID, "npc"))
+    if not guid then return nil end
+    local kind, _, _, _, _, id = strsplit("-", guid)
+    if kind ~= "Creature" then return nil end
+    return tonumber(id)
+end
+
 --- Abandon a quest in the log (as the quest log's Abandon button does).
 -- @return true if the game was asked to abandon it
 function GameApi.AbandonQuest(questID)

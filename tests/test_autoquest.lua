@@ -221,4 +221,41 @@ return {
         _G.Questie.db.profile.autoAccept.enabled = false
         T.eq(ns.AutoQuest.QuestieAutomationOn(), false)
     end },
+
+    ---------------------------------------------------------------------
+    -- Quests the guide expected but the NPC doesn't offer
+    ---------------------------------------------------------------------
+    { "a quest the NPC doesn't offer is noted and the guide moves on", function(T)
+        local ns, mock = setup(T)
+        ForeverPathDB.auto.accept = false -- just talking
+        local state = ns.Engine.state
+        T.eq(state.steps[1].title, "Talk to Foreman Thazz'ril")
+        T.contains(state.steps[1].questIDs, 102)
+        -- The Foreman only offers 107 (108 and 102 need something else).
+        mock.dialog.npcID = 1002
+        mock.dialog.gossipAvailable = { { questID = 107 } }
+        ns:FireEvent("GOSSIP_SHOW")
+        T.contains(mock.printed[#mock.printed], "Not offered to you yet: ")
+        T.contains(mock.printed[#mock.printed], "Lazy Peons")
+        T.eq(ForeverPathCharDB.guide.notOffered[102], 8)
+        for _, step in ipairs(ns.Engine.state.steps) do
+            T.truthy(not (step.kind == "ACCEPT" and step.questIDs[1] == 102), "102 no longer suggested")
+        end
+        ns.MainFrame.ShowTab("steps")
+        T.eq(ns.Engine.FocusQuest(102), true, "picking it in the Steps list tries again")
+        T.eq(ForeverPathCharDB.guide.notOffered[102], nil)
+    end },
+
+    { "another NPC's quests aren't affected, and levelling up checks again", function(T)
+        local ns, mock = setup(T)
+        mock.dialog.npcID = 9999 -- some other NPC with nothing to offer
+        ns:FireEvent("GOSSIP_SHOW")
+        T.eq(next(ForeverPathCharDB.guide.notOffered), nil)
+        mock.dialog.npcID = 1002
+        mock.dialog.gossipAvailable = {}
+        ns:FireEvent("GOSSIP_SHOW")
+        T.truthy(next(ForeverPathCharDB.guide.notOffered), "Foreman's quests noted")
+        ns:FireEvent("PLAYER_LEVEL_UP", 9)
+        T.eq(next(ForeverPathCharDB.guide.notOffered), nil, "cleared on level up")
+    end },
 }
