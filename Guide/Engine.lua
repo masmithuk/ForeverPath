@@ -252,6 +252,19 @@ function Engine.SkipCurrent()
     return step
 end
 
+--- "I'm lost": forget the step you chose in the Steps list and the step
+--- the guide was holding on to, and pick the best one from where you're
+--- standing right now. Skipped quests stay skipped.
+-- @return the new current step, or nil
+function Engine.BestStep()
+    charGuide().focus = nil
+    invalidateDoable()
+    Engine.state.currentKey = nil
+    Engine.state.origin = nil -- force a fresh position and a full re-sort
+    Engine.Replan()
+    return Engine.state.steps[1]
+end
+
 ---------------------------------------------------------------------------
 -- Working with one quest (the Steps list)
 ---------------------------------------------------------------------------

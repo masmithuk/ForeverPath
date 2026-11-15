@@ -84,6 +84,8 @@ local subcommands = {
         local entry = ns.Engine.Back()
         Util.Print(entry and L.GUIDE_RESTORED_FMT:format(entry.title) or L.GUIDE_BACK_NONE)
     end,
+    best = function() ns.GuideFrame.BestStep() end,
+    lost = function() ns.GuideFrame.BestStep() end,
     unskip = function()
         ns.Engine.UnskipAll()
         Util.Print(L.GUIDE_UNSKIPPED)

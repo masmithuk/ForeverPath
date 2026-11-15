@@ -156,4 +156,44 @@ return {
         ns.MainFrame.ShowTab("steps")
         T.eq(ns.StepsTab.GetPanel().undo:IsEnabled(), true)
     end },
+
+    ---------------------------------------------------------------------
+    -- Best step ("I'm lost")
+    ---------------------------------------------------------------------
+    { "Best step drops a chosen step and picks the nearest from here", function(T)
+        local ns, mock = setup(T)
+        local best = ns.Engine.state.steps[1].key
+        ns.StepsTab.Select(101)
+        ns.StepsTab.GoTo()
+        T.truthy(ns.Engine.state.steps[1].key ~= best, "a different step was chosen")
+        ForeverPathGuideFrame.best:GetScript("OnClick")()
+        T.eq(ns.Engine.FocusedQuest(), nil)
+        T.eq(ns.Engine.state.steps[1].key, best, "back to the best step")
+        T.contains(mock.printed[#mock.printed], "Best step from here")
+    end },
+
+    { "Best step keeps skipped quests skipped", function(T)
+        local ns = setup(T)
+        ns.Engine.SkipCurrent()
+        local skipped = ForeverPathCharDB.guide.skipped
+        local n = 0
+        for _ in pairs(skipped) do n = n + 1 end
+        ns.Engine.BestStep()
+        local m = 0
+        for _ in pairs(skipped) do m = m + 1 end
+        T.eq(m, n)
+    end },
+
+    { "Best step is on the Steps tab and as /fp best", function(T)
+        local ns, mock = setup(T)
+        ns.StepsTab.Select(101)
+        ns.StepsTab.GoTo()
+        ns.StepsTab.GetPanel().best:GetScript("OnClick")()
+        T.eq(ns.Engine.FocusedQuest(), nil)
+        ns.StepsTab.Select(101)
+        ns.StepsTab.GoTo()
+        SlashCmdList.FOREVERPATH("lost")
+        T.eq(ns.Engine.FocusedQuest(), nil)
+        T.contains(mock.printed[#mock.printed], "Best step from here")
+    end },
 }

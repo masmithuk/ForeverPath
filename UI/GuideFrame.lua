@@ -172,27 +172,37 @@ local function create()
     f.current = newText(f, "GameFontHighlight")
     f.current:SetPoint("TOPLEFT", f.icon, "TOPRIGHT", 6, 0)
 
-    -- Button row: [Steps] [Skip] [Done] [Zones]. Steps opens the full list
-    -- (where you are, done, skipped, missed) to pick any step.
+    -- Button row: [Steps] [Skip] [Done] [Zones] [Best step]. Steps opens the
+    -- full list to pick any step; Best step is the "I'm lost" button.
+    -- The row is laid out in Update, so Done only takes room when shown.
     f.list = newButton(f, L.GUIDE_LIST, function() ns.MainFrame.ShowTab("steps") end)
     f.list:SetPoint("TOPLEFT", f.current, "BOTTOMLEFT", 0, -6)
+    f.list:SetWidth(54)
 
     f.skip = newButton(f, L.GUIDE_SKIP, function()
         local skipped = ns.Engine.SkipCurrent()
         if skipped then Util.Print(L.GUIDE_SKIPPED_FMT:format(skipped.title)) end
     end)
-    f.skip:SetPoint("LEFT", f.list, "RIGHT", 4, 0)
+    f.skip:SetWidth(50)
 
     f.done = newButton(f, L.GUIDE_DONE, function()
         local step = ns.Engine.state.steps[1]
         if step then ns.Engine.MarkDone(step.key) end
     end)
-    f.done:SetPoint("LEFT", f.skip, "RIGHT", 4, 0)
+    f.done:SetWidth(50)
 
     f.guides = newButton(f, L.GUIDE_BROWSE, function() ns.MainFrame.ShowTab("zones") end)
-    -- Sits after Done's slot so it doesn't move when Done is hidden.
-    f.guides:SetPoint("LEFT", f.skip, "RIGHT", 78, 0)
-    f.guides:SetWidth(66)
+    f.guides:SetWidth(54)
+
+    f.best = newButton(f, L.GUIDE_BEST, function() GuideFrame.BestStep() end)
+    f.best:SetWidth(72)
+    f.best:SetScript("OnEnter", function(self)
+        if not GameTooltip then return end
+        GameTooltip:SetOwner(self, "ANCHOR_TOP")
+        GameTooltip:SetText(L.GUIDE_BEST_TOOLTIP, 1, 1, 1, 1, true)
+        GameTooltip:Show()
+    end)
+    f.best:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
 
     f.upcoming = newText(f, "GameFontHighlightSmall")
     f.upcoming:SetPoint("TOPLEFT", f.list, "BOTTOMLEFT", 0, -8)
@@ -228,6 +238,29 @@ local function setShown(widget, shown)
     if shown then widget:Show() else widget:Hide() end
 end
 
+--- Lay out the button row left to right, skipping hidden buttons.
+local function layoutButtons(f)
+    local prev = f.list
+    for _, b in ipairs({ f.skip, f.done, f.guides, f.best }) do
+        if b:IsShown() then
+            b:ClearAllPoints()
+            b:SetPoint("LEFT", prev, "RIGHT", 4, 0)
+            prev = b
+        end
+    end
+end
+
+--- "I'm lost": jump to the best step from where you're standing.
+function GuideFrame.BestStep()
+    local step = ns.Engine.BestStep()
+    if step then
+        Util.Print(L.GUIDE_BEST_FMT:format(step.title))
+    else
+        Util.Print(L.GUIDE_NOTHING)
+    end
+    return step
+end
+
 --- Redraw from Engine state.
 function GuideFrame.Update(state)
     if not ns.Settings.account.guide.shown then return end
@@ -255,6 +288,7 @@ function GuideFrame.Update(state)
     f.status:SetText(status or "")
     setShown(f.status, status ~= nil)
 
+    layoutButtons(f)
     local last = layoutBelow(f.list, { f.upcoming, f.status })
 
     local top = f:GetTop()

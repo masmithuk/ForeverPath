@@ -5,6 +5,7 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 ## [0.8.0] - 2026-11-15
 
 ### Added
+- **Best step** button in the guide window and the Steps tab (and `/fp best` or `/fp lost`): if you're lost, it drops any chosen or held step and picks the best one from where you're standing.
 - **Steps tab**, the first tab of the main window: every quest in your guide in order, with where you are, what's done, skipped and missed (available quests you've moved past). Filter by All, To do, Skipped & missed or Done.
 - **Go to this step** (or double-click) makes any quest in the list the current step until it's done, and says why if you can't do it yet. Skip, Unskip and Undo last skip work from the list.
 - **Service steps** in the route, only when they're due and you're within about 400 yards:

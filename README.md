@@ -155,6 +155,7 @@ Everything runs from the game's own UI.
 - **Skip** hides the current step's quests.
 - **Done** appears on steps you tick off yourself.
 - **Zones** opens the zone browser.
+- **Best step** is for when you're lost. It forgets the step you picked in the Steps list and the step the guide was holding on to, then picks the best step from where you're standing. Skipped quests stay skipped. Also on the Steps tab, and as `/fp best` or `/fp lost`.
 - **Header:** names the guide you're following.
 
 **Steps tab** (first tab of the main window): every quest in your guide, in order.

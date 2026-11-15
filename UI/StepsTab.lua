@@ -12,6 +12,7 @@
       Buttons  Go to this step   make the selected quest the current step
                Skip / Unskip     skip it, or bring a skipped quest back
                Undo last skip    undo your most recent skip or tick
+               Best step         lost? go back to the best step from here
 
     The rows come from Guide/StepList.lua (pure; tested there).
 ]]
@@ -180,8 +181,14 @@ function StepsTab.Create(parent)
     panel.skip:SetPoint("LEFT", panel.go, "RIGHT", 6, 0)
     panel.undo = MF.NewButton(panel, L.GUIDE_BACK, 130, StepsTab.Undo)
     panel.undo:SetPoint("LEFT", panel.skip, "RIGHT", 6, 0)
+    panel.best = MF.NewButton(panel, L.GUIDE_BEST, 100, function()
+        ns.GuideFrame.BestStep()
+        selectedId = nil -- reselect the new current step
+        StepsTab.Refresh()
+    end)
+    panel.best:SetPoint("LEFT", panel.undo, "RIGHT", 6, 0)
     panel.hint = panel:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    panel.hint:SetPoint("LEFT", panel.undo, "RIGHT", 10, 0)
+    panel.hint:SetPoint("LEFT", panel.best, "RIGHT", 10, 0)
     panel.hint:SetText(L.STEPS_HINT)
 
     panel.scroll = CreateFrame("ScrollFrame", nil, panel, "UIPanelScrollFrameTemplate")

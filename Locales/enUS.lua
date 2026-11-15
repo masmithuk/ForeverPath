@@ -240,6 +240,7 @@ L.HELP = {
     "/fp skip - skip the current step",
     "/fp back - undo the last skip (repeat to go further back)",
     "/fp done - mark the current step done",
+    "/fp best (or /fp lost) - go to the best step from where you are",
     "/fp unskip - bring back every skipped quest",
     "/fp waypoints auto|shortestpath|tomtom|builtin|off - choose the arrow",
     "/fp route <guide id or name> - follow a guide (story, efficient or your own)",
@@ -252,6 +253,10 @@ L.HELP = {
 L.GUIDE_TITLE                = "ForeverPath Guide"
 L.GUIDE_AUTOMATIC            = "Automatic"
 L.GUIDE_BROWSE               = "Zones"
+L.GUIDE_BEST                 = "Best step"
+L.GUIDE_BEST_TOOLTIP         = "Lost? Forget the step you picked and go to the best step from where you're standing now. "
+    .. "Skipped quests stay skipped."
+L.GUIDE_BEST_FMT             = "Best step from here: %s"
 L.GUIDE_SKIP                 = "Skip"
 L.GUIDE_LIST                 = "Steps"
 L.GUIDE_BACK                 = "Undo last skip"
