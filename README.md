@@ -9,7 +9,7 @@ It reads your race, class, faction and level. From those it picks a leveling rou
 A guide decides which zones you level in and how the step guide picks quests. ForeverPath comes with a **Speedrun** and a **Story** guide, levels 1-60, for each starting area: **Orc & Troll**, **Tauren**, **Undead**, **Human**, **Dwarf & Gnome**, **Night Elf** and **Skyborne**. The Guides tab shows the two for your race, plus your own guides.
 
 | | **Speedrun** | **Story** |
-|---|---|---|
+| --- | --- | --- |
 | **Goal** | The quickest quest path to 60 for your race | The important quests of each zone, enough to level into the next |
 | **Zones** | Your race's starting zones, then the densest zones (Riverglades carries 35-45) | Your race's starting zones, then the main zones for each level range |
 | **Quests offered** | From 2 levels below you to 2 above | From 3 below you to 3 above (no grey quests) |
@@ -21,6 +21,7 @@ Each character follows one guide; pick it in the **Guides** tab. Every character
 ### Your own guides
 
 In the **Guides** tab:
+
 - **Copy** makes your own version of any guide. Copying a built-in guide also fills in the full quest list those guides would pick for your character, so you can trim and reorder it.
 - **New guide** starts from scratch.
 - **Edit** opens the guide editor. **View** does the same for the read-only built-ins.
@@ -33,7 +34,7 @@ Your guides are saved account-wide, so every character can use them. If you edit
 ### The guide editor
 
 | Tab | What you do there |
-|---|---|
+| --- | --- |
 | **Quests** | Your guide's quests, in order, with level and zone. Select one and use **Top**, **Up**, **Down**, **Bottom** or **Remove**. On the right, type part of a quest's name ("famil") or a quest ID to search QuestieDB, select a result, and click **Add after selected**. Quests already in the guide are marked. Below that, **Add a step** puts a step that isn't a quest after the selected entry: pick the kind (Note, Buy, Train, Hearth, Go to), type the text, optionally press **Use my location**, then **Add step**. Select a step in the list to change it with **Update step**. Steps move and delete like quests. |
 | **Details** | Name, author, description, and whether it's based on **Story** or **Efficient** (Speedrun), which sets the default rules. |
 | **JSON** | The whole guide as JSON, for the less common settings: zones per level, rules, skipped quests and extra steps. Changes here carry over to the other tabs. If the JSON doesn't parse, the editor keeps you here and shows the line and column. |
@@ -41,6 +42,7 @@ Your guides are saved account-wide, so every character can use them. If you edit
 **Check** validates the guide without saving. **Save** always validates, so a broken guide is never stored.
 
 **How a quest list is followed:**
+
 - The step guide picks up the next quests on your list, in order. The next three get a strong head start, so they come first even when other quest givers are closer.
 - Hand-ins and objectives still fit in by distance.
 - Listed quests are offered wherever their giver stands, and whatever their level. Only the quest's own required level and earlier quests in its chain still count.
@@ -75,7 +77,7 @@ JSON is easier to share than XML: it's shorter to paste, any text editor or onli
 ```
 
 | Key | Meaning |
-|---|---|
+| --- | --- |
 | `name` | Required. `author` and `description` are optional. |
 | `basedOn` | `"story"` or `"efficient"`. Each one's rules are the defaults. |
 | `rules` | Optional overrides, all whole numbers:<br>• `greyGap`: skip quests this many levels below you<br>• `levelsAbove`: allow quests this many levels above you<br>• `maxAccept`: quest givers considered at once<br>• `turninBonus` and `chainBonus`: yards a hand-in or story follow-up counts as closer<br>• `maxDetour`: skip quests whose objectives are this far from the giver (0 = no limit) |
@@ -95,7 +97,7 @@ A few things are forgiving: trailing commas and `//` comments are allowed. Guide
 ```
 
 | `step` | What it does |
-|---|---|
+| --- | --- |
 | `note` | Shows the text. You tick it off with **Done**. Needs `text`. |
 | `buy` | Like a note, with a vendor icon. Needs `text`. |
 | `train` | Without a location, points to your nearest class trainer. Clears when you open your class trainer. |
@@ -111,7 +113,7 @@ Guides are read as data only, never run as code. Sizes are capped, and `|` is re
 The guide window shows your current step and the next few steps. Steps are built live from your quest log, QuestieDB and what's nearby:
 
 | Step | Where it comes from |
-|---|---|
+| --- | --- |
 | **Talk to (NPC) - Accept: (quests)** | Quests you can pick up now in your guide's zones. QuestieDB supplies the quest givers and checks prerequisites, race, class, faction and level. |
 | **Complete: (quest)** | Quests in your log. The step shows live objective progress, and the arrow points to Blizzard's own quest waypoint or the nearest QuestieDB spawn. Quests whose objectives are in the same area (within about 150 yards of each other) are one step, such as "Complete: Cutting Teeth & Wayward Weapons", and the Target button cycles through all their creatures. |
 | **Turn in to (NPC)** | Finished quests in your log, pointing to the NPC who ends the quest. |
@@ -162,11 +164,13 @@ Steps advance on their own:
 Everything runs from the game's own UI.
 
 **Minimap button** (the map icon on the edge of the minimap):
+
 - **Left-click:** show or hide the step guide window.
 - **Right-click:** open or close the main window.
 - **Drag:** move the button around the minimap.
 
 **Step guide window:** shows your current step and the next few steps.
+
 - **Steps** opens the Steps list (below).
 - **Skip** hides the current step's quests.
 - **Done** appears on steps you tick off yourself.
@@ -174,6 +178,7 @@ Everything runs from the game's own UI.
 - **Resizing:** drag the bottom-right corner to make it wider or narrower. The text wraps to fit and the width is remembered.
 
 **Steps tab:** every quest in your guide, in order.
+
 - **Header:** where you are ("You're at quest 12 of 40") and how many are done, skipped and missed.
 - **List:** number, level, quest, quest giver and status (Done, Ready, In log, Skipped, Missed, Available, Level n, Locked). The step the guide is showing now is marked with `>`.
 - **Missed** means an available quest you've already moved past in the guide.
@@ -183,6 +188,7 @@ Everything runs from the game's own UI.
 - **Best step** is for when you're lost. It forgets the step you picked and the step the guide was holding on to, then picks the best step from where you're standing. Skipped quests stay skipped. Also `/fp best` or `/fp lost`.
 
 **Target button:** a small button labelled with a creature's name, such as "Target: Near Scorpid (1/3)". **Each press targets the next creature you still need for a quest, from nearest to furthest, then starts again at the nearest.** The label shows which creature the next press targets.
+
 - **Which creatures:** only those for the **current step**, including creatures that drop its quest items. The button hides on steps without creatures to kill, such as picking up or handing in quests. It skips kill objectives you've already finished. Each creature appears once, sorted by its nearest spawn, up to 8.
 - **In combat:** cycling works in combat because a secure snippet inside the button steps through the list. The list itself only refreshes out of combat, because the game forbids changing it during a fight. A new list starts again at the nearest creature.
 - **Keybinding:** bind a key under *Key Bindings > AddOns > ForeverPath*. Don't include Shift in that key, because Shift-clicks are ignored so you can drag the button. One press is one step, whether or not you use "cast on key down".
@@ -192,6 +198,7 @@ Everything runs from the game's own UI.
 **Abandon unrelated quests** (Settings > Tools): abandons quests in your log that aren't part of your guide, meaning not on its quest list and not in its zones for your level or the next band. Quests ready to hand in, class quests and quests QuestieDB doesn't know are always kept. The first click lists them in chat and the button asks "Abandon N quests? Click again"; leaving the tab cancels.
 
 **Quest automation:** talking to a quest giver accepts their quests and hands in finished ones, with the reward taken for you.
+
 - **Never automated:** choosing between several rewards, quests that cost gold to complete, quests shared by other players, and escort confirmations are always left to you.
 - **Accept filters**, all set in Settings: quests you skipped in the guide, grey quests and repeatable quests are skipped. A guide's `skip quests` list is respected. Turn on "Only accept quests my guide uses" if you want Speedrun's level and detour filters applied too (off by default, so every quest you're offered is taken). Dialog replacements such as DialogueUI work too. Quests QuestieDB doesn't know yet are accepted.
 - **Questie:** if Questie's own auto-accept or auto-complete is on, ForeverPath stands aside and Settings tells you, so the two don't fight over the same window.
@@ -199,7 +206,7 @@ Everything runs from the game's own UI.
 **Main window**, with four tabs. Drag its bottom-right corner to resize it; every tab adjusts to the new size, and the size is remembered.
 
 | Tab | What's in it |
-|---|---|
+| --- | --- |
 | **Home** | Your character, the guide you're following, where you're levelling now and next, your current step, rested XP, class tips, dungeons for your level, and a short explanation of every part of ForeverPath. Buttons show or hide the guide window and open Steps or Guides. |
 | **Steps** | Every quest in your guide, as described above. |
 | **Guides** | The Speedrun and Story guides for your race, then yours. Select one to see its details, then **Use this guide**, **Edit** (or **View** for built-ins), **Copy**, **New guide**, **Delete**, **Export** or **Import**. Edit and View open the guide editor described above. |
