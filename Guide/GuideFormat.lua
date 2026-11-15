@@ -69,8 +69,10 @@ local START = "START"
 
 --- Defaults for each "basedOn" value. Rules in the guide override these.
 GuideFormat.BASES = {
-    story = { greyGap = 10, levelsAbove = 3, maxAccept = 30, turninBonus = 60, chainBonus = 150, maxDetour = 0 },
-    efficient = { greyGap = 2, levelsAbove = 2, maxAccept = 10, turninBonus = 120, chainBonus = 0, maxDetour = 350 },
+    story = { greyGap = 3, levelsAbove = 3, maxAccept = 30, turninBonus = 60, chainBonus = 250,
+              sidePenalty = 350, maxDetour = 0 },
+    efficient = { greyGap = 2, levelsAbove = 2, maxAccept = 10, turninBonus = 120, chainBonus = 0,
+                  sidePenalty = 0, maxDetour = 350 },
 }
 
 -- Rules players may set, with allowed ranges, in the order they're written.
@@ -80,6 +82,7 @@ GuideFormat.RULES = {
     { key = "maxAccept",   min = 1, max = 50 },
     { key = "turninBonus", min = 0, max = 2000 },
     { key = "chainBonus",  min = 0, max = 2000 },
+    { key = "sidePenalty", min = 0, max = 2000 },
     { key = "maxDetour",   min = 0, max = 10000 }, -- 0 = no detour limit
 }
 
@@ -100,7 +103,7 @@ function GuideFormat.IsStep(entry) return entry.step ~= nil end
 -- Key order for exported JSON, so files read top-down and diff cleanly.
 local KEY_ORDER = {
     "format", "version", "name", "author", "description", "basedOn", "rules",
-    "greyGap", "levelsAbove", "maxAccept", "turninBonus", "chainBonus", "maxDetour",
+    "greyGap", "levelsAbove", "maxAccept", "turninBonus", "chainBonus", "sidePenalty", "maxDetour",
     "quests", "id", "step", "zone", "x", "y", "bands", "levels", "zones", "alliance", "horde", "notes",
     "skipQuests", "steps", "level", "kind", "text",
 }

@@ -64,12 +64,29 @@ return {
         T.truthy(not lines:find("Grey Quest"), "grey quest skipped")
     end },
 
-    { "Story keeps everything, including detours and low quests", function(T)
+    { "Story keeps detours but skips grey quests", function(T)
         local ns = setup(T, "story", 6)
         local state = fixtures.login(ns)
         local lines = table.concat(acceptLines(state), "|")
-        T.contains(lines, "Long Walk")
-        T.contains(lines, "Grey Quest")
+        T.contains(lines, "Long Walk", "no detour limit")
+        T.truthy(not lines:find("Grey Quest"), "grey side quests are pointless")
+    end },
+
+    { "Story takes quest chains before stand-alone side quests", function(T)
+        local ns = setup(T, "story", 6)
+        local state = fixtures.login(ns)
+        -- Zureetha (50 yd) starts a chain (101 -> 103); the Foreman (20 yd)
+        -- only has stand-alone side quests.
+        T.eq(state.steps[1].title, "Talk to Zureetha Fargaze")
+        T.truthy(ns.QuestieData.IsChainQuest(101), "101 leads on to 103")
+        T.truthy(not ns.QuestieData.IsChainQuest(102), "102 stands alone")
+        T.truthy(fixtures.findStep(state, "accept:npc:1002"), "side quests still on offer, just later")
+    end },
+
+    { "Speedrun takes the nearest worthwhile quests, chain or not", function(T)
+        local ns = setup(T, "efficient", 6)
+        local state = fixtures.login(ns)
+        T.eq(state.steps[1].title, "Talk to Foreman Thazz'ril")
     end },
 
     { "Story follows a chain before nearer unrelated quests", function(T)
@@ -98,14 +115,6 @@ return {
         T.eq(run.title, "Run Wailing Caverns")
         T.eq(#run.questIDs, 2)
         T.contains(run.lines, "  Entrance: The Barrens")
-    end },
-
-    { "switching mode forgets the guide chosen in the old mode", function(T)
-        local ns = setup(T, "story")
-        fixtures.login(ns)
-        ns.Engine.SetGuide("Durotar")
-        ns.MainFrame.SetRoute("efficient")
-        T.eq(ForeverPathCharDB.guideId, nil)
     end },
 
     ---------------------------------------------------------------------

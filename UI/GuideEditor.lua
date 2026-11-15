@@ -35,10 +35,11 @@ local L = ns.L
 local C = ns.Util.Color
 
 local FRAME_NAME = "ForeverPathGuideEditor"
-local WIDTH, HEIGHT = 780, 580
+local WIDTH, HEIGHT = 780, 580 -- default size; resizable from MIN to MAX
+local MIN_WIDTH, MIN_HEIGHT, MAX_WIDTH, MAX_HEIGHT = 700, 500, 1400, 1000
 local PADDING = 12
 local ROW_HEIGHT = 20
-local COLUMN_WIDTH = 360
+local COLUMN_WIDTH = 360 -- at the default size; GuideEditor.Layout recomputes it
 local MAX_MESSAGES = 6
 local SEARCH_LIMIT = 50
 
@@ -201,6 +202,14 @@ local function newList(parent, width, onClick)
     child:SetSize(width - 24, 1)
     scroll:SetScrollChild(child)
     scroll.rows = {}
+
+    --- Follow a new column width (the editor was resized).
+    function scroll.SetListWidth(_, w)
+        width = w
+        scroll:SetWidth(w)
+        child:SetWidth(w - 24)
+        for _, row in ipairs(scroll.rows) do row:SetWidth(w - 24) end
+    end
 
     function scroll.SetItems(_, texts, selectedIndex)
         for i, text in ipairs(texts) do
@@ -652,9 +661,53 @@ local function create()
     end)
     f.selectAll:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", PADDING, PADDING)
 
+    -- Resizable: the two Quests columns share the width.
+    local saved = ns.Settings.account.editor
+    f:SetSize(math.max(MIN_WIDTH, math.min(MAX_WIDTH, saved.width or WIDTH)),
+              math.max(MIN_HEIGHT, math.min(MAX_HEIGHT, saved.height or HEIGHT)))
+    ns.MainFrame.AddResizeGrip(f, MIN_WIDTH, MIN_HEIGHT, MAX_WIDTH, MAX_HEIGHT, function(self)
+        saved.width, saved.height = math.floor(self:GetWidth() + 0.5), math.floor(self:GetHeight() + 0.5)
+    end)
+    f:SetScript("OnSizeChanged", function(self) GuideEditor.Layout(self) end)
+    GuideEditor.Layout(f)
+
     table.insert(UISpecialFrames, FRAME_NAME) -- close with Escape
     f:Hide()
     return f
+end
+
+--- Place the editor's widgets for its current size.
+function GuideEditor.Layout(f)
+    f = f or frame
+    if not f or not f.questsTab then return end
+    local width = f:GetWidth()
+    if not width or width <= 0 then width = WIDTH end
+    local column = math.floor((width - PADDING * 2 - 20) / 2)
+    local right = column + 20
+    local p = f.questsTab
+
+    p.list:SetListWidth(column)
+    p.searchLabel:ClearAllPoints()
+    p.searchLabel:SetPoint("TOPLEFT", p, "TOPLEFT", right, 0)
+    p.search:ClearAllPoints()
+    p.search:SetPoint("TOPLEFT", p, "TOPLEFT", right + 6, -18)
+    p.search:SetWidth(column - 10)
+    p.results:SetListWidth(column)
+    p.results:ClearAllPoints()
+    p.results:SetPoint("TOPLEFT", p, "TOPLEFT", right, -46)
+    p.results:SetPoint("BOTTOMRIGHT", p, "BOTTOMRIGHT", 0, 140)
+    p.resultsHint:SetWidth(column - 30)
+    for _, pair in ipairs({ { p.add, 112 }, { p.stepLabel, 84 }, { p.stepKind, 56 },
+                            { p.stepHere, 28 }, { p.stepAdd, 0 } }) do
+        pair[1]:ClearAllPoints()
+        pair[1]:SetPoint("BOTTOMLEFT", p, "BOTTOMLEFT", right, pair[2])
+    end
+    p.stepText:SetWidth(column - 86)
+
+    f.detailsTab.help:SetWidth(width - PADDING * 2 - 20)
+    f.jsonTab.edit:SetWidth(width - PADDING * 2 - 30)
+    f.status:SetWidth(width - PADDING * 2)
+    f.columnWidth = column
 end
 
 local function show(widget, on)

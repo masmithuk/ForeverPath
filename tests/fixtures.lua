@@ -17,8 +17,19 @@ local fixtures = {}
 function fixtures.durotar(mock, opts)
     opts = opts or {}
     mock.player.level = opts.level or 8
-    -- Story mode keeps every quest in range; tests for other modes set it.
-    ForeverPathCharDB.routeId = opts.mode or "story"
+    -- By default, follow a test guide that keeps every quest in range, so
+    -- tests aren't about Speedrun/Story filtering. Mode tests set opts.mode.
+    if opts.mode then
+        ForeverPathCharDB.routeId = opts.mode
+    else
+        ForeverPathDB.guides["custom-test-all"] = {
+            format = "ForeverPath guide", version = 2, name = "Test Everything", basedOn = "story",
+            rules = { greyGap = 10, sidePenalty = 0, chainBonus = 150 },
+            bands = { { levels = { 1, 60 }, zones = { "START" } } },
+        }
+        if mock.ns and mock.ns.Library then mock.ns.Library.Init() end
+        ForeverPathCharDB.routeId = "custom-test-all"
+    end
     mock.player.position = { mapID = 1411, x = 0.5, y = 0.5 }
 
     return mock.installQuestieDB({

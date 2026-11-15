@@ -1,8 +1,16 @@
 --[[
     ForeverPath - UI/SettingsTab.lua
 
-    "Settings" tab: every option as a checkbox or button, so nothing needs
-    a slash command.
+    "Settings" tab: every option as a checkbox, dropdown or button, so
+    nothing needs a slash command.
+
+      Step guide         guide window, Target button, minimap button,
+                         level-up messages; the waypoint arrow (dropdown);
+                         bring back skipped quests, reset window positions
+      Quest automation   auto accept / hand in, and the key that pauses it
+
+    The two columns sit side by side when the window is wide enough and
+    stack when it's narrow.
 ]]
 
 local _, ns = ...
@@ -23,11 +31,6 @@ local WAYPOINT_CHOICES = {
 
 -- Each checkbox reads and writes one setting through these functions.
 local CHECKBOXES = {
-    {
-        label = "SETTING_GUIDE_ENABLED",
-        get = function() return ns.Settings.account.guide.enabled end,
-        set = function(v) ns.Engine.SetEnabled(v) end,
-    },
     {
         label = "SETTING_GUIDE_SHOWN",
         get = function() return ns.Settings.account.guide.shown end,
@@ -52,17 +55,6 @@ local CHECKBOXES = {
     },
 }
 
-local function heading(parent, text, anchor, offset)
-    local fs = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    fs:SetText(text)
-    if anchor then
-        fs:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, offset or -18)
-    else
-        fs:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
-    end
-    return fs
-end
-
 -- Right column: quest automation.
 local AUTO_CHECKBOXES = {}
 for _, entry in ipairs({
@@ -80,12 +72,26 @@ for _, entry in ipairs({
     }
 end
 
-local RIGHT_COLUMN_X = 360
+-- Below this content width the two columns are stacked.
+local TWO_COLUMN_WIDTH = 620
 
-local function createCheckbox(parent, def, anchor)
+local function heading(parent, text)
+    local fs = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    fs:SetText(text)
+    fs:SetJustifyH("LEFT")
+    return fs
+end
+
+local function label(parent, text, template)
+    local fs = parent:CreateFontString(nil, "OVERLAY", template or "GameFontHighlight")
+    fs:SetText(text or "")
+    fs:SetJustifyH("LEFT")
+    return fs
+end
+
+local function createCheckbox(parent, def)
     local cb = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
     cb:SetSize(26, 26)
-    cb:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, -4)
     cb.label = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     cb.label:SetPoint("LEFT", cb, "RIGHT", 4, 0)
     cb.label:SetText(L[def.label])
@@ -97,45 +103,52 @@ local function createCheckbox(parent, def, anchor)
     return cb
 end
 
+--- Stack widgets top to bottom under `anchor`: each entry is
+--- { widget, gap } (gap in pixels, negative = down).
+local function stack(anchor, items)
+    local last = anchor
+    for _, item in ipairs(items) do
+        local w, gap = item[1], item[2] or -6
+        w:ClearAllPoints()
+        w:SetPoint("TOPLEFT", last, "BOTTOMLEFT", 0, gap)
+        last = w
+    end
+    return last
+end
+
 function SettingsTab.Create(parent)
     local MF = ns.MainFrame
     panel = MF.NewPanel(parent)
-
-    -- Step guide options.
-    local guideHeading = heading(panel, L.SETTINGS_GUIDE)
     panel.checkboxes = {}
-    local anchor = guideHeading
+
+    -- Left column: the guide, the arrow and tools.
+    panel.guideHeading = heading(panel, L.SETTINGS_GUIDE)
+    panel.guideHeading:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, 0)
+    panel.left = {}
     for _, def in ipairs(CHECKBOXES) do
-        local cb = createCheckbox(panel, def, anchor)
+        local cb = createCheckbox(panel, def)
         panel.checkboxes[#panel.checkboxes + 1] = cb
-        anchor = cb
+        panel.left[#panel.left + 1] = cb
     end
 
-    -- Waypoint arrow.
-    local wpHeading = heading(panel, L.SETTINGS_WAYPOINTS, anchor)
-    panel.waypointButtons = {}
-    for i, choice in ipairs(WAYPOINT_CHOICES) do
-        local b = MF.NewButton(panel, L[choice.label], 120, function()
-            ns.Settings.account.guide.waypoints = choice.id
+    panel.waypointLabel = label(panel, L.SETTINGS_WAYPOINTS, "GameFontNormal")
+    local choices = {}
+    for _, c in ipairs(WAYPOINT_CHOICES) do choices[#choices + 1] = { id = c.id, label = L[c.label] } end
+    panel.waypoints = MF.NewDropdown(panel, 200, choices,
+        function() return ns.Settings.account.guide.waypoints end,
+        function(id)
+            ns.Settings.account.guide.waypoints = id
             ns.Waypoints.Clear()
             ns.Engine.Replan()
             SettingsTab.Refresh()
         end)
-        b:SetPoint("TOPLEFT", wpHeading, "BOTTOMLEFT", (i - 1) * 124, -8)
-        b.choice = choice.id
-        panel.waypointButtons[i] = b
-    end
-    panel.waypointStatus = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    panel.waypointStatus:SetPoint("TOPLEFT", panel.waypointButtons[1], "BOTTOMLEFT", 0, -6)
+    panel.waypointStatus = label(panel, "", "GameFontHighlightSmall")
 
-    -- Maintenance.
-    local toolsHeading = heading(panel, L.SETTINGS_TOOLS, panel.waypointStatus)
+    panel.toolsLabel = label(panel, L.SETTINGS_TOOLS, "GameFontNormal")
     panel.unskip = MF.NewButton(panel, L.SETTING_UNSKIP, 200, function()
         ns.Engine.UnskipAll()
         ns.Util.Print(L.GUIDE_UNSKIPPED)
     end)
-    panel.unskip:SetPoint("TOPLEFT", toolsHeading, "BOTTOMLEFT", 0, -8)
-
     panel.reset = MF.NewButton(panel, L.SETTING_RESET, 200, function()
         ns.Settings.ResetFramePosition()
         ns.MainFrame.ResetPosition()
@@ -144,60 +157,75 @@ function SettingsTab.Create(parent)
         ns.MinimapButton.UpdatePosition()
         ns.Util.Print(L.POSITION_RESET)
     end)
-    panel.reset:SetPoint("LEFT", panel.unskip, "RIGHT", 6, 0)
 
-    -- Quest automation (right column).
-    local autoHeading = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    autoHeading:SetText(L.SETTINGS_AUTO)
-    autoHeading:SetPoint("TOPLEFT", panel, "TOPLEFT", RIGHT_COLUMN_X, 0)
-    anchor = autoHeading
+    -- Right column (or below, when narrow): quest automation.
+    panel.autoHeading = heading(panel, L.SETTINGS_AUTO)
+    panel.right = {}
     for _, def in ipairs(AUTO_CHECKBOXES) do
-        local cb = createCheckbox(panel, def, anchor)
+        local cb = createCheckbox(panel, def)
         panel.checkboxes[#panel.checkboxes + 1] = cb
-        anchor = cb
+        panel.right[#panel.right + 1] = cb
     end
-
-    local pauseLabel = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    pauseLabel:SetText(L.AUTO_PAUSE_LABEL)
-    pauseLabel:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, -10)
-    panel.pauseButtons = {}
-    for i, key in ipairs(ns.AutoQuest.MODIFIERS) do
-        local b = MF.NewButton(panel, L["AUTO_KEY_" .. key], 70, function()
-            ns.Settings.account.auto.pauseKey = key
+    panel.pauseLabel = label(panel, L.AUTO_PAUSE_LABEL, "GameFontNormal")
+    local keys = {}
+    for _, key in ipairs(ns.AutoQuest.MODIFIERS) do keys[#keys + 1] = { id = key, label = L["AUTO_KEY_" .. key] } end
+    panel.pauseKey = MF.NewDropdown(panel, 140, keys,
+        function() return ns.Settings.account.auto.pauseKey end,
+        function(id)
+            ns.Settings.account.auto.pauseKey = id
             SettingsTab.Refresh()
         end)
-        b:SetPoint("TOPLEFT", pauseLabel, "BOTTOMLEFT", (i - 1) * 74, -6)
-        b.key = key
-        panel.pauseButtons[i] = b
-    end
-
-    panel.autoNote = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    panel.autoNote:SetPoint("TOPLEFT", panel.pauseButtons[1], "BOTTOMLEFT", 0, -10)
-    panel.autoNote:SetWidth(320)
-    panel.autoNote:SetJustifyH("LEFT")
-
+    panel.autoNote = label(panel, "", "GameFontHighlightSmall")
     return panel
+end
+
+--- Place the columns for the window's current width.
+local function layout()
+    local width = ns.MainFrame.ContentWidth()
+    local twoColumns = width >= TWO_COLUMN_WIDTH
+    local columnWidth = twoColumns and (width / 2 - 10) or width
+
+    local leftItems = {}
+    for i, cb in ipairs(panel.left) do leftItems[i] = { cb, i == 1 and -6 or -2 } end
+    leftItems[#leftItems + 1] = { panel.waypointLabel, -14 }
+    leftItems[#leftItems + 1] = { panel.waypoints, -6 }
+    leftItems[#leftItems + 1] = { panel.waypointStatus, -4 }
+    leftItems[#leftItems + 1] = { panel.toolsLabel, -14 }
+    leftItems[#leftItems + 1] = { panel.unskip, -6 }
+    leftItems[#leftItems + 1] = { panel.reset, -4 }
+    local leftLast = stack(panel.guideHeading, leftItems)
+
+    panel.autoHeading:ClearAllPoints()
+    if twoColumns then
+        panel.autoHeading:SetPoint("TOPLEFT", panel, "TOPLEFT", width / 2 + 10, 0)
+    else
+        panel.autoHeading:SetPoint("TOPLEFT", leftLast, "BOTTOMLEFT", 0, -18)
+    end
+    local rightItems = {}
+    for i, cb in ipairs(panel.right) do rightItems[i] = { cb, i == 1 and -6 or -2 } end
+    rightItems[#rightItems + 1] = { panel.pauseLabel, -14 }
+    rightItems[#rightItems + 1] = { panel.pauseKey, -6 }
+    rightItems[#rightItems + 1] = { panel.autoNote, -10 }
+    stack(panel.autoHeading, rightItems)
+    panel.autoNote:SetWidth(columnWidth)
+    panel.waypointStatus:SetWidth(columnWidth)
+    panel.twoColumns = twoColumns
 end
 
 function SettingsTab.Refresh()
     if not panel then return end
+    layout()
     for _, cb in ipairs(panel.checkboxes) do
         cb:SetChecked(cb.def.get() and true or false)
     end
-    local setting = ns.Settings.account.guide.waypoints
-    for _, b in ipairs(panel.waypointButtons) do
-        if b.choice == setting then b:LockHighlight() else b:UnlockHighlight() end
-    end
-    for _, b in ipairs(panel.pauseButtons) do
-        if b.key == ns.Settings.account.auto.pauseKey then b:LockHighlight() else b:UnlockHighlight() end
-    end
+    panel.waypoints.Update()
+    panel.pauseKey.Update()
     if ns.AutoQuest.QuestieAutomationOn() then
         panel.autoNote:SetText(ns.Util.Color("warn", L.AUTO_QUESTIE_ON))
     else
         panel.autoNote:SetText(ns.Util.Color("muted", L.AUTO_NOTES))
     end
-
-    local inUse = ns.Waypoints.Resolve(setting)
+    local inUse = ns.Waypoints.Resolve(ns.Settings.account.guide.waypoints)
     panel.waypointStatus:SetText(L.WAYPOINTS_IN_USE_FMT:format(L["WAYPOINTS_" .. inUse:upper()]))
 end
 
@@ -212,9 +240,17 @@ function SettingsTab.Click(labelKey, value)
     end
 end
 
---- For tests: press a waypoint choice.
+--- For tests: pick a waypoint choice from the dropdown.
 function SettingsTab.ChooseWaypoints(id)
-    for _, b in ipairs(panel.waypointButtons) do
-        if b.choice == id then b:GetScript("OnClick")(b) end
+    panel.waypoints:GetScript("OnClick")(panel.waypoints) -- open
+    for _, item in ipairs(panel.waypoints.items) do
+        if item.choice == id then item:GetScript("OnClick")(item) end
     end
 end
+
+--- For tests: pick the hold-to-pause key.
+function SettingsTab.ChoosePauseKey(key)
+    panel.pauseKey:Choose(key)
+end
+
+function SettingsTab.GetPanel() return panel end

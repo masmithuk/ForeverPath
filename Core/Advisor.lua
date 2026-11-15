@@ -19,17 +19,31 @@ local DEFAULT_ROUTE = "efficient"
 
 --- Resolve which guide to use: the character's choice (if it still
 --- exists), then the class default, then the global default.
+--- The starting-area group for a character ("orc-troll", "human", ...).
+--- Unknown races fall back to their faction's first group.
+function Advisor.RaceGroup(profile)
+    local group = profile and ns.Data.RaceGroupOf(profile.raceKey)
+    if group then return group end
+    if profile and profile.faction == "Alliance" then return "human" end
+    if profile and profile.faction == "Horde" then return "orc-troll" end
+    return nil
+end
+
+--- The guide a character follows: its own choice, else its class's default
+--- kind (Speedrun or Story) for its race. "efficient" / "story" mean that
+--- race's Speedrun / Story guide.
 function Advisor.ResolveRouteId(profile, chosenId)
     local Library = ns.Library
-    chosenId = ns.Data.LegacyRouteIds[chosenId] or chosenId
-    if chosenId and Library.Get(chosenId) then
-        return chosenId
+    local group = Advisor.RaceGroup(profile)
+    local function resolve(id)
+        id = ns.Data.LegacyRouteIds[id] or id
+        if ns.Data.GenericRouteIds[id] then
+            id = Library.GroupGuideId(id, group or "orc-troll")
+        end
+        return id and Library.Get(id) and id or nil
     end
     local class = profile and profile.class
-    if class and class.defaultRoute and Library.Get(class.defaultRoute) then
-        return class.defaultRoute
-    end
-    return DEFAULT_ROUTE
+    return resolve(chosenId) or resolve(class and class.defaultRoute) or resolve(DEFAULT_ROUTE)
 end
 
 --- Index of the band containing `level`, clamped to the route's range.

@@ -175,7 +175,7 @@ end
 function StepsTab.Create(parent)
     local MF = ns.MainFrame
     panel = MF.NewPanel(parent)
-    local width = MF.WIDTH - MF.PADDING * 2
+    local width = MF.ContentWidth()
 
     panel.header = panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     panel.header:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, 0)
@@ -228,8 +228,19 @@ end
 -- Refresh
 ---------------------------------------------------------------------------
 
+--- Fit the header, rows and hint to the window's current width.
+local function layout()
+    local width = ns.MainFrame.ContentWidth()
+    panel.header:SetWidth(width)
+    panel.rowWidth = width - 28
+    panel.child:SetWidth(panel.rowWidth)
+    for _, row in ipairs(panel.rows) do row:SetWidth(panel.rowWidth) end
+    if width >= 640 then panel.hint:Show() else panel.hint:Hide() end
+end
+
 function StepsTab.Refresh()
     if not panel then return end
+    layout()
     local ctx = ns.Engine.BuildContext()
     lastList = ns.StepList.Build(ctx, ns.Engine.state.steps[1])
     panel.header:SetText(StepsTab.HeaderText(ctx.guide.name or "", lastList))

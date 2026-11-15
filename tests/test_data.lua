@@ -3,7 +3,7 @@
 return {
     { "built-in guides are valid and cover levels 1-60", function(T)
         local ns = T.fresh()
-        T.eq(#ns.Data.BuiltinGuides, 2, "Story and Efficient")
+        T.eq(#ns.Data.BuiltinGuides, 2 * #ns.Data.RaceGroups, "Speedrun and Story per starting area")
         for _, def in ipairs(ns.Data.BuiltinGuides) do
             local guide = ns.Library.Get(def.id)
             local errors, warnings = {}, {}

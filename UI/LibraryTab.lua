@@ -1,10 +1,12 @@
 --[[
     ForeverPath - UI/LibraryTab.lua
 
-    "Guides" tab: every guide you can follow.
+    "Guides" tab: the guides you can follow on this character.
 
-      Left   the built-in guides, then your own. The one this character
-             follows is marked "in use".
+      Top    which starting area the built-in guides are for, and what
+             Speedrun and Story mean
+      Left   the Speedrun and Story guides for your race (1-60), then your
+             own guides. The one this character follows is marked.
       Right  the selected guide's details, and buttons to:
                Use this guide      follow it on this character
                Edit / View         change your guide, or read a built-in one
@@ -22,8 +24,8 @@ ns.LibraryTab = LibraryTab
 local L = ns.L
 local C = ns.Util.Color
 
-local LIST_WIDTH = 250
 local ROW_HEIGHT = 22
+local HEADER_HEIGHT = 44 -- room for the two intro lines
 
 local panel
 local selectedId
@@ -160,7 +162,7 @@ local BUTTONS = {
 
 local function createRow(parent, index)
     local row = CreateFrame("Button", nil, parent)
-    row:SetSize(LIST_WIDTH - 24, ROW_HEIGHT)
+    row:SetSize(200, ROW_HEIGHT)
     row:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, -(index - 1) * ROW_HEIGHT)
     row:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
     row.selected = row:CreateTexture(nil, "BACKGROUND")
@@ -179,29 +181,58 @@ function LibraryTab.Create(parent)
     local MF = ns.MainFrame
     panel = MF.NewPanel(parent)
 
+    panel.intro = panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    panel.intro:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, 0)
+    panel.intro:SetJustifyH("LEFT")
+    panel.introNote = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    panel.introNote:SetPoint("TOPLEFT", panel.intro, "BOTTOMLEFT", 0, -4)
+    panel.introNote:SetJustifyH("LEFT")
+    panel.introNote:SetText(L.LIB_INTRO_NOTE)
+
     panel.listScroll = CreateFrame("ScrollFrame", nil, panel, "UIPanelScrollFrameTemplate")
-    panel.listScroll:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, 0)
+    panel.listScroll:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, -HEADER_HEIGHT)
     panel.listScroll:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 0, 0)
-    panel.listScroll:SetWidth(LIST_WIDTH)
     panel.listChild = CreateFrame("Frame", nil, panel.listScroll)
-    panel.listChild:SetSize(LIST_WIDTH - 24, 1)
+    panel.listChild:SetSize(200, 1)
     panel.listScroll:SetScrollChild(panel.listChild)
     panel.rows = {}
 
-    local left = LIST_WIDTH + 12
     panel.buttons = {}
     for _, def in ipairs(BUTTONS) do
-        local action, label, column, row = def[1], def[2], def[3], def[4]
-        local b = MF.NewButton(panel, L[label], 132, function() actions[action]() end)
-        b:SetPoint("TOPLEFT", panel, "TOPLEFT", left + (column - 1) * 136, -(row - 1) * 26)
-        panel.buttons[action] = b
+        local action, label = def[1], def[2]
+        panel.buttons[action] = MF.NewButton(panel, L[label], 132, function() actions[action]() end)
     end
 
-    local detailWidth = MF.WIDTH - MF.PADDING * 2 - left - 30
-    panel.detail = MF.NewScrollText(panel, detailWidth)
-    panel.detail:SetPoint("TOPLEFT", panel, "TOPLEFT", left, -3 * 26 - 8)
+    panel.detail = MF.NewScrollText(panel, 300)
     panel.detail:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -24, 0)
     return panel
+end
+
+--- Lay the list, buttons and details out for the window's current width.
+local function layout()
+    local width = ns.MainFrame.ContentWidth()
+    local listWidth = math.floor(math.max(220, math.min(340, width * 0.4)))
+    local left = listWidth + 12
+    local rightWidth = width - left
+    local buttonWidth = math.floor((rightWidth - 8) / 3)
+
+    panel.intro:SetWidth(width)
+    panel.introNote:SetWidth(width)
+    panel.listScroll:SetWidth(listWidth)
+    panel.listChild:SetWidth(listWidth - 24)
+    for _, row in ipairs(panel.rows) do row:SetWidth(listWidth - 24) end
+    for _, def in ipairs(BUTTONS) do
+        local b, column, row = panel.buttons[def[1]], def[3], def[4]
+        b:SetWidth(buttonWidth)
+        b:ClearAllPoints()
+        b:SetPoint("TOPLEFT", panel, "TOPLEFT", left + (column - 1) * (buttonWidth + 4),
+            -HEADER_HEIGHT - (row - 1) * 26)
+    end
+    panel.detail:ClearAllPoints()
+    panel.detail:SetPoint("TOPLEFT", panel, "TOPLEFT", left, -HEADER_HEIGHT - 3 * 26 - 8)
+    panel.detail:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -24, 0)
+    panel.detail:SetTextWidth(rightWidth - 30)
+    panel.listWidth = listWidth
 end
 
 ---------------------------------------------------------------------------
@@ -212,9 +243,21 @@ local function enable(button, on)
     if on then button:Enable() else button:Disable() end
 end
 
+--- "Guides for Orc & Troll (Speedrun and Story, levels 1-60)"
+function LibraryTab.IntroText(profile)
+    local key = ns.Advisor.RaceGroup(profile)
+    for _, g in ipairs(ns.Data.RaceGroups) do
+        if g.key == key then return L.LIB_INTRO_FMT:format(g.label) end
+    end
+    return L.LIB_INTRO_ALL
+end
+
 function LibraryTab.Refresh()
     if not panel then return end
-    local guides = ns.Library.List()
+    layout()
+    local profile = ns.Character.Detect()
+    panel.intro:SetText(LibraryTab.IntroText(profile))
+    local guides = ns.Library.ListFor(profile)
     local inUseId = currentId()
     if not selectedId or not ns.Library.Get(selectedId) then selectedId = inUseId end
     if deleteArmedFor ~= selectedId then deleteArmedFor = nil end
@@ -222,6 +265,7 @@ function LibraryTab.Refresh()
     for i, guide in ipairs(guides) do
         local row = panel.rows[i] or createRow(panel.listChild, i)
         panel.rows[i] = row
+        row:SetWidth(panel.listWidth - 24)
         row.guideId = guide.id
         row.text:SetText(LibraryTab.RowText(guide, guide.id == inUseId))
         if guide.id == selectedId then row.selected:Show() else row.selected:Hide() end

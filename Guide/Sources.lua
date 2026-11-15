@@ -264,6 +264,10 @@ local function acceptBonus(ctx, questID, listPosition)
     if (rules.chainBonus or 0) > 0 and ns.QuestieData.IsFollowUp(questID) then
         bonus = bonus + rules.chainBonus
     end
+    -- Story: stand-alone side quests only when they're on the way.
+    if (rules.sidePenalty or 0) > 0 and not listPosition and not ns.QuestieData.IsChainQuest(questID) then
+        bonus = bonus - rules.sidePenalty
+    end
     return bonus
 end
 

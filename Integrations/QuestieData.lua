@@ -35,6 +35,7 @@ local state = {
     candidates = {},      -- list of { id, requiredLevel, questLevel }
     byTitle = {},         -- NPC title ("Mage Trainer", "Innkeeper"...) -> list of NpcIds
     classTitle = nil,     -- "<Class> Trainer" for this character
+    leadsOn = {},         -- [questID] = true when another quest follows it
 }
 
 ---------------------------------------------------------------------------
@@ -314,6 +315,14 @@ function QuestieData.IsFollowUp(questID)
     return false
 end
 
+--- Is the quest part of a chain - a follow-up, or one that leads on to
+--- another quest? Stand-alone side quests aren't. (Story mode uses this.)
+function QuestieData.IsChainQuest(questID)
+    if QuestieData.IsFollowUp(questID) or state.leadsOn[questID] then return true end
+    local nextInChain = get("Quest", questID, "nextQuestInChain")
+    return type(nextInChain) == "number" and nextInChain > 0
+end
+
 ---------------------------------------------------------------------------
 -- Candidate index
 ---------------------------------------------------------------------------
@@ -464,7 +473,7 @@ function QuestieData.BuildIndex(profile, schedule, onDone)
         return
     end
     state.status = "indexing"
-    state.candidates, state.byTitle = {}, {}
+    state.candidates, state.byTitle, state.leadsOn = {}, {}, {}
 
     -- NPC titles worth indexing: class trainer, innkeepers, profession trainers.
     local services = ns.Data.Services
@@ -477,6 +486,13 @@ function QuestieData.BuildIndex(profile, schedule, onDone)
         for _, id in ipairs(allIds("Quest")) do
             if suitsCharacter(id, profile) then
                 local reqLevel = get("Quest", id, "requiredLevel")
+                -- Remember which quests lead on to this one.
+                for _, field in ipairs({ "preQuestSingle", "preQuestGroup" }) do
+                    local pre = get("Quest", id, field)
+                    if type(pre) == "table" then
+                        for _, preID in ipairs(pre) do state.leadsOn[preID] = true end
+                    end
+                end
                 if (reqLevel or 1) <= ns.Util.MAX_LEVEL then
                     state.candidates[#state.candidates + 1] = {
                         id = id,
@@ -601,7 +617,7 @@ end
 
 function QuestieData.Reset()
     state.status = "unknown"
-    state.candidates, state.byTitle, state.classTitle = {}, {}, nil
+    state.candidates, state.byTitle, state.classTitle, state.leadsOn = {}, {}, nil, {}
     spawnCache = {}
     dungeonByArea = {}
     searchIndex = nil

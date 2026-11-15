@@ -19,7 +19,7 @@ local _, ns = ...
 local Library = {}
 ns.Library = Library
 
-local BUILTIN_ORDER = { "story", "efficient" }
+local BUILTIN_ORDER = {} -- built-in ids in Data/Routes.lua order
 local DUNGEON_WINDOW = { below = 0, above = 3 }
 
 local builtins = {}  -- id -> guide
@@ -97,11 +97,13 @@ end
 --- SavedVariables load; safe to call again.
 function Library.Init()
     loaded = true
-    builtins, custom = {}, {}
+    builtins, custom, BUILTIN_ORDER = {}, {}, {}
     for _, def in ipairs(ns.Data.BuiltinGuides) do
         local guide = ns.GuideFormat.Copy(def)
         for k, v in pairs(ns.GuideFormat.BASES[def.base]) do guide.rules[k] = v end
+        guide.races, guide.group = def.races, def.group
         builtins[def.id] = finish(guide, def.id, true)
+        BUILTIN_ORDER[#BUILTIN_ORDER + 1] = def.id
     end
 
     local store = storage()
@@ -126,9 +128,31 @@ end
 -- Reading
 ---------------------------------------------------------------------------
 
+--- The built-in guide id for a generic choice ("efficient" / "story")
+--- and a starting-area group ("orc-troll"): "speedrun-orc-troll".
+function Library.GroupGuideId(genericId, groupKey)
+    local kind = ns.Data.GenericRouteIds[genericId]
+    if not kind or not groupKey then return nil end
+    return kind .. "-" .. groupKey
+end
+
 function Library.Get(id)
     ensureLoaded()
-    return builtins[id] or custom[id]
+    local guide = builtins[id] or custom[id]
+    if guide or not ns.Data.GenericRouteIds[id] then return guide end
+    -- "efficient" / "story": the version for this character's race.
+    return builtins[Library.GroupGuideId(id, ns.Advisor.RaceGroup(ns.Character.Detect()))]
+end
+
+--- Guides for this character: the built-ins for its starting area (all of
+--- them if the race isn't known), then the player's own.
+function Library.ListFor(profile)
+    local group = ns.Advisor.RaceGroup(profile)
+    local list = {}
+    for _, g in ipairs(Library.List()) do
+        if not g.builtin or not group or g.group == group then list[#list + 1] = g end
+    end
+    return list
 end
 
 --- All guides: built-ins first, then the player's own by name.

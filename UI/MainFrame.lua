@@ -1,19 +1,20 @@
 --[[
     ForeverPath - UI/MainFrame.lua
 
-    The main window: a movable frame with four tabs and a line showing the
-    guide you're following.
+    The main window: a movable, resizable frame with four tabs.
 
-      Guides    every guide (built-in and your own): use, edit, copy,
-                create, delete, export and import
-      Zones     the zones of your guide and their quests; follow one
-      Plan      class advice, level bands, dungeons and rested XP
-      Settings  everything that used to need a slash command
+      Home      your character and guide, and what every part does
+      Steps     every quest in your guide: where you are, done, skipped,
+                missed; go to any step, or Best step if you're lost
+      Guides    Speedrun and Story guides for your race, and your own:
+                use, edit, copy, create, delete, export and import
+      Settings  arrow, quest automation, buttons and windows
 
-    Each tab lives in its own file (UI/LibraryTab.lua, UI/ZonesTab.lua,
-    UI/PlanTab.lua, UI/SettingsTab.lua) and exposes Create(parent) and
-    Refresh(). This file only owns the frame, the tab buttons and the
-    current-guide line.
+    Each tab lives in its own file (UI/HomeTab.lua, UI/StepsTab.lua,
+    UI/LibraryTab.lua, UI/SettingsTab.lua) and exposes Create(parent) and
+    Refresh(). Refresh lays the tab out for the window's current size, and
+    runs again whenever the window is resized. This file owns the frame,
+    the tab buttons and shared widgets (buttons, scrolling text, dropdowns).
 
     The frame is created lazily on first show. It is not a protected
     frame, so it can be opened and closed in combat.
@@ -27,19 +28,21 @@ ns.MainFrame = MainFrame
 local L = ns.L
 
 local FRAME_NAME = "ForeverPathMainFrame" -- needed for UISpecialFrames (Esc)
-MainFrame.WIDTH, MainFrame.HEIGHT = 720, 540
+MainFrame.WIDTH, MainFrame.HEIGHT = 720, 540 -- default size
+MainFrame.MIN_WIDTH, MainFrame.MIN_HEIGHT = 560, 400
+MainFrame.MAX_WIDTH, MainFrame.MAX_HEIGHT = 1400, 1000
 MainFrame.PADDING = 12
 MainFrame.BUTTON_HEIGHT = 22
--- Where tab content starts, below the tab and route button rows.
-MainFrame.CONTENT_TOP = -32 - 2 * (22 + 6)
+-- Where tab content starts, below the tab buttons.
+MainFrame.CONTENT_TOP = -32 - (22 + 8)
 
 local TABS = {
+    { id = "home",     label = "TAB_HOME",     module = "HomeTab" },
     { id = "steps",    label = "TAB_STEPS",    module = "StepsTab" },
     { id = "library",  label = "TAB_LIBRARY",  module = "LibraryTab" },
-    { id = "zones",    label = "TAB_ZONES",    module = "ZonesTab" },
-    { id = "plan",     label = "TAB_PLAN",     module = "PlanTab" },
     { id = "settings", label = "TAB_SETTINGS", module = "SettingsTab" },
 }
+MainFrame.TABS = TABS
 
 local frame -- created on demand
 
@@ -82,13 +85,42 @@ local function createTabButtons(f)
     end
 end
 
---- "Guide: Efficient (Speedrun)   [Change guide]"
-local function createGuideLine(f)
-    f.guideLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    f.guideLabel:SetPoint("TOPLEFT", f, "TOPLEFT", MainFrame.PADDING, -30 - 28 - 4)
+--- A grip in the bottom-right corner that resizes `f`.
+-- @param onDone called after a resize, to save the size
+function MainFrame.AddResizeGrip(f, minW, minH, maxW, maxH, onDone)
+    f:SetResizable(true)
+    if f.SetResizeBounds then
+        f:SetResizeBounds(minW, minH, maxW, maxH)
+    elseif f.SetMinResize then
+        f:SetMinResize(minW, minH)
+        f:SetMaxResize(maxW, maxH)
+    end
+    local grip = CreateFrame("Button", nil, f)
+    grip:SetSize(16, 16)
+    grip:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -2, 2)
+    grip:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
+    grip:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
+    grip:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
+    grip:SetScript("OnMouseDown", function() f:StartSizing("BOTTOMRIGHT") end)
+    grip:SetScript("OnMouseUp", function()
+        f:StopMovingOrSizing()
+        if onDone then onDone(f) end
+    end)
+    f.resizeGrip = grip
+    return grip
+end
 
-    f.changeGuide = newButton(f, L.CHANGE_GUIDE, 130, function() MainFrame.ShowTab("library") end)
-    f.changeGuide:SetPoint("TOPRIGHT", f, "TOPRIGHT", -MainFrame.PADDING - 4, -30 - 28)
+local function clamp(v, lo, hi) return math.max(lo, math.min(hi, v)) end
+
+local function saveSize(f)
+    local saved = ns.Settings.account.frame
+    saved.width, saved.height = math.floor(f:GetWidth() + 0.5), math.floor(f:GetHeight() + 0.5)
+end
+
+local function restoreSize(f)
+    local saved = ns.Settings.account.frame
+    f:SetSize(clamp(saved.width or MainFrame.WIDTH, MainFrame.MIN_WIDTH, MainFrame.MAX_WIDTH),
+              clamp(saved.height or MainFrame.HEIGHT, MainFrame.MIN_HEIGHT, MainFrame.MAX_HEIGHT))
 end
 
 local function create()
@@ -112,7 +144,11 @@ local function create()
     f.title:SetText(L.TITLE)
 
     createTabButtons(f)
-    createGuideLine(f)
+    MainFrame.AddResizeGrip(f, MainFrame.MIN_WIDTH, MainFrame.MIN_HEIGHT,
+        MainFrame.MAX_WIDTH, MainFrame.MAX_HEIGHT, saveSize)
+    restoreSize(f)
+    -- Lay the visible tab out again for the new size.
+    f:SetScript("OnSizeChanged", function() MainFrame.Refresh() end)
 
     f.panels = {}
     for _, tab in ipairs(TABS) do
@@ -161,7 +197,73 @@ function MainFrame.NewScrollText(parent, width)
         text:SetText(content)
         child:SetHeight(text:GetStringHeight() + 8)
     end
+    --- Follow the window's width (call from the tab's Refresh).
+    function scroll.SetTextWidth(_, w)
+        w = math.max(100, w)
+        child:SetWidth(w)
+        text:SetWidth(w)
+    end
     return scroll
+end
+
+--- Width available to a tab's content at the window's current size.
+function MainFrame.ContentWidth()
+    local w = frame and frame:GetWidth()
+    if not w or w <= 0 then w = MainFrame.WIDTH end
+    return w - MainFrame.PADDING * 2
+end
+
+--- Height available to a tab's content.
+function MainFrame.ContentHeight()
+    local h = frame and frame:GetHeight()
+    if not h or h <= 0 then h = MainFrame.HEIGHT end
+    return h + MainFrame.CONTENT_TOP - MainFrame.PADDING
+end
+
+--- A compact dropdown: a button showing the current choice; clicking it
+--- opens a list of choices underneath.
+-- @param choices list of { id, label }
+-- @param get     function() -> current id
+-- @param set     function(id)
+function MainFrame.NewDropdown(parent, width, choices, get, set)
+    local dd = newButton(parent, "", width, nil)
+    local menu = CreateFrame("Frame", nil, dd, "BackdropTemplate")
+    menu:SetFrameStrata("DIALOG")
+    menu:SetPoint("TOPLEFT", dd, "BOTTOMLEFT", 0, -2)
+    menu:SetSize(width, #choices * 22 + 8)
+    if menu.SetBackdrop then
+        menu:SetBackdrop({ bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+                           edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+                           edgeSize = 12, insets = { left = 3, right = 3, top = 3, bottom = 3 } })
+        menu:SetBackdropColor(0, 0, 0, 0.95)
+    end
+    menu:Hide()
+    dd.menu, dd.items, dd.choices = menu, {}, choices
+
+    local function labelOf(id)
+        for _, c in ipairs(choices) do if c.id == id then return c.label end end
+        return tostring(id)
+    end
+    function dd.Update()
+        dd:SetText(labelOf(get()) .. "  v")
+    end
+    function dd.Choose(_, id)
+        menu:Hide()
+        set(id)
+        dd.Update()
+    end
+    for i, c in ipairs(choices) do
+        local item = newButton(menu, c.label, width - 8, function() dd:Choose(c.id) end)
+        item:SetPoint("TOPLEFT", menu, "TOPLEFT", 4, -4 - (i - 1) * 22)
+        item.choice = c.id
+        dd.items[i] = item
+    end
+    dd:SetScript("OnClick", function()
+        if menu:IsShown() then menu:Hide() else menu:Show() end
+    end)
+    dd:SetScript("OnHide", function() menu:Hide() end)
+    dd.Update()
+    return dd
 end
 
 ---------------------------------------------------------------------------
@@ -178,12 +280,14 @@ end
 function MainFrame.Refresh()
     if not frame or not frame:IsShown() then return end
     local tabId = ns.Settings.account.tab
-    local profile = ns.Character.Detect()
-    local routeId = ns.Advisor.ResolveRouteId(profile, ns.Settings.char.routeId)
+    local known = false
+    for _, tab in ipairs(TABS) do if tab.id == tabId then known = true end end
+    if not known then -- a tab from an older version (Zones, Plan)
+        tabId = "home"
+        ns.Settings.account.tab = tabId
+    end
 
     highlight(frame.tabButtons, "tabId", tabId)
-    frame.guideLabel:SetText(L.CURRENT_GUIDE_FMT:format(ns.Library.Get(routeId).name))
-    if tabId == "library" then frame.changeGuide:Hide() else frame.changeGuide:Show() end
 
     for _, tab in ipairs(TABS) do
         if tab.id == tabId then

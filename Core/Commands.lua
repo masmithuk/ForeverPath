@@ -12,9 +12,12 @@ ns.Commands = Commands
 local L = ns.L
 local Util = ns.Util
 
+--- "speedrun, story" (your race's guides) and your own guides' ids.
 local function routeIds()
-    local ids = {}
-    for _, g in ipairs(ns.Library.List()) do ids[#ids + 1] = g.id end
+    local ids = { "speedrun", "story" }
+    for _, g in ipairs(ns.Library.List()) do
+        if not g.builtin then ids[#ids + 1] = g.id end
+    end
     return Util.Join(ids, ", ")
 end
 

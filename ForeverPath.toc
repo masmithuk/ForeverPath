@@ -43,9 +43,8 @@ Guide\StepList.lua
 
 UI\Text.lua
 UI\MainFrame.lua
-UI\PlanTab.lua
+UI\HomeTab.lua
 UI\StepsTab.lua
-UI\ZonesTab.lua
 UI\SettingsTab.lua
 UI\LibraryTab.lua
 UI\GuideEditor.lua

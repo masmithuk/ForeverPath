@@ -4,7 +4,7 @@
     A round button on the edge of the minimap, written without libraries.
 
       Left-click    show or hide the step guide window
-      Right-click   open or close the main window (Guides, Plan, Settings)
+      Right-click   open or close the main window (Home, Steps, Guides, Settings)
       Drag          move it around the minimap edge (position is saved)
 
     It can be hidden from the Settings tab. The minimap's addon compartment

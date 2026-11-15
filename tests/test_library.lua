@@ -42,9 +42,21 @@ return {
         local ns = setup(T)
         save(ns)
         local list = ns.Library.List()
-        T.eq(list[1].id, "story")
-        T.eq(list[2].id, "efficient")
-        T.eq(list[3].name, "My Durotar Run")
+        T.eq(list[1].id, "speedrun-orc-troll")
+        T.eq(list[2].id, "story-orc-troll")
+        T.eq(list[#list].name, "Test Everything", "yours after, by name")
+        T.eq(list[#list - 1].name, "My Durotar Run")
+    end },
+
+    { "the Guides list shows your race's guides and your own", function(T)
+        local ns = setup(T)
+        save(ns)
+        local names = {}
+        for _, g in ipairs(ns.Library.ListFor(ns.Character.Detect())) do names[#names + 1] = g.name end
+        T.eq(names[1], "Undead Speedrun (1-60)", "the fixture character is Undead")
+        T.eq(names[2], "Undead Story (1-60)")
+        T.contains(names, "My Durotar Run")
+        for _, n in ipairs(names) do T.truthy(not n:find("Human"), "no other race's guides") end
     end },
 
     { "saved guides are stored as data and survive a reload", function(T)
@@ -68,11 +80,11 @@ return {
 
     { "built-in guides can't be overwritten", function(T)
         local ns = setup(T)
-        local draft = ns.Library.Draft("story")
+        local draft = ns.Library.Draft("story-undead")
         draft.name = "Hacked"
-        local id = ns.Library.Save(draft, "story")
-        T.truthy(id ~= "story")
-        T.eq(ns.Library.Get("story").name, "Story (Completionist)")
+        local id = ns.Library.Save(draft, "story-undead")
+        T.truthy(id ~= "story-undead")
+        T.eq(ns.Library.Get("story-undead").name, "Undead Story (1-60)")
     end },
 
     { "names are kept unique", function(T)
@@ -108,7 +120,7 @@ return {
         local ns = setup(T)
         _G.UnitRace = function() return "Orc", "Orc", 2 end
         local draft = ns.Library.CopyDraft("story", ns.Engine.BuildContext())
-        T.eq(draft.name, "Story (Completionist) (copy)")
+        T.eq(draft.name, "Orc & Troll Story (1-60) (copy)")
         T.truthy(#draft.quests >= 5)
     end },
 
@@ -180,8 +192,11 @@ return {
             if r:IsShown() then rows[#rows + 1] = r.text:GetText() end
         end
         local text = table.concat(rows, "\n")
-        T.contains(text, "> Story (Completionist)")
+        T.contains(text, "> Test Everything")
+        T.contains(text, "Undead Speedrun (1-60)")
         T.contains(text, "built-in")
+        T.contains(ns.LibraryTab.IntroText(ns.Character.Detect()), "Guides for Undead")
+        ns.LibraryTab.Select("speedrun-undead")
         T.eq(ns.LibraryTab.GetButton("delete"):IsEnabled(), false, "built-ins can't be deleted")
     end },
 
@@ -194,7 +209,7 @@ return {
         T.truthy(ns.Library.Get(id), "first click only asks")
         ns.LibraryTab.Press("delete")
         T.eq(ns.Library.Get(id), nil, "second click deletes")
-        T.eq(ns.Engine.CurrentGuide().id, "efficient", "Mage default")
+        T.eq(ns.Engine.CurrentGuide().id, "speedrun-undead", "Mage default: Speedrun for your race")
     end },
 
     ---------------------------------------------------------------------
@@ -324,11 +339,12 @@ return {
 
     { "saving an invalid guide shows errors and stores nothing", function(T)
         local ns = setup(T)
+        local before = #ns.Library.List()
         ns.LibraryTab.Press("new")
         ns.GuideEditor.SetField("name", "")
         T.eq(ns.GuideEditor.Save(), nil)
         T.contains(ns.GuideEditor.GetStatus(), "name is required")
-        T.eq(#ns.Library.List(), 2)
+        T.eq(#ns.Library.List(), before)
     end },
 
     { "Export shows the JSON, Import adds a pasted guide", function(T)

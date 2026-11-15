@@ -183,8 +183,8 @@ return {
             if name == "ZoneDB" then return { GetUiMapIdByAreaId = function() return nil end } end
         end }
         local state = fixtures.login(ns)
-        T.eq(ns.Advisor.ResolveRouteId(ns.Character.Detect(), ForeverPathCharDB.routeId), "efficient",
-            "speedrun guide by default")
+        T.eq(ns.Advisor.ResolveRouteId(ns.Character.Detect(), ForeverPathCharDB.routeId), "speedrun-orc-troll",
+            "the troll's Speedrun guide by default")
         local titles = {}
         for i, s in ipairs(state.steps) do titles[i] = s.title end
         T.contains(titles, "Talk to Kaltunk", "found while Questie loads")

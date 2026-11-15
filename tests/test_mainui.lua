@@ -1,0 +1,215 @@
+-- Main window: Home, tabs, resizing, Settings layout and dropdowns, the
+-- guide window's buttons, and quest overviews.
+
+local fixtures = require("fixtures")
+
+local function login(T, opts)
+    local ns, mock = T.fresh()
+    if opts and opts.orc then mock.player.race = { "Orc", "Orc", 2 } end
+    fixtures.durotar(mock, opts)
+    ForeverPathCharDB.guide.trainedLevel = 60
+    fixtures.login(ns)
+    return ns, mock
+end
+
+local function questStatus(overview, id)
+    for _, q in ipairs(overview.quests) do
+        if q.id == id then return q.status end
+    end
+    return nil
+end
+
+local function tabIds(ns)
+    local out = {}
+    for i, tab in ipairs(ns.MainFrame.TABS) do out[i] = tab.id end
+    return table.concat(out, ",")
+end
+
+return {
+    ---------------------------------------------------------------------
+    -- Home and tabs
+    ---------------------------------------------------------------------
+    { "the main window has Home, Steps, Guides and Settings", function(T)
+        local ns = login(T)
+        T.eq(tabIds(ns), "home,steps,library,settings")
+        ns.MainFrame.Show()
+        T.eq(ForeverPathDB.tab, "home", "opens on Home")
+        T.truthy(ns.HomeTab.GetPanel():IsShown())
+    end },
+
+    { "Home explains the guide, the current step and every part", function(T)
+        local ns = login(T)
+        ns.MainFrame.ShowTab("home")
+        local text = ns.HomeTab.GetText()
+        T.contains(text, "Undead Mage - Level 8 (Horde)")
+        T.contains(text, "Following: ")
+        T.contains(text, "Test Everything")
+        T.contains(text, "Current step: Talk to Foreman Thazz'ril")
+        T.contains(text, "Rested XP")
+        T.contains(text, "Frost")
+        T.contains(text, "What's where")
+        for _, part in ipairs({ "Guide window", "Steps", "Guides", "Settings", "Target button", "Minimap button" }) do
+            T.contains(text, part .. " - ", part .. " explained")
+        end
+    end },
+
+    { "Home buttons open the guide window, Steps and Guides", function(T)
+        local ns = login(T)
+        ns.MainFrame.ShowTab("home")
+        local p = ns.HomeTab.GetPanel()
+        p.window:GetScript("OnClick")()
+        T.eq(ForeverPathDB.guide.shown, false, "guide window toggled off")
+        T.eq(p.window:GetText(), "Show guide window")
+        p.steps:GetScript("OnClick")()
+        T.eq(ForeverPathDB.tab, "steps")
+        ns.MainFrame.ShowTab("home")
+        p.guides:GetScript("OnClick")()
+        T.eq(ForeverPathDB.tab, "library")
+    end },
+
+    { "a saved tab from an older version opens Home", function(T)
+        local ns = login(T)
+        ForeverPathDB.tab = "zones"
+        ns.MainFrame.Show()
+        T.eq(ForeverPathDB.tab, "home")
+    end },
+
+    ---------------------------------------------------------------------
+    -- Resizing
+    ---------------------------------------------------------------------
+    { "the main window is resizable and remembers its size", function(T)
+        local ns = login(T)
+        ns.MainFrame.Show()
+        local f = ForeverPathMainFrame
+        T.truthy(f.resizeGrip, "has a resize grip")
+        f:SetSize(900, 600)
+        f.resizeGrip:GetScript("OnMouseUp")()
+        T.eq(ForeverPathDB.frame.width, 900)
+        T.eq(ForeverPathDB.frame.height, 600)
+        T.eq(ns.MainFrame.ContentWidth(), 900 - 24)
+    end },
+
+    { "tabs follow the window width", function(T)
+        local ns = login(T, { orc = true })
+        ns.MainFrame.ShowTab("steps")
+        ForeverPathMainFrame:SetSize(1000, 600)
+        local rows = ns.StepsTab.GetVisibleRows()
+        T.eq(rows[1]:GetWidth(), 1000 - 24 - 28, "Steps rows are as wide as the window")
+        ForeverPathMainFrame:SetSize(600, 600)
+        T.eq(rows[1]:GetWidth(), 600 - 24 - 28)
+        T.truthy(not ns.StepsTab.GetPanel().hint:IsShown(), "hint hidden when narrow")
+
+        ns.MainFrame.ShowTab("settings")
+        ForeverPathMainFrame:SetSize(1000, 600)
+        T.eq(ns.SettingsTab.GetPanel().twoColumns, true, "two columns when wide")
+        ForeverPathMainFrame:SetSize(600, 600)
+        T.eq(ns.SettingsTab.GetPanel().twoColumns, false, "stacked when narrow")
+    end },
+
+    { "a saved size outside the limits is clamped", function(T)
+        local ns = login(T)
+        ForeverPathDB.frame.width, ForeverPathDB.frame.height = 100, 5000
+        ns.MainFrame.Show()
+        T.eq(ForeverPathMainFrame:GetWidth(), ns.MainFrame.MIN_WIDTH)
+        T.eq(ForeverPathMainFrame:GetHeight(), ns.MainFrame.MAX_HEIGHT)
+    end },
+
+    { "the guide window's width can be changed and is remembered", function(T)
+        login(T)
+        local f = ForeverPathGuideFrame
+        f:SetSize(480, 200)
+        f.resizeGrip:GetScript("OnMouseUp")()
+        T.eq(ForeverPathDB.guide.width, 480)
+        T.eq(f.current:GetWidth(), 480 - 20 - 26, "text wraps to the new width")
+    end },
+
+    ---------------------------------------------------------------------
+    -- Guide window
+    ---------------------------------------------------------------------
+    { "the guide window has Steps, Skip and Done only", function(T)
+        login(T)
+        local f = ForeverPathGuideFrame
+        T.truthy(f.list and f.skip and f.done)
+        T.eq(rawget(f, "guides"), nil, "no Zones button")
+        T.eq(rawget(f, "best"), nil, "Best step lives on the Steps tab")
+        T.contains(f.header:GetText(), "Test Everything", "header names the guide")
+    end },
+
+    ---------------------------------------------------------------------
+    -- Settings
+    ---------------------------------------------------------------------
+    { "the waypoint arrow is a dropdown", function(T)
+        local ns, mock = login(T)
+        mock.installTomTom()
+        ns.MainFrame.ShowTab("settings")
+        local dd = ns.SettingsTab.GetPanel().waypoints
+        T.contains(dd:GetText(), "Automatic")
+        dd:GetScript("OnClick")(dd)
+        T.truthy(dd.menu:IsShown(), "opens")
+        ns.SettingsTab.ChooseWaypoints("tomtom")
+        T.truthy(not dd.menu:IsShown(), "closes after a choice")
+        T.eq(ForeverPathDB.guide.waypoints, "tomtom")
+        T.contains(dd:GetText(), "TomTom")
+        T.truthy(#mock.tomtom.waypoints > 0, "TomTom arrow set")
+        ns.SettingsTab.ChooseWaypoints("off")
+        T.eq(#mock.tomtom.removed, #mock.tomtom.waypoints, "arrow removed")
+    end },
+
+    { "the pause key is a dropdown too", function(T)
+        local ns = login(T)
+        ns.MainFrame.ShowTab("settings")
+        ns.SettingsTab.ChoosePauseKey("CTRL")
+        T.eq(ForeverPathDB.auto.pauseKey, "CTRL")
+        T.contains(ns.SettingsTab.GetPanel().pauseKey:GetText(), "Ctrl")
+    end },
+
+    { "settings checkboxes: guide window and minimap button", function(T)
+        local ns = login(T)
+        ns.MainFrame.ShowTab("settings")
+        ns.SettingsTab.Click("SETTING_GUIDE_SHOWN", false)
+        T.truthy(not ForeverPathGuideFrame:IsShown())
+        ns.SettingsTab.Click("SETTING_MINIMAP", false)
+        T.eq(ForeverPathDB.minimap.hide, true)
+        T.truthy(not ForeverPathMinimapButton:IsShown(), "button hidden")
+        for _, cb in ipairs(ns.SettingsTab.GetPanel().checkboxes) do
+            T.truthy(cb.def.label ~= "SETTING_GUIDE_ENABLED", "no separate on/off switch")
+        end
+    end },
+
+    ---------------------------------------------------------------------
+    -- Quest overviews (used for guides without a quest list)
+    ---------------------------------------------------------------------
+    { "quest overview shows each quest's status for you", function(T)
+        local ns, mock = login(T)
+        mock.completed[102] = true
+        local overview = ns.Catalog.Overview("Durotar", ns.Engine.BuildContext())
+        T.eq(questStatus(overview, 101), "available")
+        T.eq(questStatus(overview, 102), "done")
+        T.eq(questStatus(overview, 103), "locked", "needs 101")
+        T.eq(questStatus(overview, 109), "level")
+        T.eq(questStatus(overview, 110), nil, "other faction's quest left out")
+        T.eq(questStatus(overview, 105), nil, "other race's quest left out")
+        T.eq(overview.done, 1)
+    end },
+
+    { "quests in your log show as active or ready", function(T)
+        local ns, mock = login(T)
+        fixtures.addToLog(mock, 101, "Vile Familiars", false)
+        fixtures.addToLog(mock, 102, "Lazy Peons", true)
+        local overview = ns.Catalog.Overview("Durotar", ns.Engine.BuildContext())
+        T.eq(questStatus(overview, 101), "active")
+        T.eq(questStatus(overview, 102), "ready")
+    end },
+
+    { "the guide editor is resizable and its columns follow", function(T)
+        local ns = login(T)
+        ns.MainFrame.ShowTab("library")
+        ns.LibraryTab.Press("new")
+        local f = ForeverPathGuideEditor
+        f:SetSize(1100, 700)
+        f.resizeGrip:GetScript("OnMouseUp")()
+        T.eq(ForeverPathDB.editor.width, 1100)
+        T.eq(f.columnWidth, math.floor((1100 - 24 - 20) / 2))
+        T.eq(f.questsTab.search:GetWidth(), f.columnWidth - 10)
+    end },
+}

@@ -17,7 +17,7 @@ local Settings = {}
 ns.Settings = Settings
 
 -- Bump when the shape of saved data changes, and add a migration below.
-Settings.SCHEMA_VERSION = 4
+Settings.SCHEMA_VERSION = 5
 
 local ACCOUNT_DEFAULTS = {
     schema = Settings.SCHEMA_VERSION,
@@ -27,10 +27,11 @@ local ACCOUNT_DEFAULTS = {
         x = 0,
         y = 0,
         shown = false,
+        width = 720,
+        height = 540,
     },
-    showAllBands = false,
     announceLevelUp = true,
-    tab = "steps",                      -- main window tab last shown
+    tab = "home",                      -- main window tab last shown
     guides = {},                          -- player-made guides: [id] = guide text
     minimap = { angle = 225, hide = false },
     targetButton = true,                  -- show the Target button
@@ -43,19 +44,20 @@ local ACCOUNT_DEFAULTS = {
         pauseKey = "SHIFT",     -- hold while talking to pause: SHIFT | CTRL | ALT | NONE
     },
     target = { point = "RIGHT", relativePoint = "RIGHT", x = -80, y = 40 },
+    editor = {},                          -- guide editor size (width, height) once resized
     guide = {
         enabled = true,
         waypoints = "auto",   -- "auto" | "tomtom" | "builtin" | "off"
         maxSteps = 6,
         shown = true,
         frame = { point = "RIGHT", relativePoint = "RIGHT", x = -80, y = 120 },
+        width = 320,          -- guide window width (it grows to fit its text)
     },
 }
 
 local CHAR_DEFAULTS = {
     schema = Settings.SCHEMA_VERSION,
     routeId = nil, -- nil = use the class's default route
-    guideId = nil, -- zone name of the guide being followed; nil = Automatic
     guide = {
         skipped = {},      -- [questID] = true, hidden until /fp unskip
         done = {},         -- [guide note step id] = true
@@ -80,7 +82,18 @@ local function migrate(db)
             db.routeId = ns.Data.LegacyRouteIds.dungeon
             db.guideId = nil -- was a dungeon name, not a zone
         end
-        if db.tab == "guides" then db.tab = "zones" end
+        if db.tab == "guides" then db.tab = "home" end
+    end
+    -- Schema 5 (0.8.0): the Zones and Plan tabs and following a single zone
+    -- were removed; "efficient" / "story" now mean your race's Speedrun /
+    -- Story guide (resolved when the guide is looked up).
+    if from < 5 then
+        db.guideId = nil
+        db.showAllBands = nil
+        if db.tab == "zones" or db.tab == "plan" then db.tab = "home" end
+        -- The "guide me step by step" switch is gone: the guide window's
+        -- show/hide is the one control now, so turn the guide back on.
+        if type(db.guide) == "table" and db.guide.waypoints then db.guide.enabled = true end
     end
     db.schema = Settings.SCHEMA_VERSION
 end
@@ -107,6 +120,9 @@ end
 --- Restore the default window positions (plan window and guide window).
 function Settings.ResetFramePosition()
     resetPosition(Settings.account.frame, ACCOUNT_DEFAULTS.frame)
+    Settings.account.frame.width, Settings.account.frame.height =
+        ACCOUNT_DEFAULTS.frame.width, ACCOUNT_DEFAULTS.frame.height
     resetPosition(Settings.account.guide.frame, ACCOUNT_DEFAULTS.guide.frame)
+    Settings.account.guide.width = ACCOUNT_DEFAULTS.guide.width
     resetPosition(Settings.account.target, ACCOUNT_DEFAULTS.target)
 end

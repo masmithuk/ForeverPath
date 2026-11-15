@@ -59,13 +59,9 @@ local function currentOrigin()
     return ns.GameApi.GetWorldPosition(pos.mapID, pos.x, pos.y), pos.mapID
 end
 
---- Maps where the guide may suggest new quests:
----   * a zone chosen in the Zones tab: that zone
----   * Automatic: your guide's zones for your level, plus where you stand
+--- Maps where the guide may suggest new quests: your guide's zones for
+--- your level, plus where you stand.
 local function allowedMaps(plan, playerMapID)
-    local zone = ns.Settings.char.guideId
-    local mapID = zone and ns.ZoneMap.MapIdByName(zone)
-    if mapID then return { [mapID] = true } end
     return ns.Sources.AllowedMaps(plan, playerMapID)
 end
 
@@ -448,9 +444,7 @@ function Engine.WantsQuest(questID)
 end
 
 --- The guide changed: different zones and rules, so rebuild everything.
---- A zone chosen under the old guide no longer applies.
 function Engine.OnModeChanged()
-    ns.Settings.char.guideId = nil
     Engine.state.currentKey = nil
     invalidateDoable()
     Engine.RequestReplan()
@@ -461,14 +455,6 @@ function Engine.OnGuideEdited()
     Engine.state.currentKey = nil
     invalidateDoable()
     Engine.RequestReplan()
-end
-
---- Follow one zone (by name), or nil for Automatic.
-function Engine.SetGuide(guideId)
-    ns.Settings.char.guideId = guideId
-    Engine.state.currentKey = nil
-    invalidateDoable()
-    Engine.Replan()
 end
 
 function Engine.UnskipAll()

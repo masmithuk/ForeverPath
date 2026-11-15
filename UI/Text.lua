@@ -1,8 +1,8 @@
 --[[
     ForeverPath - UI/Text.lua
 
-    Turns a plan (from Core/Advisor.lua) into the coloured text shown in the
-    main window. Kept separate from frame code so it can be tested and so
+    Turns a plan (from Core/Advisor.lua) into the coloured text shown on the
+    main window's Home tab. Kept separate from frame code so it can be tested and so
     the window stays a thin shell.
 ]]
 
@@ -56,43 +56,6 @@ local function renderXp(lines, profile, xp)
     end
 end
 
-local function renderClass(lines, profile)
-    local class = profile.class
-    if not class then return end
-    heading(lines, L.CLASS_HEADER:format(class.name))
-    bullet(lines, L.LEVEL_SPEC:format(C("good", class.spec)) .. " - " .. class.why)
-    bullet(lines, L.ALT_SPEC:format(class.altSpec), "muted")
-    bullet(lines, L.LEVEL_TIER:format(class.tier), "muted")
-    for _, tip in ipairs(class.tips) do
-        bullet(lines, tip)
-    end
-end
-
-local function renderBand(lines, label, entry, highlight)
-    if not entry then return end
-    local b = entry.band
-    local title = L.BAND_FMT:format(label, b.min, b.max)
-    lines[#lines + 1] = "  " .. C(highlight and "good" or "muted", title)
-    lines[#lines + 1] = "    " .. L.QUEST_IN:format(Util.Join(entry.zones))
-    for _, note in ipairs(entry.notes or {}) do
-        lines[#lines + 1] = "    " .. C("muted", note)
-    end
-end
-
-local function renderRoute(lines, plan, showAll)
-    heading(lines, L.ROUTE_HEADER:format(plan.route.name))
-    lines[#lines + 1] = "  " .. C("muted", plan.route.description)
-    if showAll then
-        for i, entry in ipairs(plan.allBands) do
-            local label = (i == plan.bandIndex) and L.NOW or L.LEVELS
-            renderBand(lines, label, entry, i == plan.bandIndex)
-        end
-    else
-        renderBand(lines, L.NOW, plan.current, true)
-        renderBand(lines, L.NEXT, plan.next, false)
-    end
-end
-
 local function renderDungeons(lines, plan, profile)
     heading(lines, L.DUNGEON_HEADER)
     if #plan.dungeons == 0 then
@@ -112,38 +75,51 @@ local function renderDungeons(lines, plan, profile)
     end
 end
 
-local function renderMilestones(lines, plan)
-    if #plan.milestones == 0 then return end
-    heading(lines, L.MILESTONE_HEADER)
-    for _, m in ipairs(plan.milestones) do
-        bullet(lines, ("%d: %s"):format(m.level, m.text))
+local function renderGuide(lines, plan, step)
+    heading(lines, L.HOME_GUIDE_HEADER)
+    bullet(lines, L.HOME_FOLLOWING_FMT:format(C("good", plan.route.name)))
+    local cur, nxt = plan.current, plan.next
+    if cur then
+        bullet(lines, L.HOME_NOW_FMT:format(Util.Join(cur.zones), cur.band.min, cur.band.max))
+        for _, note in ipairs(cur.notes or {}) do bullet(lines, note, "muted") end
+    end
+    if nxt then
+        bullet(lines, L.HOME_NEXT_FMT:format(nxt.band.min, Util.Join(nxt.zones)), "muted")
+    end
+    bullet(lines, L.HOME_STEP_FMT:format(step and step.title or L.GUIDE_NOTHING))
+end
+
+local function renderClassTips(lines, profile)
+    local class = profile.class
+    if not class then return end
+    heading(lines, L.CLASS_HEADER:format(class.name))
+    bullet(lines, L.LEVEL_SPEC:format(C("good", class.spec)) .. " - " .. class.why)
+    for i = 1, math.min(2, #class.tips) do bullet(lines, class.tips[i], "muted") end
+end
+
+local function renderHelp(lines)
+    heading(lines, L.HOME_HELP_HEADER)
+    for _, key in ipairs({ "HOME_HELP_WINDOW", "HOME_HELP_STEPS", "HOME_HELP_GUIDES", "HOME_HELP_SETTINGS",
+                           "HOME_HELP_TARGET", "HOME_HELP_MINIMAP" }) do
+        bullet(lines, L[key])
     end
 end
 
-local function renderGeneral(lines)
-    heading(lines, L.GENERAL_HEADER)
-    for _, tip in ipairs(ns.Data.GeneralTips) do
-        bullet(lines, tip, "muted")
-    end
-end
-
---- Build the full window text.
+--- The Home tab: who you are, the guide you follow and where you are in
+--- it, rested XP, class tips, dungeons for your level, and what each part
+--- of ForeverPath does.
 -- @param profile from Character.Detect
 -- @param plan    from Advisor.BuildPlan
 -- @param xp      from Advisor.GetXpInfo (optional)
--- @param opts    { showAllBands = bool }
-function Text.Render(profile, plan, xp, opts)
-    opts = opts or {}
+-- @param step    the guide's current step (optional)
+function Text.Home(profile, plan, xp, step)
     local lines = {}
     renderHeader(lines, profile)
+    renderGuide(lines, plan, step)
     renderXp(lines, profile, xp)
-    renderClass(lines, profile)
-
-    renderRoute(lines, plan, opts.showAllBands)
+    renderClassTips(lines, profile)
     renderDungeons(lines, plan, profile)
-
-    renderMilestones(lines, plan)
-    renderGeneral(lines)
+    renderHelp(lines)
     return table.concat(lines, "\n")
 end
 

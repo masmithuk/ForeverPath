@@ -6,22 +6,22 @@ It reads your race, class, faction and level. From those it picks a leveling rou
 
 ## Guides
 
-A guide decides which zones you level in and how the step guide picks quests. ForeverPath comes with two, and you can make, share and import your own.
+A guide decides which zones you level in and how the step guide picks quests. ForeverPath comes with a **Speedrun** and a **Story** guide, levels 1-60, for each starting area: **Orc & Troll**, **Tauren**, **Undead**, **Human**, **Dwarf & Gnome**, **Night Elf** and **Skyborne**. The Guides tab shows the two for your race, plus your own guides.
 
-| | **Story (Completionist)** | **Efficient (Speedrun)** |
+| | **Speedrun** | **Story** |
 |---|---|---|
-| **Goal** | Do every quest and follow each story through | Quickest path through each zone |
-| **Zones** | Every zone for your level, Classic and Forever | The densest zones only (Riverglades carries 35-45) |
-| **Quests offered** | Everything from 10 levels below you to 3 above | Only from 2 below to 2 above you |
-| **Skipped** | Nothing | Quests whose objectives are more than 350 yards from the quest giver |
-| **Ordering** | Follow-ups in a chain jump the queue (150 yd bonus), so stories are told in order | Hand-ins first (120 yd bonus), then the nearest step |
+| **Goal** | The quickest quest path to 60 for your race | The important quests of each zone, enough to level into the next |
+| **Zones** | Your race's starting zones, then the densest zones (Riverglades carries 35-45) | Your race's starting zones, then the main zones for each level range |
+| **Quests offered** | From 2 levels below you to 2 above | From 3 below you to 3 above (no grey quests) |
+| **Skipped** | Quests whose objectives are more than 350 yards from the quest giver | Stand-alone side quests count as 350 yards further away, so they're only picked up when they're on the way |
+| **Ordering** | Hand-ins first (120 yd bonus), then the nearest step | Quest chains first: follow-ups jump the queue (250 yd bonus), so each zone's story is told in order |
 
-Each character follows one guide; pick it in the **Guides** tab. Rogues start on Story and everyone else on Efficient.
+Each character follows one guide; pick it in the **Guides** tab. Rogues start on Story and everyone else on Speedrun.
 
 ### Your own guides
 
 In the **Guides** tab:
-- **Copy** makes your own version of any guide. Copying Story or Efficient also fills in the full quest list those guides would pick for your character, so you can trim and reorder it.
+- **Copy** makes your own version of any guide. Copying a built-in guide also fills in the full quest list those guides would pick for your character, so you can trim and reorder it.
 - **New guide** starts from scratch.
 - **Edit** opens the guide editor. **View** does the same for the read-only built-ins.
 - **Export** shows the guide's JSON already selected, ready for Ctrl+C. Paste it into Discord, a forum or a file.
@@ -35,7 +35,7 @@ Your guides are saved account-wide, so every character can use them. If you edit
 | Tab | What you do there |
 |---|---|
 | **Quests** | Your guide's quests, in order, with level and zone. Select one and use **Top**, **Up**, **Down**, **Bottom** or **Remove**. On the right, type part of a quest's name ("famil") or a quest ID to search QuestieDB, select a result, and click **Add after selected**. Quests already in the guide are marked. Below that, **Add a step** puts a step that isn't a quest after the selected entry: pick the kind (Note, Buy, Train, Hearth, Go to), type the text, optionally press **Use my location**, then **Add step**. Select a step in the list to change it with **Update step**. Steps move and delete like quests. |
-| **Details** | Name, author, description, and whether it's based on **Story** or **Efficient**, which sets the default rules. |
+| **Details** | Name, author, description, and whether it's based on **Story** or **Efficient** (Speedrun), which sets the default rules. |
 | **JSON** | The whole guide as JSON, for the less common settings: zones per level, rules, skipped quests and extra steps. Changes here carry over to the other tabs. If the JSON doesn't parse, the editor keeps you here and shows the line and column. |
 
 **Check** validates the guide without saving. **Save** always validates, so a broken guide is never stored.
@@ -46,7 +46,7 @@ Your guides are saved account-wide, so every character can use them. If you edit
 - Listed quests are offered wherever their giver stands, and whatever their level. Only the quest's own required level and earlier quests in its chain still count.
 - Once nothing on the list is available, the guide's zones take over, so you're never stuck.
 
-Guides without a list, like Story and Efficient, use their zones from the start.
+Guides without a list, like the built-in Speedrun and Story guides, use their zones from the start.
 
 ### Guide format (JSON)
 
@@ -80,7 +80,7 @@ JSON is easier to share than XML: it's shorter to paste, any text editor or onli
 | `basedOn` | `"story"` or `"efficient"`. Each one's rules are the defaults. |
 | `rules` | Optional overrides, all whole numbers:<br>• `greyGap`: skip quests this many levels below you<br>• `levelsAbove`: allow quests this many levels above you<br>• `maxAccept`: quest givers considered at once<br>• `turninBonus` and `chainBonus`: yards a hand-in or story follow-up counts as closer<br>• `maxDetour`: skip quests whose objectives are this far from the giver (0 = no limit) |
 | `quests` | Your quests, in order. Each is `{ "id": 788, "name": "..." }` or just `788`. Only the id matters; the name is there for people reading the file. The list can also hold **steps that aren't quests**, see below. |
-| `bands` | Zones per level range, covering 1-60 in order with no gaps or overlaps. `levels` is `[from, to]`. `zones` sets both factions; otherwise use `alliance` and `horde`. `"START"` means your race's starting zone. `notes` show in the Plan tab. |
+| `bands` | Zones per level range, covering 1-60 in order with no gaps or overlaps. `levels` is `[from, to]`. `zones` sets both factions; otherwise use `alliance` and `horde`. `"START"` means your race's starting zone. `notes` show on the Home tab. |
 | `skipQuests` | Quest IDs the guide never picks up or auto-accepts. |
 | `steps` | Extra steps from a level. `kind` is `train`, `buy`, `note` or `hearth`. `train` makes class training due from that level (it shows up when your trainer is nearby). `buy`, `note` and `hearth` become a step in the guide that you tick off with **Done**. |
 
@@ -141,7 +141,7 @@ Steps advance on their own:
 ## Features
 
 - **Detects your character automatically.** It covers all 10 Forever races, including the Skyborne and their faction-specific classes. It also points out when you're playing one of the six new race/class combinations, such as an Undead Paladin or a Dwarf Shaman.
-- **Guides you can edit and share:** Story and Efficient are built in, and you can copy, write, export and import your own. See above.
+- **Guides you can edit and share:** Speedrun and Story guides for every race are built in, and you can copy, write, export and import your own. See above.
 - **Target button.** Click it, or press its key, to target the nearest creature you still need for a quest.
 - **Gives class advice.** You get a leveling spec, an alternative, the class's launch leveling tier and practical tips.
 - **Suggests dungeons.** All Classic and new Forever dungeons in your level range are listed. Dungeons deep in enemy territory go to the bottom of the list.
@@ -170,17 +170,17 @@ Everything runs from the game's own UI.
 - **Steps** opens the Steps list (below).
 - **Skip** hides the current step's quests.
 - **Done** appears on steps you tick off yourself.
-- **Zones** opens the zone browser.
-- **Best step** is for when you're lost. It forgets the step you picked in the Steps list and the step the guide was holding on to, then picks the best step from where you're standing. Skipped quests stay skipped. Also on the Steps tab, and as `/fp best` or `/fp lost`.
 - **Header:** names the guide you're following.
+- **Resizing:** drag the bottom-right corner to make it wider or narrower. The text wraps to fit and the width is remembered.
 
-**Steps tab** (first tab of the main window): every quest in your guide, in order.
+**Steps tab:** every quest in your guide, in order.
 - **Header:** where you are ("You're at quest 12 of 40") and how many are done, skipped and missed.
 - **List:** number, level, quest, quest giver and status (Done, Ready, In log, Skipped, Missed, Available, Level n, Locked). The step the guide is showing now is marked with `>`.
 - **Missed** means an available quest you've already moved past in the guide.
 - **Filters:** All, To do, Skipped & missed, Done.
 - **Go to this step** (or double-click) makes the selected quest the current step until it's done. If you can't do it yet, it says why.
 - **Skip / Unskip** the selected quest, and **Undo last skip** to step back through your last 50 skips (kept per character, even after a `/reload`).
+- **Best step** is for when you're lost. It forgets the step you picked and the step the guide was holding on to, then picks the best step from where you're standing. Skipped quests stay skipped. Also `/fp best` or `/fp lost`.
 
 **Target button:** a small button labelled with a creature's name, such as "Target: Near Scorpid (1/3)". **Each press targets the next creature you still need for a quest, from nearest to furthest, then starts again at the nearest.** The label shows which creature the next press targets.
 - **Which creatures:** only those for the **current step**, including creatures that drop its quest items. The button hides on steps without creatures to kill, such as picking up or handing in quests. It skips kill objectives you've already finished. Each creature appears once, sorted by its nearest spawn, up to 8.
@@ -192,23 +192,23 @@ Everything runs from the game's own UI.
 **Quest automation:** talking to a quest giver accepts their quests and hands in finished ones, with the reward taken for you.
 - **Pausing:** hold **Shift** while you open the NPC and nothing is automated for that conversation. The pause key can be changed in Settings.
 - **Never automated:** choosing between several rewards, quests that cost gold to complete, quests shared by other players, and escort confirmations are always left to you.
-- **Accept filters**, all set in Settings: quests you skipped in the guide, grey quests and repeatable quests are skipped. By default it also only accepts quests your guide would pick, so Efficient won't load you up with low-value quests, and a guide's `skip quests` list is respected. Quests QuestieDB doesn't know yet are accepted.
+- **Accept filters**, all set in Settings: quests you skipped in the guide, grey quests and repeatable quests are skipped. By default it also only accepts quests your guide would pick, so Speedrun won't load you up with low-value quests, and a guide's `skip quests` list is respected. Quests QuestieDB doesn't know yet are accepted.
 - **Questie:** if Questie's own auto-accept or auto-complete is on, ForeverPath stands aside and Settings tells you, so the two don't fight over the same window.
 
-**Main window**, with four tabs. The line at the top shows the guide you're following, with a **Change guide** button.
+**Main window**, with four tabs. Drag its bottom-right corner to resize it; every tab adjusts to the new size, and the size is remembered.
 
 | Tab | What's in it |
 |---|---|
-| **Guides** | Every guide: the built-in ones, then yours. Select one to see its details, then **Use this guide**, **Edit** (or **View** for built-ins), **Copy**, **New guide**, **Delete**, **Export** or **Import**. Edit and View open the guide editor described above. |
-| **Zones** | Every zone in your guide. Each shows its level range and how many of its quests you've done. Zones for your level are gold, and the one you're following has an arrow. Click a zone to see all its quests: level, quest giver and your status (Done, Ready to turn in, In your log, Available, the level you need, or Requirements not met yet). **Follow this zone** keeps the step guide in that zone. **Automatic** goes back to your guide's zones for your level. |
-| **Plan** | Leveling spec and tips for your class, your route's level bands, dungeons for your level, upcoming milestones and rested XP. |
-| **Settings** | Quest automation: accept, turn in, only quests your guide wants, skip grey or repeatable quests, and the pause key. Also: turn step-by-step guiding on or off, show or hide the guide window and the minimap button, and turn level-up announcements on or off. Choose the waypoint arrow (Automatic, TomTom, Map pin, Off). Bring back skipped quests, and reset window positions. |
+| **Home** | Your character, the guide you're following, where you're levelling now and next, your current step, rested XP, class tips, dungeons for your level, and a short explanation of every part of ForeverPath. Buttons show or hide the guide window and open Steps or Guides. |
+| **Steps** | Every quest in your guide, as described above. |
+| **Guides** | The Speedrun and Story guides for your race, then yours. Select one to see its details, then **Use this guide**, **Edit** (or **View** for built-ins), **Copy**, **New guide**, **Delete**, **Export** or **Import**. Edit and View open the guide editor described above. |
+| **Settings** | Show or hide the guide window, the Target button and the minimap button; level-up messages; the waypoint arrow (a dropdown: Automatic, Shortest Path, TomTom, Map pin, Off); bring back skipped quests and reset window positions. Quest automation: accept, hand in, only quests your guide wants, skip grey or repeatable quests, and the pause key (a dropdown). The two columns stack when the window is narrow. |
 
 The minimap's addon compartment also opens the main window, even if you hide the minimap button.
 
 ### Slash commands (optional)
 
-Everything above can also be done with commands, which is handy for macros: `/fp`, `/fp guide [on|off]`, `/fp skip`, `/fp back`, `/fp done`, `/fp unskip`, `/fp waypoints auto|shortestpath|tomtom|builtin|off`, `/fp route <guide id or name>`, `/fp next`, `/fp reset` and `/fp help`.
+Everything above can also be done with commands, which is handy for macros: `/fp`, `/fp guide [on|off]`, `/fp skip`, `/fp back`, `/fp done`, `/fp best`, `/fp unskip`, `/fp waypoints auto|shortestpath|tomtom|builtin|off`, `/fp route speedrun|story|<your guide>`, `/fp next`, `/fp debug`, `/fp reset` and `/fp help`.
 
 ## Project layout
 
@@ -231,10 +231,10 @@ Guide/Json.lua       Safe JSON encode/decode (size/depth limits, line:column err
 Guide/GuideFormat.lua  Guide schema: check, normalise, to/from JSON (no code execution)
 Guide/LegacyText.lua Reads 0.6 plain-text guides so old exports still import
 Guide/Library.lua    Built-in and player guides: save, copy, delete, import, export, quest lists
-Guide/Catalog.lua    Zones of a guide and their quest overviews (Zones tab data)
+Guide/Catalog.lua    Quest overviews per zone and quest statuses
 Guide/AutoQuest.lua  Auto accept / turn in: pure decisions plus the quest dialog events
 UI/MainFrame.lua     Main window shell: tabs and route picker
-UI/*Tab.lua          Guides (library), Zones, Plan and Settings tabs
+UI/*Tab.lua          Home, Steps, Guides (library) and Settings tabs
 UI/GuideEditor.lua   Guide editor: Quests (search/add/reorder), Details, JSON; export/import
 UI/GuideFrame.lua    Step guide window
 UI/MinimapButton.lua Library-free minimap button

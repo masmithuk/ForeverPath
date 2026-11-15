@@ -1,38 +1,18 @@
 -- Smoke tests for the window, slash commands and event wiring.
 
 return {
-    { "rendered text contains the key sections", function(T)
-        local ns = T.fresh()
-        local profile = ns.Character.Detect()
-        local plan = ns.Advisor.BuildPlan(profile, nil)
-        local text = ns.Text.Render(profile, plan, ns.Advisor.GetXpInfo(profile.level), {})
-        T.contains(text, "Undead Mage - Level 12 (Horde)")
-        T.contains(text, "Frost")
-        T.contains(text, "Rested XP")
-        T.contains(text, "Ruins of Lordaeron")
-    end },
-
-    { "show-all mode lists every band", function(T)
-        local ns = T.fresh()
-        local profile = ns.Character.Detect()
-        local plan = ns.Advisor.BuildPlan(profile, "story")
-        local text = ns.Text.Render(profile, plan, nil, { showAllBands = true })
-        T.contains(text, "Mount Hyjal")
-    end },
-
-    { "minimap button opens the main window; route buttons save per character", function(T)
+    { "minimap button opens the main window on Home", function(T)
         local ns = T.fresh()
         ns:FireEvent("PLAYER_LOGIN")
         T.truthy(ForeverPathMinimapButton, "minimap button created")
-
         ns.MinimapButton.Click("RightButton")
         T.truthy(ForeverPathMainFrame:IsShown(), "shown")
-        ns.MainFrame.ShowTab("plan")
-        T.contains(ns.PlanTab.GetText(), "Efficient (Speedrun)")
+        T.eq(ForeverPathDB.tab, "home")
+        T.contains(ns.HomeTab.GetText(), "Undead Speedrun (1-60)")
 
         ns.MainFrame.SetRoute("story")
         T.eq(ForeverPathCharDB.routeId, "story")
-        T.contains(ns.PlanTab.GetText(), "Story (Completionist)")
+        T.contains(ns.HomeTab.GetText(), "Undead Story (1-60)")
 
         ns.MinimapButton.Click("RightButton")
         T.truthy(not ForeverPathMainFrame:IsShown(), "hidden")
@@ -63,7 +43,7 @@ return {
     { "unknown route prints the valid choices", function(T)
         local _, mock = T.fresh()
         SlashCmdList.FOREVERPATH("route nowhere")
-        T.contains(mock.printed[#mock.printed], "story, efficient")
+        T.contains(mock.printed[#mock.printed], "speedrun, story")
     end },
 
     { "level-up into a new band announces zones and milestones", function(T)
@@ -86,11 +66,11 @@ return {
     { "saved variables survive a relog and gain new defaults", function(T)
         T.fresh()
         -- Pretend an older install saved only one field.
-        ForeverPathDB = { showAllBands = true }
+        ForeverPathDB = { schema = 5, announceLevelUp = false }
         T.reload()
-        T.eq(ForeverPathDB.showAllBands, true, "kept")
+        T.eq(ForeverPathDB.announceLevelUp, false, "kept")
         T.eq(ForeverPathDB.frame.point, "CENTER", "defaults filled")
-        T.eq(ForeverPathDB.schema, 4, "schema stamped")
+        T.eq(ForeverPathDB.schema, 5, "schema stamped")
     end },
 
     { "a 0.3 route choice carries over to the new modes", function(T)
@@ -107,6 +87,19 @@ return {
         T.reload()
         T.eq(ForeverPathCharDB.routeId, "efficient")
         T.eq(ForeverPathCharDB.guideId, nil, "dungeon guide choice dropped")
-        T.eq(ForeverPathDB.tab, "zones", "old Guides tab is now Zones")
+        T.eq(ForeverPathDB.tab, "home", "old tabs open Home")
+    end },
+
+    { "0.8 upgrade: old tabs, zone choice and the guide switch are cleared", function(T)
+        T.fresh()
+        ForeverPathCharDB = { schema = 4, routeId = "efficient", guideId = "Durotar" }
+        ForeverPathDB = { schema = 4, tab = "plan", showAllBands = true,
+                          guide = { enabled = false, waypoints = "auto" } }
+        local ns = T.reload()
+        T.eq(ForeverPathCharDB.guideId, nil)
+        T.eq(ForeverPathDB.tab, "home")
+        T.eq(ForeverPathDB.showAllBands, nil)
+        T.eq(ForeverPathDB.guide.enabled, true, "guide back on (there's no switch for it now)")
+        T.eq(ns.Engine.CurrentGuide().id, "speedrun-undead", "efficient -> your race's Speedrun")
     end },
 }

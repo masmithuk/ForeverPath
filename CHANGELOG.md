@@ -4,6 +4,15 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 
 ## [0.8.0] - 2026-11-15
 
+### Changed (interface overhaul)
+- **Home tab**, the new first tab: your character and guide, where you're levelling now and next, your current step, rested XP, class tips, dungeons for your level, and what every part of ForeverPath does.
+- **Guides per race:** a Speedrun and a Story guide, levels 1-60, for each starting area (Orc & Troll, Tauren, Undead, Human, Dwarf & Gnome, Night Elf, Skyborne). The Guides tab shows yours plus your own guides. Choices saved as "Efficient" or "Story" now mean your race's version.
+- **Speedrun** is the quickest quest path to 60 for your race. **Story** now covers the important quests of each zone: quest chains first, no grey quests, and stand-alone side quests only when they're on the way (new `sidePenalty` rule).
+- Main window tabs are now Home · Steps · Guides · Settings. The **Zones** and **Plan** tabs, following a single zone, and the **Change guide** button are gone.
+- The guide window's buttons are Steps · Skip · Done. **Best step** lives on the Steps tab.
+- **Settings:** the waypoint arrow and the pause key are dropdowns (they no longer overlap), the redundant "guide me step by step" switch is gone, and the columns stack when the window is narrow.
+- **Resizable windows:** the main window, guide window and guide editor can be resized from the corner, everything inside adjusts, and the sizes are remembered.
+
 ### Fixed
 - A brand-new character could see "No steps right now" instead of its first quest. Questie finishes starting up a few seconds after login, and until then its quest-availability and zone answers are empty. ForeverPath used those answers and remembered them. Now it uses its own checks until Questie has started, doesn't remember failed zone lookups made in the meantime, and plans again the moment Questie is ready.
 - Quest givers listed under a starting sub-zone (Valley of Trials, Echo Isles, Northshire, ...) are placed on their zone's map.

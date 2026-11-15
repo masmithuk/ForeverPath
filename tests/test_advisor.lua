@@ -9,14 +9,31 @@ end
 return {
     { "route choice: explicit, then class default, then global default", function(T)
         local ns = T.fresh()
-        local warrior = { class = ns.Data.Classes.WARRIOR }
-        T.eq(ns.Advisor.ResolveRouteId(warrior, "story"), "story")
-        T.eq(ns.Advisor.ResolveRouteId(warrior, "story"), "story", "0.3 id migrated")
-        T.eq(ns.Advisor.ResolveRouteId(warrior, nil), "efficient")
-        T.eq(ns.Advisor.ResolveRouteId(warrior, "bogus"), "efficient", "deleted guide falls back")
-        T.eq(ns.Advisor.ResolveRouteId(warrior, "dungeon"), "efficient", "0.4 Dungeon mode migrated")
-        T.eq(ns.Advisor.ResolveRouteId({ class = ns.Data.Classes.ROGUE }, nil), "story")
-        T.eq(ns.Advisor.ResolveRouteId({}, nil), "efficient")
+        local troll = { class = ns.Data.Classes.WARRIOR, raceKey = "Troll", faction = "Horde" }
+        T.eq(ns.Advisor.ResolveRouteId(troll, "story"), "story-orc-troll", "Story for your race")
+        T.eq(ns.Advisor.ResolveRouteId(troll, "classic"), "story-orc-troll", "0.3 id migrated")
+        T.eq(ns.Advisor.ResolveRouteId(troll, nil), "speedrun-orc-troll", "class default")
+        T.eq(ns.Advisor.ResolveRouteId(troll, "bogus"), "speedrun-orc-troll", "deleted guide falls back")
+        T.eq(ns.Advisor.ResolveRouteId(troll, "dungeon"), "speedrun-orc-troll", "0.4 Dungeon mode migrated")
+        T.eq(ns.Advisor.ResolveRouteId(troll, "story-human"), "story-human", "an explicit guide is kept")
+        T.eq(ns.Advisor.ResolveRouteId({ class = ns.Data.Classes.ROGUE, raceKey = "Human" }, nil), "story-human")
+        T.eq(ns.Advisor.ResolveRouteId({ raceKey = "Scourge" }, nil), "speedrun-undead")
+        T.eq(ns.Advisor.ResolveRouteId({ faction = "Alliance" }, nil), "speedrun-human", "unknown race")
+        T.eq(ns.Advisor.ResolveRouteId({}, nil), "speedrun-orc-troll")
+    end },
+
+    { "every race has its own Speedrun and Story guide", function(T)
+        local ns = T.fresh()
+        for key in pairs(ns.Data.Races) do
+            local group = ns.Data.RaceGroupOf(key)
+            T.truthy(group, key .. " has a starting-area group")
+            T.truthy(ns.Library.Get("speedrun-" .. group), key .. " speedrun")
+            T.truthy(ns.Library.Get("story-" .. group), key .. " story")
+        end
+        local trollStart = ns.Library.Get("speedrun-orc-troll").bands[1]
+        T.eq(trollStart.Horde[1], "Durotar")
+        T.eq(ns.Library.Get("speedrun-undead").bands[2].Horde[1], "Silverpine Forest")
+        T.eq(ns.Library.Get("speedrun-skyborne").bands[1].Alliance[1], "Zephras Isle")
     end },
 
     { "band lookup is clamped at both ends", function(T)

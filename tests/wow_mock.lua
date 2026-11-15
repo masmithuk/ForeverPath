@@ -91,6 +91,18 @@ function Frame:SetText(t) self.textValue = t end
 function Frame:GetText() return self.textValue end
 function Frame:GetStringHeight() return 100 end
 function Frame:GetPoint() return "CENTER", nil, "CENTER", 10, 20 end
+-- Sizes are remembered so resizing can be tested; unsized frames are 0.
+function Frame:SetSize(w, h)
+    rawset(self, "width", w); rawset(self, "height", h)
+    local onSize = self.scripts and self.scripts.OnSizeChanged
+    if onSize then onSize(self, w, h) end
+end
+function Frame:SetWidth(w) self:SetSize(w, rawget(self, "height") or 0) end
+function Frame:SetHeight(h)
+    rawset(self, "height", h)
+end
+function Frame:GetWidth() return rawget(self, "width") or 0 end
+function Frame:GetHeight() return rawget(self, "height") or 0 end
 function Frame:GetTop() return 500 end
 function Frame:GetBottom() return 400 end
 function Frame:CreateFontString() return mock.newFrame() end
@@ -418,6 +430,7 @@ function mock.loadAddon(root, addonName)
             local path = root .. "/" .. line:gsub("\\", "/")
             local chunk = assert(loadfile(path))
             chunk(addonName, ns)
+            mock.ns = ns
         end
     end
     return ns

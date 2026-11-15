@@ -67,5 +67,5 @@ read_globals = {
 
 files["tests/"] = {
     std = "+lua51",
-    globals = { "_G", "print", "issecretvalue", "ForeverPathMainFrame", "ForeverPathGuideFrame", "ForeverPathMinimapButton", "ForeverPathTargetButton", "ShortestPathForever" },
+    globals = { "_G", "print", "issecretvalue", "ForeverPathMainFrame", "ForeverPathGuideFrame", "ForeverPathGuideEditor", "ForeverPathMinimapButton", "ForeverPathTargetButton", "ShortestPathForever" },
 }

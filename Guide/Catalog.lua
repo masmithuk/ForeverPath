@@ -1,11 +1,11 @@
 --[[
     ForeverPath - Guide/Catalog.lua
 
-    The guide browser's data: one guide per zone on a route, each with its
-    level range and a quest overview.
+    Quest overviews per zone (used to build a guide's quest list when it
+    has none of its own) and quest statuses.
 
-    A guide's quests come from QuestieDB: every quest for your race, class
-    and faction whose zone is that guide's zone. Each quest gets a status:
+    A zone's quests come from QuestieDB: every quest for your race, class
+    and faction whose zone is that zone. Each quest gets a status:
 
       done       already turned in
       ready      in your log and complete - hand it in
@@ -13,51 +13,12 @@
       available  you can pick it up now
       level      you're not high enough yet
       locked     needs an earlier quest first
-
-    Following a guide (Engine.SetGuide) makes the step guide suggest new
-    quests only in that zone. "Automatic" follows your route band instead.
 ]]
 
 local _, ns = ...
 
 local Catalog = {}
 ns.Catalog = Catalog
-
-
-
---- Zones of a guide, in level order.
--- @return list of { id, name, min, max, recommended, active }
-function Catalog.List(profile, routeId)
-    local id = ns.Advisor.ResolveRouteId(profile, routeId)
-    local route = ns.Library.Get(id)
-    local byName, list = {}, {}
-
-    for _, band in ipairs(route.bands) do
-        for _, zone in ipairs(ns.Advisor.ResolveZones(band, profile, false)) do
-            local guide = byName[zone]
-            if guide then
-                guide.min = math.min(guide.min, band.min)
-                guide.max = math.max(guide.max, band.max)
-            else
-                guide = { id = zone, name = zone, min = band.min, max = band.max }
-                byName[zone] = guide
-                list[#list + 1] = guide
-            end
-        end
-    end
-
-    local chosen = ns.Settings.char.guideId
-    for _, guide in ipairs(list) do
-        guide.recommended = profile.level >= guide.min and profile.level <= guide.max
-        guide.active = guide.id == chosen
-    end
-
-    table.sort(list, function(a, b)
-        if a.min ~= b.min then return a.min < b.min end
-        return a.name < b.name
-    end)
-    return list
-end
 
 --- Status of one quest for this character.
 function Catalog.QuestStatus(q, ctx)

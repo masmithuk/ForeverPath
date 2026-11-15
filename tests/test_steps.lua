@@ -166,7 +166,7 @@ return {
         ns.StepsTab.Select(101)
         ns.StepsTab.GoTo()
         T.truthy(ns.Engine.state.steps[1].key ~= best, "a different step was chosen")
-        ForeverPathGuideFrame.best:GetScript("OnClick")()
+        ns.StepsTab.GetPanel().best:GetScript("OnClick")()
         T.eq(ns.Engine.FocusedQuest(), nil)
         T.eq(ns.Engine.state.steps[1].key, best, "back to the best step")
         T.contains(mock.printed[#mock.printed], "Best step from here")

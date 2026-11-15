@@ -20,7 +20,13 @@ ns.GuideFrame = GuideFrame
 local L = ns.L
 local Util = ns.Util
 
-local WIDTH = 320
+local WIDTH = 320 -- default width; the window can be resized from 260 to 640
+local MIN_WIDTH, MAX_WIDTH = 260, 640
+
+local function savedWidth()
+    local w = ns.Settings.account.guide.width or WIDTH
+    return math.max(MIN_WIDTH, math.min(MAX_WIDTH, w))
+end
 local PADDING = 10
 
 local ICONS = {
@@ -77,10 +83,10 @@ function GuideFrame.UpcomingText(steps)
     return table.concat(lines, "\n")
 end
 
---- "ForeverPath Guide - The Barrens" or "... - Automatic".
+--- "ForeverPath - Orc & Troll Speedrun (1-60)"
 function GuideFrame.HeaderText()
-    local guideId = ns.Settings.char.guideId
-    return L.GUIDE_TITLE .. " - " .. (guideId or L.GUIDE_AUTOMATIC)
+    local guide = ns.Engine.CurrentGuide()
+    return L.GUIDE_TITLE .. (guide and (" - " .. guide.name) or "")
 end
 
 --- Status line explaining missing data, or nil when all is well.
@@ -120,7 +126,7 @@ local function newText(parent, template)
     local fs = parent:CreateFontString(nil, "OVERLAY", template)
     fs:SetJustifyH("LEFT")
     fs:SetJustifyV("TOP")
-    fs:SetWidth(WIDTH - PADDING * 2 - 26)
+    fs:SetWidth(savedWidth() - PADDING * 2 - 26)
     return fs
 end
 
@@ -134,7 +140,7 @@ end
 
 local function create()
     local f = CreateFrame("Frame", "ForeverPathGuideFrame", UIParent, "BackdropTemplate")
-    f:SetSize(WIDTH, 120)
+    f:SetSize(savedWidth(), 120)
     f:SetFrameStrata("MEDIUM")
     f:SetClampedToScreen(true)
     f:SetMovable(true)
@@ -173,42 +179,38 @@ local function create()
     f.current = newText(f, "GameFontHighlight")
     f.current:SetPoint("TOPLEFT", f.icon, "TOPRIGHT", 6, 0)
 
-    -- Button row: [Steps] [Skip] [Done] [Zones] [Best step]. Steps opens the
-    -- full list to pick any step; Best step is the "I'm lost" button.
-    -- The row is laid out in Update, so Done only takes room when shown.
+    -- Button row: [Steps] [Skip] [Done]. Steps opens the full list (and Best
+    -- step, if you're lost). Done only shows on steps you tick off yourself.
     f.list = newButton(f, L.GUIDE_LIST, function() ns.MainFrame.ShowTab("steps") end)
     f.list:SetPoint("TOPLEFT", f.current, "BOTTOMLEFT", 0, -6)
-    f.list:SetWidth(54)
 
     f.skip = newButton(f, L.GUIDE_SKIP, function()
         local skipped = ns.Engine.SkipCurrent()
         if skipped then Util.Print(L.GUIDE_SKIPPED_FMT:format(skipped.title)) end
     end)
-    f.skip:SetWidth(50)
 
     f.done = newButton(f, L.GUIDE_DONE, function()
         local step = ns.Engine.state.steps[1]
         if step then ns.Engine.MarkDone(step.key) end
     end)
-    f.done:SetWidth(50)
-
-    f.guides = newButton(f, L.GUIDE_BROWSE, function() ns.MainFrame.ShowTab("zones") end)
-    f.guides:SetWidth(54)
-
-    f.best = newButton(f, L.GUIDE_BEST, function() GuideFrame.BestStep() end)
-    f.best:SetWidth(72)
-    f.best:SetScript("OnEnter", function(self)
-        if not GameTooltip then return end
-        GameTooltip:SetOwner(self, "ANCHOR_TOP")
-        GameTooltip:SetText(L.GUIDE_BEST_TOOLTIP, 1, 1, 1, 1, true)
-        GameTooltip:Show()
-    end)
-    f.best:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
 
     f.upcoming = newText(f, "GameFontHighlightSmall")
     f.upcoming:SetPoint("TOPLEFT", f.list, "BOTTOMLEFT", 0, -8)
 
     f.status = newText(f, "GameFontHighlightSmall")
+
+    -- Drag the corner to make the window wider or narrower; the text wraps
+    -- to fit and the height follows the text.
+    ns.MainFrame.AddResizeGrip(f, MIN_WIDTH, 80, MAX_WIDTH, 2000, function(self)
+        ns.Settings.account.guide.width = math.floor(self:GetWidth() + 0.5)
+        GuideFrame.Update(ns.Engine.state)
+    end)
+    f:SetScript("OnSizeChanged", function(self, w)
+        local textWidth = (w or savedWidth()) - PADDING * 2 - 26
+        for _, fs in ipairs({ self.header, self.current, self.upcoming, self.status }) do
+            fs:SetWidth(textWidth)
+        end
+    end)
 
     restorePosition(f)
     return f
@@ -242,7 +244,7 @@ end
 --- Lay out the button row left to right, skipping hidden buttons.
 local function layoutButtons(f)
     local prev = f.list
-    for _, b in ipairs({ f.skip, f.done, f.guides, f.best }) do
+    for _, b in ipairs({ f.skip, f.done }) do
         if b:IsShown() then
             b:ClearAllPoints()
             b:SetPoint("LEFT", prev, "RIGHT", 4, 0)

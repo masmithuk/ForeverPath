@@ -15,7 +15,37 @@ ns.L = L
 
 -- Frame
 L.TITLE                 = "ForeverPath"
+L.TAB_HOME              = "Home"
 L.TAB_STEPS             = "Steps"
+
+-- Home tab
+L.HOME_WINDOW           = "Show guide window"
+L.HOME_HIDE_WINDOW      = "Hide guide window"
+L.HOME_OPEN_STEPS       = "Open Steps"
+L.HOME_CHOOSE_GUIDE     = "Choose a guide"
+L.HOME_GUIDE_HEADER     = "Your guide"
+L.HOME_FOLLOWING_FMT    = "Following: %s"
+L.HOME_NOW_FMT          = "Levelling in: %s (levels %d-%d)"
+L.HOME_NEXT_FMT         = "From level %d: %s"
+L.HOME_STEP_FMT         = "Current step: %s"
+L.HOME_HELP_HEADER      = "What's where"
+L.HOME_HELP_WINDOW      = "Guide window - your current step and the next few. Steps opens the full list, Skip skips "
+    .. "a step, Done ticks off steps you do yourself. Drag it to move, drag its corner to resize."
+L.HOME_HELP_STEPS       = "Steps - every quest in your guide in order: where you are, what's done, skipped or "
+    .. "missed. Pick any step to go to it, or press Best step if you're lost."
+L.HOME_HELP_GUIDES      = "Guides - Speedrun (the quickest quest path to 60) and Story (the important quests of "
+    .. "each zone) for your race, plus your own guides to make, edit, share and import."
+L.HOME_HELP_SETTINGS    = "Settings - the waypoint arrow, auto accept and hand-in, the Target button and the "
+    .. "minimap button."
+L.HOME_HELP_TARGET      = "Target button - each press targets the next creature for your current step, nearest "
+    .. "first. Shift-drag to move it."
+L.HOME_HELP_MINIMAP     = "Minimap button - left-click shows or hides the guide window, right-click opens this window."
+
+-- Guides tab intro
+L.LIB_INTRO_FMT         = "Guides for %s - levels 1-60"
+L.LIB_INTRO_ALL         = "Guides - levels 1-60"
+L.LIB_INTRO_NOTE        = "Speedrun: the quickest quest path to 60. Story: the important quests of each zone, "
+    .. "enough to level into the next. Your own guides are listed after these."
 L.TAB_LIBRARY           = "Guides"
 
 -- Steps tab
@@ -43,20 +73,9 @@ L.STEPS_GOING_FMT       = "Now heading for: %s"
 L.STEPS_CANT_DONE       = "You've already done that quest."
 L.STEPS_CANT_LEVEL_FMT  = "You need level %d for that quest."
 L.STEPS_CANT_LOCKED     = "That quest needs an earlier quest first."
-L.TAB_ZONES             = "Zones"
-L.TAB_PLAN              = "Plan"
 L.TAB_SETTINGS          = "Settings"
-L.CURRENT_GUIDE_FMT     = "Guide: %s"
-L.CHANGE_GUIDE          = "Change guide"
 
 -- Guide browser
-L.GUIDES_FOLLOW         = "Follow this zone"
-L.GUIDES_AUTO           = "Automatic"
-L.GUIDES_FOLLOWING_FMT  = "Following: %s"
-L.GUIDES_FOLLOWING_AUTO = "Following: Automatic (your guide's zones for your level)"
-L.GUIDES_PROGRESS_FMT   = "%d of %d quests done"
-L.GUIDES_NO_QUESTS      = "QuestieDB has no quests for you here yet."
-L.GUIDES_NEED_QUESTIE   = "Install Questie (with QuestieDB) to see the quests in each zone."
 
 -- Guide library (Guides tab)
 L.LIB_BUILTIN           = "built-in"
@@ -150,7 +169,6 @@ L.QUEST_LOCKED          = "Requirements not met yet"
 L.SETTINGS_GUIDE        = "Step guide"
 L.SETTINGS_WAYPOINTS    = "Waypoint arrow"
 L.SETTINGS_TOOLS        = "Tools"
-L.SETTING_GUIDE_ENABLED = "Guide me step by step (steps and waypoints)"
 L.SETTING_GUIDE_SHOWN   = "Show the guide window"
 L.SETTING_MINIMAP       = "Show the minimap button"
 L.SETTING_ANNOUNCE      = "Announce level-ups and milestones in chat"
@@ -199,8 +217,6 @@ _G["BINDING_NAME_CLICK ForeverPathTargetButton:LeftButton"] = "Target nearest qu
 L.MINIMAP_LEFT          = "Left-click: show/hide the step guide"
 L.MINIMAP_RIGHT         = "Right-click: guides, plan and settings"
 L.MINIMAP_DRAG          = "Drag to move"
-L.SHOW_ALL_BANDS        = "Show all bands"
-L.SHOW_CURRENT_BANDS    = "Show current only"
 
 -- Header
 L.HEADER_FMT            = "%s %s - Level %d (%s)"   -- race, class, level, faction
@@ -219,16 +235,10 @@ L.XP_TO_LEVEL_FMT       = "%s XP to level %d"
 -- Class section
 L.CLASS_HEADER          = "Your class: %s"
 L.LEVEL_SPEC            = "Leveling spec: %s"
-L.ALT_SPEC              = "Alternative: %s"
-L.LEVEL_TIER            = "Leveling tier: %s"
 
 -- Route section
-L.ROUTE_HEADER          = "Guide: %s"
 L.NOW                   = "Now"
 L.NEXT                  = "Next"
-L.LEVELS                = "Levels"
-L.BAND_FMT              = "%s (%d-%d)"
-L.QUEST_IN              = "Quest in: %s"
 
 -- Dungeons
 L.DUNGEON_HEADER        = "Dungeons for your level"
@@ -238,10 +248,8 @@ L.NEW_TAG               = "new"
 L.FACTION_TERRITORY     = "%s territory"
 
 -- Milestones
-L.MILESTONE_HEADER      = "Coming up"
 
 -- General
-L.GENERAL_HEADER        = "Good to know"
 
 -- Chat
 L.LOADED                = "loaded. Click the map button on your minimap to pick a guide."
@@ -269,11 +277,7 @@ L.HELP = {
 
 -- Step guide
 L.GUIDE_TITLE                = "ForeverPath Guide"
-L.GUIDE_AUTOMATIC            = "Automatic"
-L.GUIDE_BROWSE               = "Zones"
 L.GUIDE_BEST                 = "Best step"
-L.GUIDE_BEST_TOOLTIP         = "Lost? Forget the step you picked and go to the best step from where you're standing now. "
-    .. "Skipped quests stay skipped."
 L.GUIDE_BEST_FMT             = "Best step from here: %s"
 L.GUIDE_SKIP                 = "Skip"
 L.GUIDE_LIST                 = "Steps"
