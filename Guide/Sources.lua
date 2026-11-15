@@ -198,7 +198,7 @@ local function doableListed(ctx)
     local listed = {}
     for _, q in ipairs(ctx.guide and ctx.guide.quests or {}) do
         local id = q.id
-        if not ctx.log[id] and not ctx.isCompleted(id) and not ctx.skipped[id]
+        if id and not ctx.log[id] and not ctx.isCompleted(id) and not ctx.skipped[id]
             and data.MeetsLevel(id, ctx.profile.level) and data.IsDoable(id, ctx) then
             listed[#listed + 1] = id
         end
@@ -426,6 +426,110 @@ local function guideNoteSteps(ctx, out)
 end
 
 ---------------------------------------------------------------------------
+-- Steps in a guide's quest list (not quests: notes, buy, train, ...)
+---------------------------------------------------------------------------
+
+Sources.LIST_STEP_BONUS = 2e6 -- a step the guide has reached goes first, wherever it is
+Sources.ARRIVE_RADIUS = 20       -- yards: a "go to" step is done on arrival
+
+--- A stable key for a list step, built from its content (so reordering
+--- other entries keeps what you've ticked off). Duplicates get "#n".
+function Sources.ListStepKey(guideId, entry, occurrence)
+    local key = ("list:%s:%s:%s:%s:%s:%s"):format(guideId or "?", entry.step, entry.text or "",
+        entry.zone or "", entry.x or "", entry.y or "")
+    if occurrence and occurrence > 1 then key = key .. "#" .. occurrence end
+    return key
+end
+
+--- Every step in the guide's quest list, with whether it's done and
+--- whether the guide has reached it. A step is reached once everything
+--- before it is dealt with: earlier steps done, and no earlier listed
+--- quest still waiting to be picked up. Quests you can't do yet don't
+--- hold it back. A step chosen in the Steps list counts as reached.
+-- @return list of { index, entry, key, done, reached }
+function Sources.ListSteps(ctx)
+    local guide = ctx.guide
+    local out = {}
+    if not guide or not guide.quests then return out end
+    local waiting = {}
+    if ctx.doableFromList then
+        for _, id in ipairs(ctx.doable or {}) do waiting[id] = true end
+    end
+    local seen, blocked = {}, false
+    for i, entry in ipairs(guide.quests) do
+        if entry.step then
+            local base = Sources.ListStepKey(guide.id, entry)
+            seen[base] = (seen[base] or 0) + 1
+            local key = Sources.ListStepKey(guide.id, entry, seen[base])
+            local done = ctx.char.done[key] == true
+            local focused = ctx.char.focusStep == key
+            out[#out + 1] = { index = i, entry = entry, key = key, done = done,
+                              reached = not done and (focused or not blocked) }
+            if not done then blocked = true end
+        elseif waiting[entry.id] then
+            blocked = true
+        end
+    end
+    return out
+end
+
+local LIST_TITLES = { NOTE = "Note", BUY = "Buy", TRAIN = "Train", HEARTH = "Hearthstone", GOTO = "Go to" }
+
+--- "Durotar 52.0, 41.5"
+function Sources.LocationText(entry)
+    if not entry.zone then return nil end
+    return ("%s %.1f, %.1f"):format(entry.zone, entry.x, entry.y)
+end
+
+local function listStepTarget(ctx, entry)
+    if entry.zone then
+        local mapID = ns.ZoneMap.MapIdByName(entry.zone)
+        if not mapID then return nil end
+        local point = withWorld({ mapID = mapID, x = entry.x / 100, y = entry.y / 100 })
+        return target(point, entry.text or LIST_TITLES[entry.step])
+    end
+    -- No location: train and hearth point to the nearest trainer / inn.
+    local title
+    if entry.step == "TRAIN" then title = ns.QuestieData.ClassTrainerTitle() end
+    if entry.step == "HEARTH" then title = ns.Data.Services.innkeeperTitle end
+    if not title then return nil end
+    local actor, point = nearestActor(ctx.origin, ns.QuestieData.GetNpcsByTitle(title, ctx.profile.faction))
+    if not actor then return nil end
+    return target(point, actor.name), actor.name
+end
+
+--- The route step for one list step.
+function Sources.ListStepToStep(ctx, item)
+    local entry = item.entry
+    local tgt, npc = listStepTarget(ctx, entry)
+    local title = entry.text
+    if not title then
+        if entry.step == "TRAIN" then
+            title = npc and ("Train at " .. npc) or "Visit your class trainer"
+        elseif entry.step == "HEARTH" then
+            title = npc and ("Set your hearthstone at " .. npc) or "Set your hearthstone"
+        else
+            title = "Go to " .. (Sources.LocationText(entry) or "?")
+        end
+    end
+    local lines = {}
+    local where = Sources.LocationText(entry)
+    if where and entry.text then lines[1] = where end
+    return {
+        key = item.key, kind = entry.step, title = title, lines = lines, questIDs = {},
+        target = tgt, bonus = Sources.LIST_STEP_BONUS, manual = true,
+        suggestionID = item.key, listKind = entry.step, listIndex = item.index,
+        arriveRadius = entry.step == "GOTO" and Sources.ARRIVE_RADIUS or nil,
+    }
+end
+
+local function listSteps(ctx, out)
+    for _, item in ipairs(Sources.ListSteps(ctx)) do
+        if item.reached then out[#out + 1] = Sources.ListStepToStep(ctx, item) end
+    end
+end
+
+---------------------------------------------------------------------------
 -- Entry point
 ---------------------------------------------------------------------------
 
@@ -446,5 +550,6 @@ function Sources.Collect(ctx)
     hearthStep(ctx, steps)
     professionSteps(ctx, steps)
     guideNoteSteps(ctx, steps)
+    listSteps(ctx, steps)
     return steps
 end

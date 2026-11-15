@@ -31,6 +31,7 @@ local ICONS = {
     BUY      = "Interface\\GossipFrame\\VendorGossipIcon",
     HEARTH   = "Interface\\Icons\\INV_Misc_Rune_01",
     NOTE     = "Interface\\GossipFrame\\GossipGossipIcon",
+    GOTO     = "Interface\\Icons\\INV_Misc_Map_01",
 }
 
 local frame

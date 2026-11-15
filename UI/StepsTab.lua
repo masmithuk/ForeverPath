@@ -42,7 +42,9 @@ local STATUS = {
     upcoming = { "accent", "QUEST_AVAILABLE" },
     level    = { "muted",  "QUEST_LEVEL_FMT" },
     locked   = { "muted",  "QUEST_LOCKED" },
+    later    = { "muted",  "STEPS_LATER" },
 }
+local STEP_UPCOMING = { "accent", "STEPS_STEP_NEXT" }
 
 local panel
 local filter = "all"
@@ -55,6 +57,7 @@ local lastList   -- last StepList.Build result, for tests and buttons
 
 function StepsTab.StatusLabel(row)
     local entry = STATUS[row.status] or STATUS.locked
+    if row.isStep and row.status == "upcoming" then entry = STEP_UPCOMING end
     local label = L[entry[2]]
     if row.status == "level" then label = label:format(row.requiredLevel or 0) end
     return C(entry[1], label)
@@ -62,6 +65,13 @@ end
 
 function StepsTab.RowText(row)
     local marker = row.isCurrent and C("good", "> ") or "   "
+    if row.isStep then
+        local kind = L["STEP_KIND_" .. row.kind] or row.kind
+        local where = row.where and C("muted", "  - " .. row.where) or ""
+        local name = row.status == "done" and C("muted", row.name) or row.name
+        return ("%s%d. %s %s%s   %s"):format(marker, row.index, C("accent", "<" .. kind .. ">"), name, where,
+            StepsTab.StatusLabel(row))
+    end
     local name = row.name
     if row.status == "done" then name = C("muted", name) end
     local giver = row.giver and C("muted", "  - " .. row.giver) or ""
@@ -83,9 +93,12 @@ end
 
 local REASONS = { done = "STEPS_CANT_DONE", level = "STEPS_CANT_LEVEL_FMT", locked = "STEPS_CANT_LOCKED" }
 
+-- A row is selected by its quest ID, or by its key for a guide step.
+local function rowId(r) return r.isStep and r.key or r.id end
+
 local function selectedRow()
     for _, r in ipairs(lastList and lastList.rows or {}) do
-        if r.id == selectedId then return r end
+        if selectedId ~= nil and rowId(r) == selectedId then return r end
     end
     return nil
 end
@@ -94,6 +107,13 @@ end
 function StepsTab.GoTo()
     local row = selectedRow()
     if not row then return false end
+    if row.isStep then
+        if not row.key then return false end
+        ns.Engine.FocusStep(row.key)
+        Util.Print(L.STEPS_GOING_FMT:format(row.name))
+        StepsTab.Refresh()
+        return true
+    end
     local ok, reason, level = ns.Engine.FocusQuest(row.id)
     if ok then
         Util.Print(L.STEPS_GOING_FMT:format(row.name))
@@ -107,7 +127,9 @@ end
 function StepsTab.ToggleSkip()
     local row = selectedRow()
     if not row then return end
-    if row.status == "skipped" then
+    if row.isStep then
+        if row.key and row.status ~= "done" then ns.Engine.SkipListStep(row.key, row.name) end
+    elseif row.status == "skipped" then
         ns.Engine.UnskipQuest(row.id)
     else
         ns.Engine.SkipQuest(row.id, row.name)
@@ -221,14 +243,14 @@ function StepsTab.Refresh()
     if not selectedRow() then
         selectedId = nil
         for _, r in ipairs(lastList.rows) do
-            if r.isCurrent then selectedId = r.id; break end
+            if r.isCurrent then selectedId = rowId(r); break end
         end
     end
 
     for i, r in ipairs(rows) do
         local widget = panel.rows[i] or createRow(panel.child, i, panel.rowWidth)
         panel.rows[i] = widget
-        widget.questID = r.id
+        widget.questID = rowId(r)
         widget.text:SetText(StepsTab.RowText(r))
         if r.id == selectedId then widget.selected:Show() else widget.selected:Hide() end
         widget:Show()
@@ -237,8 +259,10 @@ function StepsTab.Refresh()
     panel.child:SetHeight(math.max(1, #rows * ROW_HEIGHT))
 
     local sel = selectedRow()
-    local canAct = sel and sel.status ~= "done"
-    if canAct then panel.go:Enable(); panel.skip:Enable() else panel.go:Disable(); panel.skip:Disable() end
+    local canGo = sel and (sel.status ~= "done" or sel.isStep)
+    local canSkip = sel and sel.status ~= "done"
+    if canGo then panel.go:Enable() else panel.go:Disable() end
+    if canSkip then panel.skip:Enable() else panel.skip:Disable() end
     panel.skip:SetText(sel and sel.status == "skipped" and L.STEPS_UNSKIP or L.STEPS_SKIP)
     if ns.Engine.LastSkipped() then panel.undo:Enable() else panel.undo:Disable() end
 end

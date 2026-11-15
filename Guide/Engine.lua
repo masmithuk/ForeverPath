@@ -94,6 +94,10 @@ function Engine.BuildContext()
         skipped = char.skipped,
         char = char,
         focusQuest = char.focus,
+        -- Last planning pass's available quests (the Steps list uses them
+        -- to tell where guide steps come up). Replan refreshes them.
+        doable = doableCache and doableCache.list,
+        doableFromList = doableCache and doableCache.fromList,
     }
 end
 
@@ -121,10 +125,16 @@ function Engine.Replan()
     ctx.doable = doableCache and doableCache.list
     ctx.doableFromList = doableCache and doableCache.fromList
 
+    -- So is a step chosen there, until it's ticked off.
+    if char.focusStep and char.done[char.focusStep] then char.focusStep = nil end
+
     local candidates = ns.Sources.Collect(ctx)
     local state = Engine.state
     local merged = ns.Planner.Merge(candidates)
     local pinned = state.currentKey
+    for _, step in ipairs(merged) do
+        if char.focusStep and step.key == char.focusStep then pinned = step.key end
+    end
     if ctx.focusQuest then
         for _, step in ipairs(merged) do
             for _, id in ipairs(step.questIDs or {}) do
@@ -138,6 +148,8 @@ function Engine.Replan()
     state.dataStatus = ns.QuestieData.Status()
 
     local first = state.steps[1]
+    -- Already standing on a "go to" spot: tick it off (which plans again).
+    if Engine.Arrived(first, origin) and Engine.MarkDone(first.key) then return end
     state.currentKey = first and first.key or nil
     ns.Waypoints.Set(state.steps, guideSettings().waypoints)
 
@@ -157,9 +169,21 @@ function Engine.RequestReplan()
     C_Timer.After(REPLAN_DELAY, Engine.Replan)
 end
 
+--- Has the player arrived at a "go to" step's spot?
+function Engine.Arrived(step, origin)
+    local to = step and step.arriveRadius and step.target and step.target.world
+    if not to or not origin or origin.continent ~= to.continent then return false end
+    return ns.Util.Distance(origin, to) <= step.arriveRadius
+end
+
 local function onTick()
     if not guideSettings().enabled then return end
     local origin = currentOrigin()
+    local current = Engine.state.steps[1]
+    if Engine.Arrived(current, origin) then
+        Engine.MarkDone(current.key)
+        return
+    end
     local last = Engine.state.origin
     if origin and (not last or origin.continent ~= last.continent
         or ns.Util.Distance(origin, last) > REPLAN_DISTANCE) then
@@ -213,6 +237,41 @@ local function record(entry)
     while #list > MAX_HISTORY do table.remove(list, 1) end
 end
 
+--- Tick off the guide's reached list steps of one kind ("TRAIN" when you
+--- open your class trainer, "HEARTH" when you set your hearthstone).
+function Engine.CompleteListSteps(kind)
+    local char = charGuide()
+    for _, step in ipairs(Engine.state.steps) do
+        if step.listKind == kind and not char.done[step.key] then
+            local entry = { action = "done", key = step.key, title = step.title, questIDs = {} }
+            markSuggestion(step, entry)
+            record(entry)
+        end
+    end
+end
+
+--- Skip one of the guide's list steps (Steps list). Back can undo it.
+function Engine.SkipListStep(key, title)
+    local char = charGuide()
+    if char.done[key] then return false end
+    char.done[key] = true
+    record({ action = "skip", key = key, title = title or key, questIDs = {}, suggestionID = key })
+    if char.focusStep == key then char.focusStep = nil end
+    Engine.Replan()
+    return true
+end
+
+--- Make one of the guide's list steps the current step (Steps list).
+function Engine.FocusStep(key)
+    local char = charGuide()
+    char.done[key] = nil
+    char.focusStep = key
+    char.focus = nil
+    Engine.state.currentKey = nil
+    Engine.Replan()
+    return true
+end
+
 --- Mark a step as done by hand (a guide's note/buy steps, which the game
 --- can't detect).
 function Engine.MarkDone(key)
@@ -258,6 +317,7 @@ end
 -- @return the new current step, or nil
 function Engine.BestStep()
     charGuide().focus = nil
+    charGuide().focusStep = nil
     invalidateDoable()
     Engine.state.currentKey = nil
     Engine.state.origin = nil -- force a fresh position and a full re-sort
@@ -282,6 +342,7 @@ function Engine.FocusQuest(questID)
     local char = charGuide()
     char.skipped[questID] = nil
     char.focus = questID
+    char.focusStep = nil
     invalidateDoable()
     Engine.state.currentKey = nil
     Engine.Replan()
@@ -400,7 +461,13 @@ local function onTrainerShow()
     if not ns.GameApi.IsTradeskillTrainer() then
         local char = charGuide()
         char.trainedLevel = math.max(char.trainedLevel or 0, ns.Character.Detect().level)
+        Engine.CompleteListSteps("TRAIN")
     end
+    Engine.RequestReplan()
+end
+
+local function onHearthBound()
+    Engine.CompleteListSteps("HEARTH")
     Engine.RequestReplan()
 end
 
@@ -436,7 +503,7 @@ function Engine.Start()
         if ns.TargetButton then ns.TargetButton.OnCombatEnded() end
         Engine.RequestReplan()
     end)
-    ns:RegisterEvent("HEARTHSTONE_BOUND", Engine.RequestReplan)
+    ns:RegisterEvent("HEARTHSTONE_BOUND", onHearthBound)
     ns:RegisterEvent("SKILL_LINES_CHANGED", Engine.RequestReplan)
 
     invalidateDoable()

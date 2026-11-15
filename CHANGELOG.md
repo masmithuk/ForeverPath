@@ -5,6 +5,7 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 ## [0.8.0] - 2026-11-15
 
 ### Added
+- **Steps that aren't quests in your own guides**: note, buy, train, set hearth and go to a spot, placed anywhere in the quest list. Add them in the editor's Quests tab (with **Use my location**) or in JSON as `{ "step": "goto", "text": "...", "zone": "Durotar", "x": 52.0, "y": 41.5 }`. They come up in order once the quests before them are dealt with. Train and hearth clear themselves at the trainer or innkeeper, go to clears when you arrive, and the rest are ticked off with Done. They're listed in the Steps tab too.
 - **Best step** button in the guide window and the Steps tab (and `/fp best` or `/fp lost`): if you're lost, it drops any chosen or held step and picks the best one from where you're standing.
 - **Steps tab**, the first tab of the main window: every quest in your guide in order, with where you are, what's done, skipped and missed (available quests you've moved past). Filter by All, To do, Skipped & missed or Done.
 - **Go to this step** (or double-click) makes any quest in the list the current step until it's done, and says why if you can't do it yet. Skip, Unskip and Undo last skip work from the list.

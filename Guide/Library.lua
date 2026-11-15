@@ -40,7 +40,9 @@ local function finish(guide, id, builtin)
     guide.skipSet = {}
     for _, q in ipairs(guide.skipQuests) do guide.skipSet[q] = true end
     guide.questRank = {}
-    for i, q in ipairs(guide.quests) do guide.questRank[q.id] = i end
+    for i, q in ipairs(guide.quests) do
+        if q.id then guide.questRank[q.id] = i end
+    end
     guide.dungeonWindow = DUNGEON_WINDOW
     return guide
 end

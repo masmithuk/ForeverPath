@@ -16,6 +16,7 @@
           "rules": { "greyGap": 2, "maxDetour": 350, ... },
           "quests": [
             { "id": 788, "name": "Your Place In The World" },
+            { "step": "buy", "text": "Buy 6-slot bags.", "zone": "Durotar", "x": 52.0, "y": 41.5 },
             { "id": 789, "name": "Cutting Teeth" }
           ],
           "bands": [
@@ -29,6 +30,11 @@
     quests      the guide's own quests, in the order to do them. The step
                 guide picks these up first, in order. Names are only for
                 people reading the JSON; the id is what counts.
+                The list can also hold steps that aren't quests, written
+                { "step": kind, "text": ..., "zone": ..., "x": ..., "y": ... }.
+                kind is note, buy, train, hearth or goto; zone/x/y (map
+                coordinates 0-100) are optional except for goto. A step comes
+                up once every quest before it is done, taken or unavailable.
     bands       zones per level range. "zones" means both factions;
                 "alliance"/"horde" set one side. Used when the quest list
                 has nothing available, and for the Zones and Plan tabs.
@@ -36,7 +42,8 @@
     steps       extra steps from a level: train, buy, note or hearth.
 
     Inside the addon a guide is a plain table:
-      name, author, description, base, rules, quests = { {id, name} },
+      name, author, description, base, rules,
+      quests = { {id, name} or {step ("NOTE"...), text, zone, x, y} },
       bands = { {min, max, Alliance, Horde, notes} }, skipQuests, steps =
       { {level, kind ("TRAIN"...), text} }
 
@@ -77,12 +84,24 @@ GuideFormat.RULES = {
 }
 
 GuideFormat.STEP_KINDS = { train = "TRAIN", buy = "BUY", note = "NOTE", hearth = "HEARTH" }
+-- Kinds a step in the quest list may have (goto needs a location).
+GuideFormat.LIST_STEP_KINDS = { note = "NOTE", buy = "BUY", train = "TRAIN", hearth = "HEARTH", ["goto"] = "GOTO" }
+GuideFormat.LIST_STEP_ORDER = { "NOTE", "BUY", "TRAIN", "HEARTH", "GOTO" }
+
+--- The JSON word for an internal step kind ("TRAIN" -> "train").
+function GuideFormat.KindWord(kind)
+    for word, k in pairs(GuideFormat.LIST_STEP_KINDS) do if k == kind then return word end end
+    return nil
+end
+
+--- Is this quest-list entry a step rather than a quest?
+function GuideFormat.IsStep(entry) return entry.step ~= nil end
 
 -- Key order for exported JSON, so files read top-down and diff cleanly.
 local KEY_ORDER = {
     "format", "version", "name", "author", "description", "basedOn", "rules",
     "greyGap", "levelsAbove", "maxAccept", "turninBonus", "chainBonus", "maxDetour",
-    "quests", "id", "bands", "levels", "zones", "alliance", "horde", "notes",
+    "quests", "id", "step", "zone", "x", "y", "bands", "levels", "zones", "alliance", "horde", "notes",
     "skipQuests", "steps", "level", "kind", "text",
 }
 
@@ -121,7 +140,13 @@ function GuideFormat.Copy(guide)
         skipQuests = copyList(guide.skipQuests), steps = {},
     }
     for k, v in pairs(guide.rules or {}) do copy.rules[k] = v end
-    for i, q in ipairs(guide.quests or {}) do copy.quests[i] = { id = q.id, name = q.name } end
+    for i, q in ipairs(guide.quests or {}) do
+        if q.step then
+            copy.quests[i] = { step = q.step, text = q.text, zone = q.zone, x = q.x, y = q.y }
+        else
+            copy.quests[i] = { id = q.id, name = q.name }
+        end
+    end
     for i, b in ipairs(guide.bands or {}) do
         copy.bands[i] = { min = b.min, max = b.max, Alliance = copyList(b.Alliance),
                           Horde = copyList(b.Horde), notes = copyList(b.notes) }
@@ -207,6 +232,41 @@ function Reader:questId(value, path)
     return self:integer(value, path, 1, 10000000)
 end
 
+--- A map coordinate, 0-100, rounded to one decimal place.
+function Reader:coord(value, path)
+    if type(value) ~= "number" or value ~= value or value < 0 or value > 100 then
+        self:error(path, "must be a map coordinate from 0 to 100")
+        return nil
+    end
+    return math.floor(value * 10 + 0.5) / 10
+end
+
+--- A non-quest step in the quest list.
+function Reader:listStep(q, path)
+    local kind = type(q.step) == "string" and GuideFormat.LIST_STEP_KINDS[q.step:lower()]
+    if not kind then
+        self:error(path .. ".step", 'must be "note", "buy", "train", "hearth" or "goto"')
+        return nil
+    end
+    local text = q.text ~= nil and self:string(q.text, path .. ".text", 200) or nil
+    local step = { step = kind, text = text }
+    if q.zone ~= nil or q.x ~= nil or q.y ~= nil then
+        step.zone = self:string(q.zone, path .. ".zone", 60, true)
+        step.x = self:coord(q.x, path .. ".x")
+        step.y = self:coord(q.y, path .. ".y")
+        if not (step.zone and step.x and step.y) then return nil end
+    end
+    if kind == "GOTO" and not step.zone then
+        self:error(path, 'a "goto" step needs "zone", "x" and "y"')
+        return nil
+    end
+    if not text and (kind == "NOTE" or kind == "BUY") then
+        self:error(path .. ".text", "is needed for a note or buy step")
+        return nil
+    end
+    return step
+end
+
 local KNOWN_KEYS = {
     format = true, version = true, name = true, author = true, description = true, basedOn = true,
     rules = true, quests = true, bands = true, skipQuests = true, steps = true,
@@ -239,13 +299,16 @@ local function readQuests(r, raw, guide)
     for i, q in ipairs(r:list(raw.quests, "quests", GuideFormat.MAX_QUESTS)) do
         local path = ("quests[%d]"):format(i)
         local id, name
-        if type(q) == "number" then
+        if type(q) == "table" and q.step ~= nil then
+            local step = r:listStep(q, path)
+            if step then guide.quests[#guide.quests + 1] = step end
+        elseif type(q) == "number" then
             id = r:questId(q, path)
         elseif type(q) == "table" then
             id = r:questId(q.id, path .. ".id")
             name = r:string(q.name, path .. ".name", 100)
         else
-            r:error(path, 'must be a quest ID or { "id": ..., "name": ... }')
+            r:error(path, 'must be a quest ID, { "id": ..., "name": ... } or { "step": ..., "text": ... }')
         end
         if id then
             if seen[id] then
@@ -419,7 +482,13 @@ function GuideFormat.ToData(guide)
     if next(data.rules) == nil then data.rules = nil end
 
     for i, q in ipairs(guide.quests or {}) do
-        data.quests[i] = q.name and { id = q.id, name = q.name } or { id = q.id }
+        if q.step then
+            local out = { step = GuideFormat.KindWord(q.step), text = q.text }
+            if q.zone then out.zone, out.x, out.y = q.zone, q.x, q.y end
+            data.quests[i] = out
+        else
+            data.quests[i] = q.name and { id = q.id, name = q.name } or { id = q.id }
+        end
     end
     for i, b in ipairs(guide.bands or {}) do
         local out = { levels = { b.min, b.max } }

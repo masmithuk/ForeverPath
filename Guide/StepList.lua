@@ -14,6 +14,10 @@
       upcoming  available, still ahead of you
       level     you're not high enough yet
       locked    needs an earlier quest (or other requirement) first
+      later     a guide step (note, buy, train...) you haven't reached yet
+
+    Guide steps that aren't quests are rows too (isStep = true, with key
+    and kind); they can be done, upcoming (reached), missed or later.
 
     "Where you are" is the furthest quest in the list you've taken or
     finished; available quests before it that you haven't done or skipped
@@ -34,54 +38,76 @@ StepList.FILTERS = {
     done = function(r) return r.status == "done" end,
 }
 
+local function stepRow(ctx, i, entry, item, currentStep)
+    local step = item and ns.Sources.ListStepToStep(ctx, item)
+    local row = {
+        index = i, isStep = true, kind = entry.step, key = item and item.key,
+        name = step and step.title or entry.text or entry.step, level = 0,
+        where = ns.Sources.LocationText(entry),
+        isCurrent = currentStep ~= nil and item ~= nil and currentStep.key == item.key,
+    }
+    if item and item.done then row.status = "done"
+    elseif item and item.reached then row.status = "upcoming"
+    else row.status = "later" end
+    return row
+end
+
+local function questRow(ctx, i, q, inCurrent)
+    local info = ns.QuestieData.Describe(q.id, q.name)
+    local row = {
+        index = i, id = q.id, name = info.name, level = info.level,
+        requiredLevel = info.requiredLevel, zone = info.zone,
+        isCurrent = inCurrent[q.id] == true, isFocus = ctx.focusQuest == q.id,
+    }
+    local givers = ns.QuestieData.GetStarters(q.id, ctx.profile.faction)
+    row.giver = givers[1] and givers[1].name or nil
+
+    local logEntry = ctx.log[q.id]
+    if ctx.isCompleted(q.id) then
+        row.status = "done"
+    elseif logEntry then
+        row.status = logEntry.complete and "ready" or "active"
+    elseif ctx.skipped[q.id] or (ctx.guide.skipSet and ctx.guide.skipSet[q.id]) then
+        row.status = "skipped"
+    else
+        local status = ns.Catalog.QuestStatus({ id = q.id, requiredLevel = info.requiredLevel }, ctx)
+        row.status = status == "available" and "upcoming" or status
+    end
+    return row
+end
+
+local REACHED = { done = true, ready = true, active = true }
+
 --- Build the list.
 -- @param ctx         from Engine.BuildContext()
 -- @param currentStep the step the guide is showing (Engine.state.steps[1])
 -- @return { rows = {...}, done, skipped, missed, total, position }
---   each row: { index, id, name, level, requiredLevel, zone, giver,
---               status, isCurrent, isFocus }
+--   quest rows: { index, id, name, level, requiredLevel, zone, giver,
+--                 status, isCurrent, isFocus }
+--   step rows:  { index, isStep, key, kind, name, where, status, isCurrent }
 function StepList.Build(ctx, currentStep)
-    local guide = ctx.guide
-    local quests = ns.Library.QuestList(guide, ctx)
+    local quests = ns.Library.QuestList(ctx.guide, ctx)
     local inCurrent = {}
     for _, id in ipairs(currentStep and currentStep.questIDs or {}) do inCurrent[id] = true end
-    local focus = ctx.focusQuest
+    local listSteps = {}
+    for _, item in ipairs(ns.Sources.ListSteps(ctx)) do listSteps[item.index] = item end
 
     local result = { rows = {}, done = 0, skipped = 0, missed = 0, total = #quests, position = 0 }
-
     for i, q in ipairs(quests) do
-        local info = ns.QuestieData.Describe(q.id, q.name)
-        local row = {
-            index = i, id = q.id, name = info.name, level = info.level,
-            requiredLevel = info.requiredLevel, zone = info.zone,
-            isCurrent = inCurrent[q.id] == true, isFocus = focus == q.id,
-        }
-        local givers = ns.QuestieData.GetStarters(q.id, ctx.profile.faction)
-        row.giver = givers[1] and givers[1].name or nil
-
-        local logEntry = ctx.log[q.id]
-        if ctx.isCompleted(q.id) then
-            row.status = "done"
-        elseif logEntry then
-            row.status = logEntry.complete and "ready" or "active"
-        elseif ctx.skipped[q.id] or (guide.skipSet and guide.skipSet[q.id]) then
-            row.status = "skipped"
+        local row
+        if q.step then
+            row = stepRow(ctx, i, q, listSteps[i], currentStep)
         else
-            local status = ns.Catalog.QuestStatus(
-                { id = q.id, requiredLevel = info.requiredLevel }, ctx)
-            row.status = status == "available" and "upcoming" or status
+            row = questRow(ctx, i, q, inCurrent)
         end
-
-        if row.status == "done" or row.status == "ready" or row.status == "active" then
-            result.position = i
-        end
+        if REACHED[row.status] then result.position = i end
         result.rows[i] = row
     end
 
-    -- Available quests behind where you are were passed by: missed.
+    -- Anything still open behind where you are was passed by: missed.
     for i = 1, result.position - 1 do
         local row = result.rows[i]
-        if row.status == "upcoming" then row.status = "missed" end
+        if row.status == "upcoming" or (row.isStep and row.status == "later") then row.status = "missed" end
     end
 
     for _, row in ipairs(result.rows) do

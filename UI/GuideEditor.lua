@@ -7,7 +7,10 @@
       Quests   the guide's quests in order. Select one and move it to the
                top, up, down or to the bottom, or remove it. Search
                QuestieDB by part of a quest's name (or its ID) and add
-               results after the selected quest.
+               results after the selected quest. "Add a step" puts a
+               non-quest step (note, buy, train, set hearth, go to a spot)
+               after the selected entry, optionally at your current location;
+               select a step in the list to change it.
       Details  name, author, description and what it's based on.
       JSON     the whole guide as JSON: zones, rules, extra steps and
                anything else. Also used to export and import.
@@ -50,6 +53,7 @@ local state = {
     resultSelected = nil,
     jsonDirty = false, -- JSON box edited since it was filled
     viewList = nil,    -- read-only quest list shown for built-in guides
+    stepForm = { kind = "NOTE", text = "" }, -- the "Add a step" form
 }
 
 ---------------------------------------------------------------------------
@@ -86,6 +90,31 @@ function Ops.Add(list, quest, after)
     return at, true
 end
 
+--- Add a non-quest step after position `after` (or at the end).
+-- @return its index
+function Ops.AddStep(list, step, after)
+    local at = after and (after + 1) or (#list + 1)
+    table.insert(list, at, { step = step.kind, text = step.text, zone = step.zone, x = step.x, y = step.y })
+    return at
+end
+
+--- Replace the step at `index` (only if that entry is a step).
+function Ops.UpdateStep(list, index, step)
+    local entry = list[index]
+    if not entry or not entry.step then return false end
+    list[index] = { step = step.kind, text = step.text, zone = step.zone, x = step.x, y = step.y }
+    return true
+end
+
+--- Check a step form. @return nil when fine, or a locale key for the problem.
+function Ops.StepProblem(step)
+    if (step.kind == "NOTE" or step.kind == "BUY") and (step.text or "") == "" then
+        return "EDITOR_STEP_NEEDS_TEXT"
+    end
+    if step.kind == "GOTO" and not step.zone then return "EDITOR_STEP_NEEDS_PLACE" end
+    return nil
+end
+
 ---------------------------------------------------------------------------
 -- Text helpers (pure; tested)
 ---------------------------------------------------------------------------
@@ -108,8 +137,14 @@ function GuideEditor.FormatMessages(errors, warnings)
     return table.concat(lines, "\n")
 end
 
---- "12. [5] Vile Familiars - Durotar"
+--- "12. [5] Vile Familiars - Durotar", or "3. <Buy> Buy bags - Durotar 52.0, 41.5"
 function GuideEditor.QuestRowText(index, q)
+    if q.step then
+        local kind = L["STEP_KIND_" .. q.step] or q.step
+        local where = ns.Sources.LocationText(q)
+        return ("%d. %s %s%s"):format(index, C("accent", "<" .. kind .. ">"),
+            q.text or C("muted", L.EDITOR_STEP_DEFAULT), where and C("muted", " - " .. where) or "")
+    end
     local info = ns.QuestieData.Describe(q.id, q.name)
     local level = info.level > 0 and ("[%d] "):format(info.level) or ""
     local where = info.zone and C("muted", " - " .. info.zone) or ""
@@ -228,6 +263,7 @@ local function createQuestsTab(f)
     p.listLabel:SetPoint("TOPLEFT", p, "TOPLEFT", 0, 0)
     p.list = newList(p, COLUMN_WIDTH, function(index)
         state.selected = index
+        GuideEditor.LoadStepForm(index)
         refreshQuests()
     end)
     p.list:SetPoint("TOPLEFT", p, "TOPLEFT", 0, -18)
@@ -266,13 +302,40 @@ local function createQuestsTab(f)
         refreshQuests()
     end)
     p.results:SetPoint("TOPLEFT", p, "TOPLEFT", right, -46)
-    p.results:SetPoint("BOTTOMRIGHT", p, "BOTTOMRIGHT", 0, 28)
+    p.results:SetPoint("BOTTOMRIGHT", p, "BOTTOMRIGHT", 0, 140)
     p.resultsHint = newLabel(p, "", "GameFontHighlightSmall")
     p.resultsHint:SetPoint("TOPLEFT", p.results, "TOPLEFT", 4, -4)
     p.resultsHint:SetWidth(COLUMN_WIDTH - 30)
 
     p.add = newButton(p, L.EDITOR_ADD, 140, function() GuideEditor.AddSelectedResult() end)
-    p.add:SetPoint("BOTTOMLEFT", p, "BOTTOMLEFT", right, 0)
+    p.add:SetPoint("BOTTOMLEFT", p, "BOTTOMLEFT", right, 112)
+
+    -- "Add a step": [kind] [text............]
+    --               [Use my location] [Clear]  Durotar 52.0, 41.5
+    --               [Add step] [Update step]
+    p.stepLabel = newLabel(p, L.EDITOR_ADD_STEP)
+    p.stepLabel:SetPoint("BOTTOMLEFT", p, "BOTTOMLEFT", right, 84)
+    p.stepKind = newButton(p, "", 70, function() GuideEditor.CycleStepKind() end)
+    p.stepKind:SetPoint("BOTTOMLEFT", p, "BOTTOMLEFT", right, 56)
+    p.stepText = newEditBox(p, COLUMN_WIDTH - 86)
+    p.stepText:SetPoint("LEFT", p.stepKind, "RIGHT", 10, 0)
+    p.stepText:SetScript("OnTextChanged", function(self, userInput)
+        if userInput then state.stepForm.text = self:GetText() end
+    end)
+    p.stepHere = newButton(p, L.EDITOR_STEP_HERE, 120, function() GuideEditor.UseMyLocation() end)
+    p.stepHere:SetPoint("BOTTOMLEFT", p, "BOTTOMLEFT", right, 28)
+    p.stepClear = newButton(p, L.EDITOR_STEP_CLEAR, 60, function()
+        local form = state.stepForm
+        form.zone, form.x, form.y = nil, nil, nil
+        refreshQuests()
+    end)
+    p.stepClear:SetPoint("LEFT", p.stepHere, "RIGHT", 4, 0)
+    p.stepWhere = newLabel(p, "", "GameFontHighlightSmall")
+    p.stepWhere:SetPoint("LEFT", p.stepClear, "RIGHT", 8, 0)
+    p.stepAdd = newButton(p, L.EDITOR_STEP_ADD, 120, function() GuideEditor.AddStep() end)
+    p.stepAdd:SetPoint("BOTTOMLEFT", p, "BOTTOMLEFT", right, 0)
+    p.stepUpdate = newButton(p, L.EDITOR_STEP_UPDATE, 120, function() GuideEditor.UpdateStep() end)
+    p.stepUpdate:SetPoint("LEFT", p.stepAdd, "RIGHT", 4, 0)
 
     f.questsTab = p
 end
@@ -305,7 +368,98 @@ refreshQuests = function()
     local r = state.results[state.resultSelected or 0]
     if readOnly() or not r or inGuide(r.id) then p.add:Disable() else p.add:Enable() end
     if readOnly() then p.search:Hide(); p.searchLabel:Hide() else p.search:Show(); p.searchLabel:Show() end
+
+    local form = state.stepForm
+    p.stepKind:SetText(L["STEP_KIND_" .. form.kind])
+    if p.stepText:GetText() ~= (form.text or "") then p.stepText:SetText(form.text or "") end
+    p.stepWhere:SetText(C("muted", ns.Sources.LocationText(form) or L.EDITOR_STEP_NOWHERE))
+    local selectedEntry = list[state.selected or 0]
+    local stepWidgets = { p.stepKind, p.stepHere, p.stepClear, p.stepAdd }
+    for _, w in ipairs(stepWidgets) do
+        if readOnly() then w:Disable() else w:Enable() end
+    end
+    if readOnly() then p.stepText:Disable() else p.stepText:Enable() end
+    if readOnly() or not (selectedEntry and selectedEntry.step) then p.stepUpdate:Disable() else p.stepUpdate:Enable() end
 end
+
+---------------------------------------------------------------------------
+-- Step form actions
+---------------------------------------------------------------------------
+
+--- Fill the step form from the selected entry, if it's a step.
+function GuideEditor.LoadStepForm(index)
+    local entry = questList()[index]
+    if not entry or not entry.step then return end
+    state.stepForm = { kind = entry.step, text = entry.text or "", zone = entry.zone, x = entry.x, y = entry.y }
+end
+
+function GuideEditor.CycleStepKind()
+    local order = ns.GuideFormat.LIST_STEP_ORDER
+    local form = state.stepForm
+    for i, k in ipairs(order) do
+        if k == form.kind then form.kind = order[i % #order + 1]; break end
+    end
+    refreshQuests()
+end
+
+--- Put your current map position into the step form.
+function GuideEditor.UseMyLocation()
+    local pos = ns.GameApi.GetPlayerPosition()
+    local zone = pos and ns.GameApi.GetMapName(pos.mapID)
+    if not zone then
+        setStatus(C("warn", L.EDITOR_STEP_NO_POSITION))
+        return false
+    end
+    local form = state.stepForm
+    form.zone = zone
+    form.x = math.floor(pos.x * 1000 + 0.5) / 10
+    form.y = math.floor(pos.y * 1000 + 0.5) / 10
+    refreshQuests()
+    return true
+end
+
+local function formStep()
+    local f = state.stepForm
+    local text = f.text and f.text:gsub("^%s+", ""):gsub("%s+$", "") or ""
+    return { kind = f.kind, text = text ~= "" and text or nil, zone = f.zone, x = f.x, y = f.y }
+end
+
+local function stepFormOk(step)
+    local problem = Ops.StepProblem(step)
+    if problem then setStatus(C("warn", L[problem])) end
+    return problem == nil
+end
+
+--- Add the step in the form after the selected entry.
+function GuideEditor.AddStep()
+    if readOnly() then return false end
+    local step = formStep()
+    if not stepFormOk(step) then return false end
+    state.selected = Ops.AddStep(state.draft.quests, step, state.selected)
+    setStatus("")
+    refreshQuests()
+    return true
+end
+
+--- Save the form into the selected step.
+function GuideEditor.UpdateStep()
+    if readOnly() then return false end
+    local step = formStep()
+    if not stepFormOk(step) then return false end
+    if not Ops.UpdateStep(state.draft.quests, state.selected, step) then return false end
+    setStatus("")
+    refreshQuests()
+    return true
+end
+
+--- For tests: fill the step form.
+function GuideEditor.SetStepForm(kind, text)
+    state.stepForm.kind = kind
+    state.stepForm.text = text or ""
+    refreshQuests()
+end
+
+function GuideEditor.GetStepForm() return state.stepForm end
 
 ---------------------------------------------------------------------------
 -- Details tab
@@ -677,7 +831,11 @@ function GuideEditor.SetJson(text)
     state.jsonDirty = true
     state.jsonText = text
 end
-function GuideEditor.SelectQuest(index) state.selected = index; refreshQuests() end
+function GuideEditor.SelectQuest(index)
+    state.selected = index
+    GuideEditor.LoadStepForm(index)
+    refreshQuests()
+end
 function GuideEditor.SelectResult(index) state.resultSelected = index; refreshQuests() end
 function GuideEditor.PressMove(i) frame.questsTab.moveButtons[i]:GetScript("OnClick")() end
 function GuideEditor.SetField(key, text)

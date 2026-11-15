@@ -34,7 +34,7 @@ Your guides are saved account-wide, so every character can use them. If you edit
 
 | Tab | What you do there |
 |---|---|
-| **Quests** | Your guide's quests, in order, with level and zone. Select one and use **Top**, **Up**, **Down**, **Bottom** or **Remove**. On the right, type part of a quest's name ("famil") or a quest ID to search QuestieDB, select a result, and click **Add after selected**. Quests already in the guide are marked. |
+| **Quests** | Your guide's quests, in order, with level and zone. Select one and use **Top**, **Up**, **Down**, **Bottom** or **Remove**. On the right, type part of a quest's name ("famil") or a quest ID to search QuestieDB, select a result, and click **Add after selected**. Quests already in the guide are marked. Below that, **Add a step** puts a step that isn't a quest after the selected entry: pick the kind (Note, Buy, Train, Hearth, Go to), type the text, optionally press **Use my location**, then **Add step**. Select a step in the list to change it with **Update step**. Steps move and delete like quests. |
 | **Details** | Name, author, description, and whether it's based on **Story** or **Efficient**, which sets the default rules. |
 | **JSON** | The whole guide as JSON, for the less common settings: zones per level, rules, skipped quests and extra steps. Changes here carry over to the other tabs. If the JSON doesn't parse, the editor keeps you here and shows the line and column. |
 
@@ -79,7 +79,7 @@ JSON is easier to share than XML: it's shorter to paste, any text editor or onli
 | `name` | Required. `author` and `description` are optional. |
 | `basedOn` | `"story"` or `"efficient"`. Each one's rules are the defaults. |
 | `rules` | Optional overrides, all whole numbers:<br>• `greyGap`: skip quests this many levels below you<br>• `levelsAbove`: allow quests this many levels above you<br>• `maxAccept`: quest givers considered at once<br>• `turninBonus` and `chainBonus`: yards a hand-in or story follow-up counts as closer<br>• `maxDetour`: skip quests whose objectives are this far from the giver (0 = no limit) |
-| `quests` | Your quests, in order. Each is `{ "id": 788, "name": "..." }` or just `788`. Only the id matters; the name is there for people reading the file. |
+| `quests` | Your quests, in order. Each is `{ "id": 788, "name": "..." }` or just `788`. Only the id matters; the name is there for people reading the file. The list can also hold **steps that aren't quests**, see below. |
 | `bands` | Zones per level range, covering 1-60 in order with no gaps or overlaps. `levels` is `[from, to]`. `zones` sets both factions; otherwise use `alliance` and `horde`. `"START"` means your race's starting zone. `notes` show in the Plan tab. |
 | `skipQuests` | Quest IDs the guide never picks up or auto-accepts. |
 | `steps` | Extra steps from a level. `kind` is `train`, `buy`, `note` or `hearth`. `train` makes class training due from that level (it shows up when your trainer is nearby). `buy`, `note` and `hearth` become a step in the guide that you tick off with **Done**. |
@@ -87,6 +87,22 @@ JSON is easier to share than XML: it's shorter to paste, any text editor or onli
 Quest IDs are the numbers in Wowhead and Questie quest links, or search for the quest in the editor.
 
 A few things are forgiving: trailing commas and `//` comments are allowed. Guides shared as 0.6 plain text still import, with their "priority quests" becoming the start of the quest list.
+
+**Steps between quests.** Put these in the `quests` list wherever they belong:
+
+```json
+{ "step": "buy", "text": "Buy 6-slot bags from the vendor.", "zone": "Durotar", "x": 52.0, "y": 41.5 }
+```
+
+| `step` | What it does |
+|---|---|
+| `note` | Shows the text. You tick it off with **Done**. Needs `text`. |
+| `buy` | Like a note, with a vendor icon. Needs `text`. |
+| `train` | Without a location, points to your nearest class trainer. Clears when you open your class trainer. |
+| `hearth` | Without a location, points to the nearest innkeeper. Clears when you set your hearthstone. |
+| `goto` | Walk to a spot. Needs `zone`, `x` and `y`. Clears when you get within 20 yards. |
+
+`text` is optional for `train`, `hearth` and `goto`. `zone` is the map name, and `x`/`y` are map coordinates from 0 to 100, as TomTom shows them. A step comes up once everything before it in the list is dealt with: earlier steps done, and no earlier quest still waiting to be picked up. Quests you can't do yet don't hold it back. Every step can also be ticked off with **Done**, skipped, or picked from the Steps tab.
 
 Guides are read as data only, never run as code. Sizes are capped, and `|` is replaced because the game would read it as a colour or link code.
 

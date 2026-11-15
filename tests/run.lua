@@ -76,6 +76,7 @@ run("tests/test_guideformat.lua")
 run("tests/test_library.lua")
 run("tests/test_back.lua")
 run("tests/test_steps.lua")
+run("tests/test_liststeps.lua")
 
 realPrint(("%d passed, %d failed"):format(T.passed, T.failed))
 for _, f in ipairs(T.failures) do realPrint("FAIL " .. f) end
