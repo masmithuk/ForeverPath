@@ -71,6 +71,7 @@ run("tests/test_browser.lua")
 run("tests/test_modes.lua")
 run("tests/test_autoquest.lua")
 run("tests/test_target.lua")
+run("tests/test_json.lua")
 run("tests/test_guideformat.lua")
 run("tests/test_library.lua")
 

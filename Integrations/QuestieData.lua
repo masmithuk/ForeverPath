@@ -304,6 +304,12 @@ end
 -- Candidate index
 ---------------------------------------------------------------------------
 
+--- Is the character high enough to pick the quest up? (true if unknown)
+function QuestieData.MeetsLevel(questID, level)
+    local required = get("Quest", questID, "requiredLevel")
+    return not required or required <= level
+end
+
 --- Is a quest inside a mode's level window? nil when QuestieDB doesn't know it.
 function QuestieData.InLevelWindow(questID, level, rules)
     local qLevel = get("Quest", questID, "questLevel") or get("Quest", questID, "requiredLevel")
@@ -479,10 +485,87 @@ function QuestieData.BuildIndex(profile, schedule, onDone)
     step()
 end
 
+---------------------------------------------------------------------------
+-- Search (guide editor)
+---------------------------------------------------------------------------
+
+local searchIndex -- list of { id, name, lower } for every quest in QuestieDB
+
+local function buildSearchIndex()
+    searchIndex = {}
+    for _, id in ipairs(allIds("Quest")) do
+        local name = get("Quest", id, "name")
+        if type(name) == "string" and name ~= "" then
+            searchIndex[#searchIndex + 1] = { id = id, name = name, lower = name:lower() }
+        end
+    end
+end
+
+--- What QuestieDB knows about a quest: { id, name, level, requiredLevel,
+--- zone }. Works for unknown quests too (name "Quest <id>", level 0).
+function QuestieData.Describe(id, name)
+    local zoneOrSort = get("Quest", id, "zoneOrSort")
+    local zone = type(zoneOrSort) == "number" and zoneOrSort > 0
+        and ns.GameApi.GetAreaName(zoneOrSort) or nil
+    return {
+        id = id,
+        name = name or get("Quest", id, "name") or ("Quest " .. id),
+        level = get("Quest", id, "questLevel") or 0,
+        requiredLevel = get("Quest", id, "requiredLevel") or 0,
+        zone = zone,
+    }
+end
+
+--- Find quests by part of their name, or by quest ID. Searches every quest
+--- in QuestieDB (any race, class or faction) so guides can be written for
+--- other characters too.
+-- @return list of { id, name, level, requiredLevel, zone } (at most `limit`)
+function QuestieData.Search(query, limit)
+    limit = limit or 50
+    local results = {}
+    if not lib() then return results end
+    query = (query or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
+    if query == "" then return results end
+    if not searchIndex then buildSearchIndex() end
+
+    local describe = QuestieData.Describe
+
+    -- An exact quest ID comes first.
+    local asNumber = tonumber(query)
+    if asNumber then
+        local name = get("Quest", asNumber, "name")
+        if name then results[1] = describe(asNumber, name) end
+    end
+
+    -- Names starting with the text, then names containing it.
+    local starts, contains = {}, {}
+    for _, q in ipairs(searchIndex) do
+        if q.id ~= asNumber then
+            local at = q.lower:find(query, 1, true)
+            if at == 1 then starts[#starts + 1] = q
+            elseif at then contains[#contains + 1] = q end
+        end
+    end
+    local byName = function(a, b)
+        if a.lower ~= b.lower then return a.lower < b.lower end
+        return a.id < b.id
+    end
+    table.sort(starts, byName)
+    table.sort(contains, byName)
+    for _, list in ipairs({ starts, contains }) do
+        for _, q in ipairs(list) do
+            if #results >= limit then return results end
+            results[#results + 1] = describe(q.id, q.name)
+        end
+    end
+    return results
+end
+
 --- Forget everything (tests, or after a level-up changes the race/class view).
 function QuestieData.Reset()
     state.status = "unknown"
     state.candidates, state.trainers = {}, {}
     spawnCache = {}
     dungeonByArea = {}
+    searchIndex = nil
 end

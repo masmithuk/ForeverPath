@@ -1,34 +1,48 @@
 --[[
     ForeverPath - Guide/GuideFormat.lua
 
-    The text format every guide is stored, edited, exported and imported in.
-    It is plain text so players can read it, edit it in the game or in any
-    text editor, and paste it to each other.
+    The guide schema: what a guide contains, how it's checked, and how it
+    becomes JSON for export/import.
 
-        # Lines starting with # are comments.
-        guide: Hillsbrad Rush
-        author: Mike
-        description: My fastest Horde route.
-        based on: efficient
-        rules: greyGap=2 levelsAbove=2 maxAccept=10 turninBonus=120 chainBonus=0 maxDetour=350
+    JSON (version 2), as exported:
 
-        [1-10]
-        both: START
-        note: Talents open at level 10.
+        {
+          "format": "ForeverPath guide",
+          "version": 2,
+          "name": "Hillsbrad Rush",
+          "author": "Mike",
+          "description": "My fastest Horde route.",
+          "basedOn": "efficient",
+          "rules": { "greyGap": 2, "maxDetour": 350, ... },
+          "quests": [
+            { "id": 788, "name": "Your Place In The World" },
+            { "id": 789, "name": "Cutting Teeth" }
+          ],
+          "bands": [
+            { "levels": [1, 10], "zones": ["START"], "notes": ["Talents open at 10."] },
+            { "levels": [11, 20], "alliance": ["Westfall"], "horde": ["The Barrens"] }
+          ],
+          "skipQuests": [123, 456],
+          "steps": [ { "level": 12, "kind": "buy", "text": "Buy bags." } ]
+        }
 
-        [11-20]
-        alliance: Westfall, Loch Modan
-        horde: The Barrens, Silverpine Forest
+    quests      the guide's own quests, in the order to do them. The step
+                guide picks these up first, in order. Names are only for
+                people reading the JSON; the id is what counts.
+    bands       zones per level range. "zones" means both factions;
+                "alliance"/"horde" set one side. Used when the quest list
+                has nothing available, and for the Zones and Plan tabs.
+    skipQuests  quests the guide never picks up.
+    steps       reminders from a level: train, buy, note or hearth.
 
-        skip quests: 123, 456
-        priority quests: 789
-        step 12 buy: Buy bags before leaving town.
+    Inside the addon a guide is a plain table:
+      name, author, description, base, rules, quests = { {id, name} },
+      bands = { {min, max, Alliance, Horde, notes} }, skipQuests, steps =
+      { {level, kind ("TRAIN"...), text} }
 
-    Parsing never runs code from the text (no loadstring), caps every size,
-    and strips the "|" character, which the game would read as colour,
-    texture or link codes. Errors and warnings carry line numbers.
-
-    tests/test_guideformat.lua covers parsing, validation and round trips.
+    Every value is type-checked and size-capped, strings are stripped of
+    "|" (the game's colour/link escape), and nothing is ever run as code.
+    tests/test_guideformat.lua covers it.
 ]]
 
 local _, ns = ...
@@ -36,17 +50,17 @@ local _, ns = ...
 local GuideFormat = {}
 ns.GuideFormat = GuideFormat
 
-GuideFormat.VERSION = 1
-GuideFormat.MAX_TEXT = 30000
-GuideFormat.MAX_LINE = 500
+GuideFormat.FORMAT_NAME = "ForeverPath guide"
+GuideFormat.VERSION = 2
 GuideFormat.MAX_BANDS = 60
 GuideFormat.MAX_ZONES = 20
-GuideFormat.MAX_LIST = 500
+GuideFormat.MAX_QUESTS = 1000
+GuideFormat.MAX_SKIP = 500
 GuideFormat.MAX_STEPS = 100
 
 local START = "START"
 
---- Defaults for each "based on" value. Rules in the guide override these.
+--- Defaults for each "basedOn" value. Rules in the guide override these.
 GuideFormat.BASES = {
     story = { greyGap = 10, levelsAbove = 3, maxAccept = 30, turninBonus = 60, chainBonus = 150, maxDetour = 0 },
     efficient = { greyGap = 2, levelsAbove = 2, maxAccept = 10, turninBonus = 120, chainBonus = 0, maxDetour = 350 },
@@ -64,6 +78,14 @@ GuideFormat.RULES = {
 
 GuideFormat.STEP_KINDS = { train = "TRAIN", buy = "BUY", note = "NOTE", hearth = "HEARTH" }
 
+-- Key order for exported JSON, so files read top-down and diff cleanly.
+local KEY_ORDER = {
+    "format", "version", "name", "author", "description", "basedOn", "rules",
+    "greyGap", "levelsAbove", "maxAccept", "turninBonus", "chainBonus", "maxDetour",
+    "quests", "id", "bands", "levels", "zones", "alliance", "horde", "notes",
+    "skipQuests", "steps", "level", "kind", "text",
+}
+
 ---------------------------------------------------------------------------
 -- Helpers
 ---------------------------------------------------------------------------
@@ -72,216 +94,291 @@ local function trim(s)
     return (s:gsub("^%s+", ""):gsub("%s+$", ""))
 end
 
---- Make imported text safe to show in the game's UI.
+--- Make text safe to show in the game's UI.
 function GuideFormat.Clean(s)
-    s = s:gsub("|", "/")                -- colour/texture/link escape codes
+    s = s:gsub("|", "/")                   -- colour/texture/link escape codes
     s = s:gsub("[%z\1-\8\11-\31\127]", "") -- control characters
     return s
 end
 
-local function splitList(value, maxItems)
-    local items = {}
-    for item in value:gmatch("[^,]+") do
-        item = trim(item)
-        if item ~= "" then items[#items + 1] = item end
-        if #items >= maxItems then break end
-    end
-    return items
+local function copyList(list)
+    local out = {}
+    for i, v in ipairs(list or {}) do out[i] = v end
+    return out
 end
 
-local function parseIdList(value, lineNo, errors)
-    local ids = {}
-    for _, item in ipairs(splitList(value, GuideFormat.MAX_LIST)) do
-        local n = tonumber(item)
-        if n and n > 0 and n == math.floor(n) then
-            ids[#ids + 1] = n
-        else
-            errors[#errors + 1] = { line = lineNo, message = ("%q is not a quest ID"):format(item) }
-        end
-    end
-    return ids
+local function sameList(a, b)
+    if #a ~= #b then return false end
+    for i = 1, #a do if a[i] ~= b[i] then return false end end
+    return true
 end
 
-local function zoneList(value)
+--- Deep copy of a guide's data fields (for drafts in the editor).
+function GuideFormat.Copy(guide)
+    local copy = {
+        name = guide.name, author = guide.author, description = guide.description,
+        base = guide.base, rules = {}, quests = {}, bands = {},
+        skipQuests = copyList(guide.skipQuests), steps = {},
+    }
+    for k, v in pairs(guide.rules or {}) do copy.rules[k] = v end
+    for i, q in ipairs(guide.quests or {}) do copy.quests[i] = { id = q.id, name = q.name } end
+    for i, b in ipairs(guide.bands or {}) do
+        copy.bands[i] = { min = b.min, max = b.max, Alliance = copyList(b.Alliance),
+                          Horde = copyList(b.Horde), notes = copyList(b.notes) }
+    end
+    for i, s in ipairs(guide.steps or {}) do copy.steps[i] = { level = s.level, kind = s.kind, text = s.text } end
+    return copy
+end
+
+---------------------------------------------------------------------------
+-- Checking a decoded table
+---------------------------------------------------------------------------
+
+local Reader = {}
+Reader.__index = Reader
+
+local function newReader()
+    return setmetatable({ errors = {}, warnings = {} }, Reader)
+end
+
+function Reader:error(path, message)
+    self.errors[#self.errors + 1] = { path = path, message = message }
+end
+
+function Reader:warn(path, message)
+    self.warnings[#self.warnings + 1] = { path = path, message = message }
+end
+
+function Reader:string(value, path, maxLen, required)
+    if value == nil or value == "" then
+        if required then self:error(path, "is required") end
+        return nil
+    end
+    if type(value) ~= "string" then
+        self:error(path, "must be text")
+        return nil
+    end
+    if value:find("|", 1, true) then
+        self:warn(path, 'contained "|", which was replaced with "/"')
+    end
+    value = trim(GuideFormat.Clean(value))
+    if #value > maxLen then
+        self:warn(path, ("was longer than %d characters and was shortened"):format(maxLen))
+        value = value:sub(1, maxLen)
+    end
+    return value
+end
+
+function Reader:integer(value, path, min, max)
+    if type(value) ~= "number" or value ~= math.floor(value) then
+        self:error(path, "must be a whole number")
+        return nil
+    end
+    if value < min or value > max then
+        self:error(path, ("must be between %d and %d"):format(min, max))
+        return nil
+    end
+    return value
+end
+
+function Reader:list(value, path, maxItems)
+    if value == nil then return {} end
+    if type(value) ~= "table" then
+        self:error(path, "must be a list [ ... ]")
+        return {}
+    end
+    if #value > maxItems then
+        self:error(path, ("has more than %d entries"):format(maxItems))
+        return {}
+    end
+    return value
+end
+
+function Reader:zones(value, path)
     local zones = {}
-    for _, z in ipairs(splitList(value, GuideFormat.MAX_ZONES)) do
-        zones[#zones + 1] = (z:upper() == START) and START or z
+    for i, z in ipairs(self:list(value, path, GuideFormat.MAX_ZONES)) do
+        local name = self:string(z, ("%s[%d]"):format(path, i), 60, true)
+        if name then zones[#zones + 1] = (name:upper() == START) and START or name end
     end
     return zones
 end
 
-local function copyRules(rules)
-    local out = {}
-    for k, v in pairs(rules) do out[k] = v end
-    return out
+function Reader:questId(value, path)
+    return self:integer(value, path, 1, 10000000)
 end
 
----------------------------------------------------------------------------
--- Parsing
----------------------------------------------------------------------------
+local KNOWN_KEYS = {
+    format = true, version = true, name = true, author = true, description = true, basedOn = true,
+    rules = true, quests = true, bands = true, skipQuests = true, steps = true,
+}
 
-local function parseRules(value, rules, lineNo, errors)
+local function readRules(r, raw, guide)
+    guide.rules = {}
+    for k, v in pairs(GuideFormat.BASES[guide.base]) do guide.rules[k] = v end
+    if raw.rules == nil then return end
+    if type(raw.rules) ~= "table" then
+        r:error("rules", "must be an object { ... }")
+        return
+    end
     local known = {}
-    for _, r in ipairs(GuideFormat.RULES) do known[r.key:lower()] = r end
-    for pair in value:gmatch("%S+") do
-        local key, number = pair:match("^(%a+)=(%-?%d+)$")
-        local rule = key and known[key:lower()]
+    for _, rule in ipairs(GuideFormat.RULES) do known[rule.key] = rule end
+    for key, value in pairs(raw.rules) do
+        local rule = known[key]
         if not rule then
-            errors[#errors + 1] = { line = lineNo, message = ("Unknown rule %q"):format(pair) }
+            r:error("rules." .. tostring(key), "isn't a known rule")
         else
-            local n = tonumber(number)
-            if n < rule.min or n > rule.max then
-                errors[#errors + 1] = { line = lineNo,
-                    message = ("%s must be between %d and %d"):format(rule.key, rule.min, rule.max) }
+            local n = r:integer(value, "rules." .. key, rule.min, rule.max)
+            if n then guide.rules[key] = n end
+        end
+    end
+end
+
+local function readQuests(r, raw, guide)
+    guide.quests = {}
+    local seen = {}
+    for i, q in ipairs(r:list(raw.quests, "quests", GuideFormat.MAX_QUESTS)) do
+        local path = ("quests[%d]"):format(i)
+        local id, name
+        if type(q) == "number" then
+            id = r:questId(q, path)
+        elseif type(q) == "table" then
+            id = r:questId(q.id, path .. ".id")
+            name = r:string(q.name, path .. ".name", 100)
+        else
+            r:error(path, 'must be a quest ID or { "id": ..., "name": ... }')
+        end
+        if id then
+            if seen[id] then
+                r:warn(path, ("quest %d is listed twice; the second was removed"):format(id))
             else
-                rules[rule.key] = n
+                seen[id] = true
+                guide.quests[#guide.quests + 1] = { id = id, name = name }
             end
         end
     end
 end
 
---- Parse guide text.
--- @return guide table, or nil; list of errors; list of warnings
---   Each error/warning is { line = n or nil, message = "..." }.
---   The guide: { name, author, description, base, rules, bands,
---                skipQuests, priorityQuests, steps }
-function GuideFormat.Parse(text)
-    local errors, warnings = {}, {}
-    if type(text) ~= "string" or trim(text) == "" then
-        return nil, { { message = "The guide is empty." } }, warnings
+local function readBands(r, raw, guide)
+    guide.bands = {}
+    for i, b in ipairs(r:list(raw.bands, "bands", GuideFormat.MAX_BANDS)) do
+        local path = ("bands[%d]"):format(i)
+        if type(b) ~= "table" then
+            r:error(path, "must be an object { ... }")
+        else
+            local levels = b.levels
+            local min, max
+            if type(levels) == "table" and #levels >= 1 and #levels <= 2 then
+                min = r:integer(levels[1], path .. ".levels[1]", 1, 60)
+                max = r:integer(levels[2] or levels[1], path .. ".levels[2]", 1, 60)
+            else
+                r:error(path .. ".levels", "must be [from, to], e.g. [11, 20]")
+            end
+            local both = r:zones(b.zones, path .. ".zones")
+            local band = {
+                min = min or 1, max = max or 1, notes = {}, path = path,
+                Alliance = #both > 0 and both or r:zones(b.alliance, path .. ".alliance"),
+                Horde = #both > 0 and copyList(both) or r:zones(b.horde, path .. ".horde"),
+            }
+            if #both > 0 and (b.alliance or b.horde) then
+                r:warn(path, '"zones" sets both factions, so "alliance" and "horde" were ignored')
+            end
+            for j, note in ipairs(r:list(b.notes, path .. ".notes", 20)) do
+                local text = r:string(note, ("%s.notes[%d]"):format(path, j), 300, true)
+                if text then band.notes[#band.notes + 1] = text end
+            end
+            if min and max then guide.bands[#guide.bands + 1] = band end
+        end
     end
-    if #text > GuideFormat.MAX_TEXT then
-        return nil, { { message = ("The guide is too long (over %d characters)."):format(GuideFormat.MAX_TEXT) } }, warnings
+end
+
+local function readExtras(r, raw, guide)
+    guide.skipQuests = {}
+    for i, id in ipairs(r:list(raw.skipQuests, "skipQuests", GuideFormat.MAX_SKIP)) do
+        local n = r:questId(id, ("skipQuests[%d]"):format(i))
+        if n then guide.skipQuests[#guide.skipQuests + 1] = n end
     end
-    if text:find("|", 1, true) then
-        warnings[#warnings + 1] = { message = 'The "|" character isn\'t allowed and was replaced with "/".' }
+
+    guide.steps = {}
+    for i, s in ipairs(r:list(raw.steps, "steps", GuideFormat.MAX_STEPS)) do
+        local path = ("steps[%d]"):format(i)
+        if type(s) ~= "table" then
+            r:error(path, "must be an object { ... }")
+        else
+            local level = r:integer(s.level, path .. ".level", 1, 60)
+            local kind = type(s.kind) == "string" and GuideFormat.STEP_KINDS[s.kind:lower()]
+            if not kind then r:error(path .. ".kind", 'must be "train", "buy", "note" or "hearth"') end
+            local text = r:string(s.text, path .. ".text", 200, true)
+            if level and kind and text then
+                guide.steps[#guide.steps + 1] = { level = level, kind = kind, text = text }
+            end
+        end
     end
-    text = GuideFormat.Clean(text:gsub("\r\n?", "\n"))
+end
+
+--- Turn a decoded table (from JSON or saved data) into a checked guide.
+-- @return guide, or nil; errors; warnings (each { path, message })
+function GuideFormat.FromData(raw)
+    local r = newReader()
+    if type(raw) ~= "table" then
+        r:error("guide", "must be an object { ... }")
+        return nil, r.errors, r.warnings
+    end
+    for key in pairs(raw) do
+        if not KNOWN_KEYS[key] then r:warn(tostring(key), "isn't a guide setting and was ignored") end
+    end
+    if type(raw.version) == "number" and raw.version > GuideFormat.VERSION then
+        r:warn("version", "is newer than this ForeverPath understands - update the addon")
+    end
 
     local guide = {
-        base = "efficient", bands = {}, skipQuests = {}, priorityQuests = {}, steps = {},
+        name = r:string(raw.name, "name", 60, true),
+        author = r:string(raw.author, "author", 60),
+        description = r:string(raw.description, "description", 300),
+        base = raw.basedOn or "efficient",
     }
-    local explicitRules = {}
-    local band -- current [a-b] section
-    local lineNo = 0
-
-    for raw in (text .. "\n"):gmatch("([^\n]*)\n") do
-        lineNo = lineNo + 1
-        local line = trim(raw)
-        if #line > GuideFormat.MAX_LINE then
-            errors[#errors + 1] = { line = lineNo, message = "Line is too long." }
-        elseif line ~= "" and not line:match("^#") and not line:match("^%-%-") then
-            local a, b = line:match("^%[%s*(%d+)%s*%-%s*(%d+)%s*%]$")
-            local single = line:match("^%[%s*(%d+)%s*%]$")
-            if single then a, b = single, single end
-
-            if a then
-                if #guide.bands >= GuideFormat.MAX_BANDS then
-                    errors[#errors + 1] = { line = lineNo, message = "Too many level bands." }
-                else
-                    band = { min = tonumber(a), max = tonumber(b), Alliance = {}, Horde = {}, notes = {}, line = lineNo }
-                    guide.bands[#guide.bands + 1] = band
-                end
-            else
-                local key, value = line:match("^([^:]+):%s*(.*)$")
-                if not key then
-                    errors[#errors + 1] = { line = lineNo, message = ('Expected "key: value" or [level-level], got %q'):format(line) }
-                else
-                    key = trim(key):lower():gsub("%s+", " ")
-                    local stepLevel, stepKind = key:match("^step%s+(%d+)%s+(%a+)$")
-
-                    if key == "guide" or key == "name" then
-                        guide.name = value:sub(1, 60)
-                    elseif key == "author" then
-                        guide.author = value:sub(1, 60)
-                    elseif key == "description" then
-                        guide.description = value:sub(1, 300)
-                    elseif key == "based on" then
-                        local base = value:lower()
-                        if GuideFormat.BASES[base] then
-                            guide.base = base
-                        else
-                            errors[#errors + 1] = { line = lineNo, message = 'based on must be "story" or "efficient"' }
-                        end
-                    elseif key == "rules" then
-                        parseRules(value, explicitRules, lineNo, errors)
-                    elseif key == "skip quests" then
-                        for _, id in ipairs(parseIdList(value, lineNo, errors)) do
-                            guide.skipQuests[#guide.skipQuests + 1] = id
-                        end
-                    elseif key == "priority quests" then
-                        for _, id in ipairs(parseIdList(value, lineNo, errors)) do
-                            guide.priorityQuests[#guide.priorityQuests + 1] = id
-                        end
-                    elseif stepLevel then
-                        local kind = GuideFormat.STEP_KINDS[stepKind]
-                        local level = tonumber(stepLevel)
-                        if not kind then
-                            errors[#errors + 1] = { line = lineNo, message = "Step kind must be train, buy, note or hearth" }
-                        elseif level < 1 or level > 60 then
-                            errors[#errors + 1] = { line = lineNo, message = "Step level must be 1-60" }
-                        elseif value == "" then
-                            errors[#errors + 1] = { line = lineNo, message = "Step needs some text" }
-                        elseif #guide.steps >= GuideFormat.MAX_STEPS then
-                            errors[#errors + 1] = { line = lineNo, message = "Too many steps" }
-                        else
-                            guide.steps[#guide.steps + 1] = { level = level, kind = kind, text = value }
-                        end
-                    elseif key == "alliance" or key == "horde" or key == "both" or key == "note" then
-                        if not band then
-                            errors[#errors + 1] = { line = lineNo, message = ('"%s:" must come after a [level-level] line'):format(key) }
-                        elseif key == "note" then
-                            band.notes[#band.notes + 1] = value
-                        else
-                            for _, zone in ipairs(zoneList(value)) do
-                                if key ~= "horde" then band.Alliance[#band.Alliance + 1] = zone end
-                                if key ~= "alliance" then band.Horde[#band.Horde + 1] = zone end
-                            end
-                        end
-                    else
-                        errors[#errors + 1] = { line = lineNo, message = ("Unknown setting %q"):format(key) }
-                    end
-                end
-            end
-        end
+    if not GuideFormat.BASES[guide.base] then
+        r:error("basedOn", 'must be "story" or "efficient"')
+        guide.base = "efficient"
     end
 
-    -- Rules: the base's defaults, then anything the guide sets.
-    guide.rules = copyRules(GuideFormat.BASES[guide.base])
-    for k, v in pairs(explicitRules) do guide.rules[k] = v end
+    readRules(r, raw, guide)
+    readQuests(r, raw, guide)
+    readBands(r, raw, guide)
+    readExtras(r, raw, guide)
 
-    GuideFormat.Validate(guide, errors, warnings)
-    for _, b in ipairs(guide.bands) do b.line = nil end
+    GuideFormat.Validate(guide, r.errors, r.warnings)
+    for _, b in ipairs(guide.bands) do b.path = nil end
 
-    if #errors > 0 then return nil, errors, warnings end
-    return guide, errors, warnings
+    if #r.errors > 0 then return nil, r.errors, r.warnings end
+    return guide, r.errors, r.warnings
 end
 
---- Structural checks shared by parsing and the built-in guides' tests.
+--- Structural checks: a name, and bands covering 1-60 in order.
 function GuideFormat.Validate(guide, errors, warnings)
+    local function err(path, line, message)
+        errors[#errors + 1] = { path = path, line = line, message = message }
+    end
     if not guide.name or trim(guide.name) == "" then
-        errors[#errors + 1] = { message = 'The guide needs a name ("guide: My Guide").' }
+        local reported = false
+        for _, e in ipairs(errors) do if e.path == "name" then reported = true end end
+        if not reported then err(nil, nil, "The guide needs a name.") end
     end
     if #guide.bands == 0 then
-        errors[#errors + 1] = { message = "The guide needs at least one level band, like [1-10]." }
+        err(nil, nil, "The guide needs at least one level band (zones for levels 1-60).")
         return
     end
 
     local expected = 1
     for _, b in ipairs(guide.bands) do
-        if b.min < 1 or b.max > 60 or b.min > b.max then
-            errors[#errors + 1] = { line = b.line, message = ("[%d-%d] isn't a valid level range"):format(b.min, b.max) }
-        elseif b.min ~= expected then
-            if b.min > expected then
-                errors[#errors + 1] = { line = b.line,
-                    message = ("Levels %d-%d aren't covered by any band"):format(expected, b.min - 1) }
-            else
-                errors[#errors + 1] = { line = b.line, message = ("[%d-%d] overlaps the band before it"):format(b.min, b.max) }
-            end
+        if b.min > b.max then
+            err(b.path, b.line, ("levels %d-%d run backwards"):format(b.min, b.max))
+        elseif b.min > expected then
+            err(b.path, b.line, ("levels %d-%d aren't covered by any band"):format(expected, b.min - 1))
+        elseif b.min < expected then
+            err(b.path, b.line, ("levels %d-%d overlap the band before"):format(b.min, b.max))
         end
         if #b.Alliance == 0 or #b.Horde == 0 then
-            errors[#errors + 1] = { line = b.line,
-                message = ("[%d-%d] needs zones for both factions (alliance:, horde: or both:)"):format(b.min, b.max) }
+            err(b.path, b.line, ("levels %d-%d need zones for both factions"):format(b.min, b.max))
         end
         expected = math.max(expected, b.max + 1)
     end
@@ -290,89 +387,107 @@ function GuideFormat.Validate(guide, errors, warnings)
     end
 end
 
+--- Run the checks on a guide the editor has built up.
+-- @return true/false, errors, warnings
+function GuideFormat.Check(guide)
+    return GuideFormat.FromData(GuideFormat.ToData(guide))
+end
+
 ---------------------------------------------------------------------------
 -- Writing
 ---------------------------------------------------------------------------
 
-local function sameList(a, b)
-    if #a ~= #b then return false end
-    for i = 1, #a do if a[i] ~= b[i] then return false end end
-    return true
-end
-
---- Guide table -> text. Parse(Write(g)) gives back the same guide.
-function GuideFormat.Write(guide)
-    local lines = {
-        ("# ForeverPath guide (format %d). Lines starting with # are comments."):format(GuideFormat.VERSION),
-        "guide: " .. guide.name,
+--- Guide -> plain table in the JSON shape (also what's saved to disk).
+function GuideFormat.ToData(guide)
+    local data = {
+        format = GuideFormat.FORMAT_NAME,
+        version = GuideFormat.VERSION,
+        name = guide.name,
+        author = guide.author,
+        description = guide.description,
+        basedOn = guide.base,
+        rules = {},
+        quests = {},
+        bands = {},
     }
-    if guide.author and guide.author ~= "" then lines[#lines + 1] = "author: " .. guide.author end
-    if guide.description and guide.description ~= "" then lines[#lines + 1] = "description: " .. guide.description end
-    lines[#lines + 1] = "based on: " .. (guide.base or "efficient")
-
-    local rules = {}
-    for _, r in ipairs(GuideFormat.RULES) do
-        rules[#rules + 1] = ("%s=%d"):format(r.key, guide.rules[r.key] or 0)
+    -- Only rules that differ from the base, so exports stay short.
+    local defaults = GuideFormat.BASES[guide.base] or {}
+    for _, rule in ipairs(GuideFormat.RULES) do
+        local v = guide.rules and guide.rules[rule.key]
+        if v ~= nil and v ~= defaults[rule.key] then data.rules[rule.key] = v end
     end
-    lines[#lines + 1] = "rules: " .. table.concat(rules, " ")
+    if next(data.rules) == nil then data.rules = nil end
 
-    for _, b in ipairs(guide.bands) do
-        lines[#lines + 1] = ""
-        lines[#lines + 1] = (b.min == b.max) and ("[%d]"):format(b.min) or ("[%d-%d]"):format(b.min, b.max)
+    for i, q in ipairs(guide.quests or {}) do
+        data.quests[i] = q.name and { id = q.id, name = q.name } or { id = q.id }
+    end
+    for i, b in ipairs(guide.bands or {}) do
+        local out = { levels = { b.min, b.max } }
         if sameList(b.Alliance, b.Horde) then
-            lines[#lines + 1] = "both: " .. table.concat(b.Alliance, ", ")
+            out.zones = copyList(b.Alliance)
         else
-            lines[#lines + 1] = "alliance: " .. table.concat(b.Alliance, ", ")
-            lines[#lines + 1] = "horde: " .. table.concat(b.Horde, ", ")
+            out.alliance = copyList(b.Alliance)
+            out.horde = copyList(b.Horde)
         end
-        for _, note in ipairs(b.notes or {}) do lines[#lines + 1] = "note: " .. note end
+        if #(b.notes or {}) > 0 then out.notes = copyList(b.notes) end
+        data.bands[i] = out
     end
-
-    local extras = {}
-    if #(guide.skipQuests or {}) > 0 then
-        extras[#extras + 1] = "skip quests: " .. table.concat(guide.skipQuests, ", ")
+    if #(guide.skipQuests or {}) > 0 then data.skipQuests = copyList(guide.skipQuests) end
+    if #(guide.steps or {}) > 0 then
+        data.steps = {}
+        for i, s in ipairs(guide.steps) do
+            local kind
+            for word, k in pairs(GuideFormat.STEP_KINDS) do if k == s.kind then kind = word end end
+            data.steps[i] = { level = s.level, kind = kind, text = s.text }
+        end
     end
-    if #(guide.priorityQuests or {}) > 0 then
-        extras[#extras + 1] = "priority quests: " .. table.concat(guide.priorityQuests, ", ")
-    end
-    for _, s in ipairs(guide.steps or {}) do
-        local kind
-        for word, k in pairs(GuideFormat.STEP_KINDS) do if k == s.kind then kind = word end end
-        extras[#extras + 1] = ("step %d %s: %s"):format(s.level, kind, s.text)
-    end
-    if #extras > 0 then
-        lines[#lines + 1] = ""
-        for _, l in ipairs(extras) do lines[#lines + 1] = l end
-    end
-    return table.concat(lines, "\n") .. "\n"
+    return data
 end
 
---- A starting point for a brand-new guide, with the format explained.
-function GuideFormat.Template(name)
-    return table.concat({
-        "# ForeverPath guide (format 1). Lines starting with # are comments.",
-        "#",
-        "# guide / author / description   name and details shown in the Guides tab",
-        "# based on: story or efficient    Story = every quest; Efficient = speedrun",
-        "# rules: ...                      optional overrides (see the README)",
-        "# [1-10]                          a level band, followed by its zones:",
-        "#   alliance: Zone, Zone          zones for Alliance (START = racial start zone)",
-        "#   horde: Zone, Zone             zones for Horde",
-        "#   both: Zone                    zones for both factions",
-        "#   note: text                    a tip shown for this band",
-        "# skip quests: 123, 456           quest IDs the guide never picks up",
-        "# priority quests: 789            quest IDs picked up before anything else",
-        "# step 12 buy: text               a reminder at a level (train, buy, note, hearth)",
-        "",
-        "guide: " .. (name or "My Guide"),
-        "based on: efficient",
-        "",
-        "[1-10]",
-        "both: START",
-        "",
-        "[11-60]",
-        "alliance: Westfall",
-        "horde: The Barrens",
-        "",
-    }, "\n")
+function GuideFormat.ToJson(guide)
+    return ns.Json.Encode(GuideFormat.ToData(guide), KEY_ORDER) .. "\n"
+end
+
+--- JSON (or 0.6 guide text) -> guide.
+-- @return guide, or nil; errors; warnings
+function GuideFormat.FromJson(text)
+    if type(text) ~= "string" or trim(text) == "" then
+        return nil, { { message = "Nothing to read - paste a guide first." } }, {}
+    end
+    if ns.LegacyText.Detect(text) then
+        return ns.LegacyText.Parse(text)
+    end
+    local data, err = ns.Json.Decode(text)
+    if err then
+        return nil, { { line = err.line, column = err.column, message = "JSON: " .. err.message } }, {}
+    end
+    return GuideFormat.FromData(data)
+end
+
+--- A starting point for a brand-new guide.
+function GuideFormat.NewGuide(name)
+    local guide = {
+        name = name or "My Guide",
+        base = "efficient",
+        quests = {},
+        bands = {
+            { min = 1, max = 10, Alliance = { START }, Horde = { START }, notes = {} },
+            { min = 11, max = 60, Alliance = { "Westfall" }, Horde = { "The Barrens" }, notes = {} },
+        },
+        skipQuests = {},
+        steps = {},
+        rules = {},
+    }
+    for k, v in pairs(GuideFormat.BASES.efficient) do guide.rules[k] = v end
+    return guide
+end
+
+--- "Line 3, column 5: ..." / "quests[2].id: ..." / "..." for the editor.
+function GuideFormat.Describe(m)
+    if m.line then
+        local where = m.column and ("Line %d, column %d"):format(m.line, m.column) or ("Line %d"):format(m.line)
+        return where .. ": " .. m.message
+    end
+    if m.path then return m.path .. " " .. m.message end
+    return m.message
 end

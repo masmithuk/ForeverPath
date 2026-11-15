@@ -1,155 +1,146 @@
--- The guide text format: parsing, validation, safety and round trips.
+-- The guide schema: JSON in and out, checks, safety, and 0.6 text guides.
 
 local VALID = [[
-# A comment
-guide: Hillsbrad Rush
-author: Mike
-description: My fastest Horde route.
-based on: efficient
-rules: greyGap=3 maxDetour=200
-
-[1-10]
-both: start
-note: Talents open at level 10.
-
-[11-60]
-alliance: Westfall, Loch Modan
-horde: The Barrens, Silverpine Forest
-
-skip quests: 123, 456
-priority quests: 789
-step 12 buy: Buy bags before leaving town.
-step 14 train: Visit your trainer.
+{
+  "format": "ForeverPath guide",
+  "version": 2,
+  "name": "Hillsbrad Rush",
+  "author": "Mike",
+  "description": "My fastest Horde route.",
+  "basedOn": "efficient",
+  "rules": { "greyGap": 3, "maxDetour": 200 },
+  "quests": [ { "id": 788, "name": "Your Place In The World" }, 789 ],
+  "bands": [
+    { "levels": [1, 10], "zones": ["start"], "notes": ["Talents open at level 10."] },
+    { "levels": [11, 60], "alliance": ["Westfall", "Loch Modan"], "horde": ["The Barrens"] }
+  ],
+  "skipQuests": [123, 456],
+  "steps": [
+    { "level": 12, "kind": "buy", "text": "Buy bags before leaving town." },
+    { "level": 14, "kind": "Train", "text": "Visit your trainer." }
+  ]
+}
 ]]
 
 local function messages(list)
     local out = {}
-    for _, m in ipairs(list) do
-        out[#out + 1] = (m.line and ("L" .. m.line .. " ") or "") .. m.message
-    end
+    for _, m in ipairs(list or {}) do out[#out + 1] = (m.path and (m.path .. " ") or "") .. m.message end
     return table.concat(out, " | ")
 end
 
-local function parse(ns, text)
-    return ns.GuideFormat.Parse(text)
-end
-
 return {
-    { "parses every part of a guide", function(T)
+    { "reads every part of a guide", function(T)
         local ns = T.fresh()
-        local g, errors = parse(ns, VALID)
-        T.truthy(g, "parsed: " .. messages(errors))
+        local g, errors = ns.GuideFormat.FromJson(VALID)
+        T.truthy(g, messages(errors))
         T.eq(g.name, "Hillsbrad Rush")
-        T.eq(g.author, "Mike")
         T.eq(g.base, "efficient")
         T.eq(g.rules.greyGap, 3, "explicit rule")
-        T.eq(g.rules.maxDetour, 200)
         T.eq(g.rules.levelsAbove, 2, "default from the efficient base")
-        T.eq(#g.bands, 2)
+        T.eq(#g.quests, 2)
+        T.eq(g.quests[1].name, "Your Place In The World")
+        T.eq(g.quests[2].id, 789, "bare IDs are fine")
         T.eq(g.bands[1].Alliance[1], "START", "START is case-insensitive")
-        T.eq(g.bands[1].notes[1], "Talents open at level 10.")
-        T.eq(g.bands[2].Horde[2], "Silverpine Forest")
+        T.eq(g.bands[1].Horde[1], "START", "zones = both factions")
+        T.eq(g.bands[2].Horde[1], "The Barrens")
         T.eq(table.concat(g.skipQuests, ","), "123,456")
-        T.eq(g.priorityQuests[1], 789)
-        T.eq(g.steps[1].kind, "BUY")
-        T.eq(g.steps[2].kind, "TRAIN")
-        T.eq(g.steps[2].level, 14)
+        T.eq(g.steps[2].kind, "TRAIN", "kinds are case-insensitive")
     end },
 
-    { "Story base supplies Story's rules", function(T)
+    { "export then import gives the same guide", function(T)
         local ns = T.fresh()
-        local g = parse(ns, "guide: X\nbased on: story\n[1-60]\nboth: Durotar\n")
-        T.eq(g.rules.chainBonus, 150)
-        T.eq(g.rules.greyGap, 10)
+        local g = ns.GuideFormat.FromJson(VALID)
+        local json = ns.GuideFormat.ToJson(g)
+        local again = ns.GuideFormat.FromJson(json)
+        T.eq(ns.GuideFormat.ToJson(again), json)
+        T.contains(json, '"format": "ForeverPath guide"')
+        T.contains(json, '"levels": [1, 10]')
+        T.truthy(not json:find('"levelsAbove"'), "rules equal to the base are left out")
     end },
 
-    { "write then parse gives the same guide", function(T)
+    { "JSON syntax errors give line and column", function(T)
         local ns = T.fresh()
-        local g = parse(ns, VALID)
-        local text = ns.GuideFormat.Write(g)
-        local again = parse(ns, text)
-        T.eq(ns.GuideFormat.Write(again), text)
-        T.eq(#again.steps, 2)
-        T.eq(again.rules.maxDetour, 200)
-    end },
-
-    { "errors carry line numbers", function(T)
-        local ns = T.fresh()
-        local g, errors = parse(ns, "guide: X\n[1-60]\nboth: Durotar\nhordee: Oops\nrules: speed=9\n")
+        local g, errors = ns.GuideFormat.FromJson('{\n  "name": "X",\n  "bands": [ }')
         T.eq(g, nil)
+        T.contains(ns.GuideFormat.Describe(errors[1]), "Line 3, column")
+    end },
+
+    { "wrong types and values are reported by path", function(T)
+        local ns = T.fresh()
+        local _, errors = ns.GuideFormat.FromJson([[{
+          "name": 5, "basedOn": "chaos", "rules": { "greyGap": 99, "speed": 2 },
+          "quests": [ { "id": "abc" }, -4 ],
+          "bands": [ { "levels": [1, 60], "zones": ["A"] } ],
+          "steps": [ { "level": 70, "kind": "dance", "text": "" } ]
+        }]])
         local text = messages(errors)
-        T.contains(text, 'L4 Unknown setting "hordee"')
-        T.contains(text, 'L5 Unknown rule "speed=9"')
+        T.contains(text, "name must be text")
+        T.contains(text, 'basedOn must be "story" or "efficient"')
+        T.contains(text, "rules.greyGap must be between 0 and 60")
+        T.contains(text, "rules.speed isn't a known rule")
+        T.contains(text, "quests[1].id must be a whole number")
+        T.contains(text, "quests[2] must be between 1 and")
+        T.contains(text, "steps[1].level must be between 1 and 60")
+        T.contains(text, "steps[1].kind must be")
     end },
 
     { "level bands must cover 1-60 without gaps or overlaps", function(T)
         local ns = T.fresh()
-        local _, errors = parse(ns, "guide: X\n[1-10]\nboth: A\n[15-60]\nboth: B\n")
-        T.contains(messages(errors), "Levels 11-14 aren't covered")
-        _, errors = parse(ns, "guide: X\n[1-10]\nboth: A\n[8-60]\nboth: B\n")
-        T.contains(messages(errors), "overlaps")
-        local g, _, warnings = parse(ns, "guide: X\n[1-30]\nboth: A\n")
+        local function bands(json)
+            return ns.GuideFormat.FromJson('{"name": "X", "bands": [' .. json .. ']}')
+        end
+        local _, errors = bands('{"levels": [1, 10], "zones": ["A"]}, {"levels": [15, 60], "zones": ["B"]}')
+        T.contains(messages(errors), "levels 11-14 aren't covered")
+        _, errors = bands('{"levels": [1, 10], "zones": ["A"]}, {"levels": [8, 60], "zones": ["B"]}')
+        T.contains(messages(errors), "overlap")
+        _, errors = bands('{"levels": [1, 60], "alliance": ["A"]}')
+        T.contains(messages(errors), "need zones for both factions")
+        local g, _, warnings = bands('{"levels": [1, 30], "zones": ["A"]}')
         T.truthy(g, "a short guide is allowed")
         T.contains(messages(warnings), "Levels 31-60 aren't covered")
     end },
 
-    { "each band needs zones for both factions", function(T)
+    { "duplicates and unknown settings are cleaned up with a warning", function(T)
         local ns = T.fresh()
-        local _, errors = parse(ns, "guide: X\n[1-60]\nalliance: Westfall\n")
-        T.contains(messages(errors), "needs zones for both factions")
-    end },
-
-    { "missing name, empty text and bad values are reported", function(T)
-        local ns = T.fresh()
-        local _, errors = parse(ns, "")
-        T.contains(messages(errors), "empty")
-        _, errors = parse(ns, "[1-60]\nboth: A\n")
-        T.contains(messages(errors), "needs a name")
-        _, errors = parse(ns, "guide: X\nbased on: chaos\nrules: greyGap=99\n[1-60]\nboth: A\n"
-            .. "skip quests: 12, abc\nstep 70 note: hi\nstep 5 dance: hi\nnote: orphan\n")
-        local text = messages(errors)
-        T.contains(text, 'based on must be "story" or "efficient"')
-        T.contains(text, "greyGap must be between 0 and 60")
-        T.contains(text, '"abc" is not a quest ID')
-        T.contains(text, "Step level must be 1-60")
-        T.contains(text, "Step kind must be")
-    end },
-
-    { "notes must follow a band", function(T)
-        local ns = T.fresh()
-        local _, errors = parse(ns, "guide: X\nnote: too early\n[1-60]\nboth: A\n")
-        T.contains(messages(errors), '"note:" must come after a [level-level] line')
+        local g, _, warnings = ns.GuideFormat.FromJson(
+            '{"name": "X", "colour": "red", "quests": [5, 5], "bands": [{"levels": [1, 60], "zones": ["A"]}]}')
+        T.eq(#g.quests, 1)
+        local text = messages(warnings)
+        T.contains(text, "listed twice")
+        T.contains(text, "colour isn't a guide setting")
     end },
 
     { "pasted text can't inject UI escape codes", function(T)
         local ns = T.fresh()
-        local g, _, warnings = parse(ns,
-            "guide: Evil |cffff0000Red|r |TInterface\\Icons\\X:0|t\n[1-60]\nboth: A|Hlink|h\n")
-        T.truthy(g)
+        local g, _, warnings = ns.GuideFormat.FromJson(
+            '{"name": "Evil |cffff0000Red|r", "bands": [{"levels": [1, 60], "zones": ["A|Hlink|h"]}]}')
         T.truthy(not g.name:find("|", 1, true), "no pipes in the name")
         T.truthy(not g.bands[1].Alliance[1]:find("|", 1, true), "no pipes in zones")
-        T.contains(messages(warnings), "isn't allowed")
+        T.contains(messages(warnings), 'contained "|"')
     end },
 
-    { "oversized guides are refused", function(T)
+    { "0.6 text guides still import, priority quests becoming the quest list", function(T)
         local ns = T.fresh()
-        local _, errors = parse(ns, ("#" .. string.rep("x", 99) .. "\n"):rep(400))
-        T.contains(messages(errors), "too long")
-    end },
-
-    { "Windows line endings and single-level bands work", function(T)
-        local ns = T.fresh()
-        local g, errors = parse(ns, "guide: X\r\n[1-59]\r\nboth: A\r\n[60]\r\nboth: Mount Hyjal\r\n")
+        local g, errors = ns.GuideFormat.FromJson(
+            "guide: Old One\nbased on: story\n[1-60]\nboth: Durotar\npriority quests: 7, 8\nskip quests: 9\n")
         T.truthy(g, messages(errors))
-        T.eq(g.bands[2].min, 60)
-        T.eq(g.bands[2].max, 60)
+        T.eq(g.name, "Old One")
+        T.eq(g.base, "story")
+        T.eq(g.quests[1].id, 7)
+        T.eq(g.quests[2].id, 8)
+        T.eq(g.skipQuests[1], 9)
     end },
 
-    { "the new-guide template is itself a valid guide", function(T)
+    { "a new guide is valid as it stands", function(T)
         local ns = T.fresh()
-        local g, errors, warnings = parse(ns, ns.GuideFormat.Template("Mine"))
+        local g, errors, warnings = ns.GuideFormat.Check(ns.GuideFormat.NewGuide("Mine"))
         T.truthy(g, messages(errors))
-        T.eq(#warnings, 0, "no warnings: " .. messages(warnings))
-        T.eq(g.name, "Mine")
+        T.eq(#warnings, 0)
+    end },
+
+    { "empty input says what to do", function(T)
+        local ns = T.fresh()
+        local _, errors = ns.GuideFormat.FromJson("   ")
+        T.contains(messages(errors), "paste a guide")
     end },
 }

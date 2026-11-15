@@ -2,6 +2,24 @@
 
 All notable changes are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.7.0] - 2026-11-15
+
+### Added
+- Guides can have their own **quest list**. The step guide follows it in order: the next three listed quests get a strong head start, and hand-ins and objectives still fit in by distance. When nothing on the list is available, the guide's zones take over.
+- New guide editor:
+  - **Quests** tab: the guide's quests with level and zone, Top/Up/Down/Bottom/Remove, and QuestieDB search by partial name or quest ID with "Add after selected".
+  - **Details** tab: name, author, description, and Story or Efficient.
+  - **JSON** tab: everything else, including zones, rules, skipped quests and steps.
+- Viewing a built-in guide shows the full quest list it picks for your character. Copying one turns that list into your own editable list.
+- Quest search across all of QuestieDB, so you can write guides for other races and factions too.
+
+### Changed
+- Guides are now **JSON** (format version 2) for export and import, and are saved as plain data. JSON has line and column errors, path-based messages (for example `quests[2].id must be a whole number`), and allows trailing commas and `//` comments.
+- 0.6 text guides are converted automatically when they load or are imported. Their "priority quests" become the start of the quest list.
+
+### Removed
+- "Priority quests". Put those quests at the top of the quest list instead.
+
 ## [0.6.0] - 2026-11-15
 
 ### Added

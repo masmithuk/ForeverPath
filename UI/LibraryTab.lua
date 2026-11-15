@@ -75,7 +75,7 @@ function LibraryTab.DetailText(guide, inUse)
     lines[#lines + 1] = L.LIB_BASED_ON_FMT:format(base)
     lines[#lines + 1] = L.LIB_RULES_FMT:format(r.greyGap, r.levelsAbove, detour)
     lines[#lines + 1] = L.LIB_ZONES_FMT:format(zoneCount(guide))
-    lines[#lines + 1] = L.LIB_EXTRAS_FMT:format(#guide.skipQuests, #guide.priorityQuests, #guide.steps)
+    lines[#lines + 1] = L.LIB_EXTRAS_FMT:format(#guide.quests, #guide.skipQuests, #guide.steps)
 
     if guide.builtin then
         lines[#lines + 1] = " "
@@ -109,7 +109,9 @@ end
 
 function actions.copy()
     local guide = selected()
-    if guide then ns.GuideEditor.Open("new", nil, ns.Library.CopyText(guide.id)) end
+    if guide then
+        ns.GuideEditor.Open("new", nil, ns.Library.CopyDraft(guide.id, ns.Engine.BuildContext()))
+    end
 end
 
 function actions.new()

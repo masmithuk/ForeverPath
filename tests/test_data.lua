@@ -14,13 +14,13 @@ return {
         end
     end },
 
-    { "built-in guides survive a round trip through the text format", function(T)
+    { "built-in guides survive a round trip through JSON", function(T)
         local ns = T.fresh()
         for _, def in ipairs(ns.Data.BuiltinGuides) do
-            local text = ns.Library.Text(def.id)
-            local parsed, errors = ns.GuideFormat.Parse(text)
+            local json = ns.Library.Export(def.id)
+            local parsed, errors = ns.GuideFormat.FromJson(json)
             T.truthy(parsed, def.id .. " parses: " .. tostring(errors[1] and errors[1].message))
-            T.eq(ns.GuideFormat.Write(parsed), text, def.id .. " writes back identically")
+            T.eq(ns.GuideFormat.ToJson(parsed), json, def.id .. " writes back identically")
             T.eq(#parsed.bands, #def.bands)
         end
     end },

@@ -2,17 +2,16 @@
     ForeverPath - Guide/Library.lua
 
     Every guide a player can choose: the built-in ones (Data/Routes.lua,
-    read-only) and their own, which are saved account-wide as guide text in
-    ForeverPathDB.guides[id] so every character can use them.
+    read-only) and their own, saved account-wide in ForeverPathDB.guides[id]
+    so every character can use them.
 
-    Guide text (Guide/GuideFormat.lua) is the single source of truth:
-    the editor edits it, Export shows it, Import accepts it. Parsed copies
-    are cached and rebuilt whenever a guide is saved or deleted.
+    Saved guides are stored as plain tables in the JSON shape
+    (GuideFormat.ToData), which the game writes to disk natively. Guides
+    saved by 0.6 as text are converted the first time they're loaded.
 
-    A guide table, as returned by Get(), has:
-      id, name, author, description, base, rules, bands,
-      skipQuests, priorityQuests, steps, builtin (bool),
-      skipSet / prioritySet (lookup tables), dungeonWindow (Plan tab)
+    A guide table, as returned by Get(), has the GuideFormat fields plus:
+      id, builtin (bool), skipSet (lookup), questRank ([questID] = position
+      in the quest list), dungeonWindow (Plan tab)
 ]]
 
 local _, ns = ...
@@ -20,33 +19,28 @@ local _, ns = ...
 local Library = {}
 ns.Library = Library
 
-local Format -- ns.GuideFormat, resolved lazily (load order)
-
 local BUILTIN_ORDER = { "story", "efficient" }
 local DUNGEON_WINDOW = { below = 0, above = 3 }
 
 local builtins = {}  -- id -> guide
-local custom = {}    -- id -> guide (parsed from saved text)
+local custom = {}    -- id -> guide
+local loaded = false
 
 ---------------------------------------------------------------------------
 -- Helpers
 ---------------------------------------------------------------------------
 
-local function toSet(list)
-    local set = {}
-    for _, v in ipairs(list or {}) do set[v] = true end
-    return set
-end
-
 --- Fill in the derived fields every guide carries.
 local function finish(guide, id, builtin)
     guide.id = id
     guide.builtin = builtin
+    guide.quests = guide.quests or {}
     guide.skipQuests = guide.skipQuests or {}
-    guide.priorityQuests = guide.priorityQuests or {}
     guide.steps = guide.steps or {}
-    guide.skipSet = toSet(guide.skipQuests)
-    guide.prioritySet = toSet(guide.priorityQuests)
+    guide.skipSet = {}
+    for _, q in ipairs(guide.skipQuests) do guide.skipSet[q] = true end
+    guide.questRank = {}
+    for i, q in ipairs(guide.quests) do guide.questRank[q.id] = i end
     guide.dungeonWindow = DUNGEON_WINDOW
     return guide
 end
@@ -63,11 +57,10 @@ local function slug(name)
 end
 
 local function nameTaken(name, exceptID)
-    for id, g in pairs(builtins) do
-        if g.name:lower() == name:lower() and id ~= exceptID then return true end
-    end
-    for id, g in pairs(custom) do
-        if g.name:lower() == name:lower() and id ~= exceptID then return true end
+    for _, set in ipairs({ builtins, custom }) do
+        for id, g in pairs(set) do
+            if g.name:lower() == name:lower() and id ~= exceptID then return true end
+        end
     end
     return false
 end
@@ -90,24 +83,35 @@ local function newID(name)
     return id
 end
 
+local function ensureLoaded()
+    if not loaded then Library.Init() end
+end
+
 ---------------------------------------------------------------------------
 -- Loading
 ---------------------------------------------------------------------------
 
---- Build the built-ins and parse every saved guide. Call after
+--- Build the built-ins and load every saved guide. Call after
 --- SavedVariables load; safe to call again.
 function Library.Init()
-    Format = ns.GuideFormat
+    loaded = true
     builtins, custom = {}, {}
     for _, def in ipairs(ns.Data.BuiltinGuides) do
-        local guide = {}
-        for k, v in pairs(def) do guide[k] = v end
-        guide.rules = {}
-        for k, v in pairs(Format.BASES[def.base]) do guide.rules[k] = v end
+        local guide = ns.GuideFormat.Copy(def)
+        for k, v in pairs(ns.GuideFormat.BASES[def.base]) do guide.rules[k] = v end
         builtins[def.id] = finish(guide, def.id, true)
     end
-    for id, text in pairs(storage()) do
-        local guide = Format.Parse(text)
+
+    local store = storage()
+    for id, saved in pairs(store) do
+        local guide
+        if type(saved) == "string" then
+            -- A 0.6 text guide: convert it and save it in the new shape.
+            guide = ns.LegacyText.Parse(saved)
+            if guide then store[id] = ns.GuideFormat.ToData(guide) end
+        else
+            guide = ns.GuideFormat.FromData(saved)
+        end
         if guide then
             custom[id] = finish(guide, id, false)
         else
@@ -121,13 +125,13 @@ end
 ---------------------------------------------------------------------------
 
 function Library.Get(id)
-    if not Format then Library.Init() end
+    ensureLoaded()
     return builtins[id] or custom[id]
 end
 
 --- All guides: built-ins first, then the player's own by name.
 function Library.List()
-    if not Format then Library.Init() end
+    ensureLoaded()
     local list = {}
     for _, id in ipairs(BUILTIN_ORDER) do list[#list + 1] = builtins[id] end
     local mine = {}
@@ -137,56 +141,91 @@ function Library.List()
     return list
 end
 
---- A guide as text (for the editor and for Export).
-function Library.Text(id)
-    if not Format then Library.Init() end
-    if custom[id] then return storage()[id] end
-    if builtins[id] then return Format.Write(builtins[id]) end
-    return nil
+--- A guide as JSON, for Export.
+function Library.Export(id)
+    local guide = Library.Get(id)
+    return guide and ns.GuideFormat.ToJson(guide) or nil
 end
 
---- Text for an editable copy of any guide, named "<name> (copy)".
-function Library.CopyText(id)
+--- The quests a guide covers for this character, in order: its own quest
+--- list, or (for guides without one, like the built-ins) every quest in
+--- its zones, band by band and by level, as the Zones tab shows them.
+-- @param ctx from Engine.BuildContext()
+function Library.QuestList(guide, ctx)
+    if #guide.quests > 0 then return guide.quests end
+    local list, seen = {}, {}
+    for _, band in ipairs(guide.bands) do
+        for _, zone in ipairs(ns.Advisor.ResolveZones(band, ctx.profile, false)) do
+            for _, q in ipairs(ns.Catalog.Overview(zone, ctx).quests) do
+                if not seen[q.id] and not guide.skipSet[q.id] then
+                    seen[q.id] = true
+                    list[#list + 1] = { id = q.id, name = q.name }
+                end
+            end
+        end
+    end
+    return list
+end
+
+--- An editable draft of a guide (a deep copy).
+function Library.Draft(id)
+    local guide = Library.Get(id)
+    return guide and ns.GuideFormat.Copy(guide) or nil
+end
+
+--- A draft copy named "<name> (copy)". Copying a guide without its own
+--- quest list fills the list in from its zones for this character, so the
+--- copy can be reordered and trimmed quest by quest.
+function Library.CopyDraft(id, ctx)
     local guide = Library.Get(id)
     if not guide then return nil end
-    local copy = Format.Parse(Library.Text(id))
-    copy.name = uniqueName(guide.name .. " (copy)")
-    copy.author = nil
-    return Format.Write(copy)
+    local draft = ns.GuideFormat.Copy(guide)
+    draft.name = uniqueName(guide.name .. " (copy)")
+    draft.author = nil
+    if #draft.quests == 0 and ctx then
+        for i, q in ipairs(Library.QuestList(guide, ctx)) do
+            draft.quests[i] = { id = q.id, name = q.name }
+        end
+    end
+    return draft
 end
 
 ---------------------------------------------------------------------------
 -- Writing
 ---------------------------------------------------------------------------
 
---- Save guide text, as a new guide or over one of the player's guides.
+--- Save a guide, as a new guide or over one of the player's guides.
 -- Built-in guides can't be overwritten; saving one creates a new guide.
--- @param text guide text
--- @param id   existing custom guide id, or nil for a new guide
+-- @param guide guide table (e.g. an editor draft)
+-- @param id    existing custom guide id, or nil for a new guide
 -- @return id or nil, errors, warnings
-function Library.Save(text, id)
-    if not Format then Library.Init() end
-    local guide, errors, warnings = Format.Parse(text)
-    if not guide then return nil, errors, warnings end
+function Library.Save(guide, id)
+    ensureLoaded()
+    local checked, errors, warnings = ns.GuideFormat.Check(guide)
+    if not checked then return nil, errors, warnings end
 
     if not (id and custom[id]) then id = nil end
-    local wanted = uniqueName(guide.name, id)
-    if wanted ~= guide.name then
+    local wanted = uniqueName(checked.name, id)
+    if wanted ~= checked.name then
         warnings[#warnings + 1] = { message = ("A guide called %q already exists, so this one is called %q.")
-            :format(guide.name, wanted) }
-        guide.name = wanted
-        text = Format.Write(guide)
+            :format(checked.name, wanted) }
+        checked.name = wanted
     end
-    id = id or newID(guide.name)
+    id = id or newID(checked.name)
 
-    storage()[id] = text
-    custom[id] = finish(guide, id, false)
+    storage()[id] = ns.GuideFormat.ToData(checked)
+    custom[id] = finish(checked, id, false)
     return id, errors, warnings
 end
 
---- Import shared guide text as a new guide.
+--- Import a shared guide (JSON, or 0.6 text) as a new guide.
+-- @return id or nil, errors, warnings
 function Library.Import(text)
-    return Library.Save(text, nil)
+    local guide, errors, warnings = ns.GuideFormat.FromJson(text)
+    if not guide then return nil, errors, warnings end
+    local id, saveErrors, saveWarnings = Library.Save(guide, nil)
+    for _, w in ipairs(saveWarnings or {}) do warnings[#warnings + 1] = w end
+    return id, saveErrors or errors, warnings
 end
 
 --- Delete one of the player's guides. Characters using it fall back to

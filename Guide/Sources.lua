@@ -81,8 +81,10 @@ local function rulesOf(ctx)
     return ctx.rules or {}
 end
 
--- Yards a guide's "priority quests" are treated as closer than they are.
-local PRIORITY_BONUS = 1000
+-- A guide's quest list: the next few available quests, in list order, are
+-- treated as this many yards closer (1st, 2nd, 3rd...), so the route
+-- follows the list while hand-ins and objectives still fit in by distance.
+local LIST_BONUSES = { 1500, 1200, 900 }
 
 --- Quests the chosen guide never picks up (its "skip quests" list), or
 --- that you skipped in the step guide.
@@ -91,8 +93,9 @@ local function isSkipped(ctx, questID)
     return ctx.guide ~= nil and ctx.guide.skipSet ~= nil and ctx.guide.skipSet[questID] == true
 end
 
-local function isPriority(ctx, questID)
-    return ctx.guide ~= nil and ctx.guide.prioritySet ~= nil and ctx.guide.prioritySet[questID] == true
+--- Position of a quest in the guide's own quest list, or nil.
+local function listRank(ctx, questID)
+    return ctx.guide ~= nil and ctx.guide.questRank ~= nil and ctx.guide.questRank[questID] or nil
 end
 
 --- maxDetour of 0 (or unset) means "no limit".
@@ -187,16 +190,42 @@ end
 --- Quest IDs the character can pick up right now, within the mode's level
 --- window. This is the expensive part of planning, so the Engine caches it
 --- between quest-state changes.
+-- Guides with a quest list: listed quests that can be picked up now, in
+-- list order. The author chose them, so the mode's level window doesn't
+-- apply - only the quest's own required level and prerequisites.
+local function doableListed(ctx)
+    local data = ns.QuestieData
+    local listed = {}
+    for _, q in ipairs(ctx.guide and ctx.guide.quests or {}) do
+        local id = q.id
+        if not ctx.log[id] and not ctx.isCompleted(id) and not ctx.skipped[id]
+            and data.MeetsLevel(id, ctx.profile.level) and data.IsDoable(id, ctx) then
+            listed[#listed + 1] = id
+        end
+    end
+    return listed
+end
+
+--- Quest IDs the character can pick up right now. For a guide with a
+--- quest list, the listed ones (in order) while any are available;
+--- otherwise every quest in the guide's level window. This is the
+--- expensive part of planning, so the Engine caches it between
+--- quest-state changes.
+-- @return list of quest IDs, and whether they came from the quest list
 function Sources.DoableQuests(ctx)
     local data = ns.QuestieData
+    if not data.IsReady() then return {}, false end
+
+    local listed = doableListed(ctx)
+    if #listed > 0 then return listed, true end
+
     local doable = {}
-    if not data.IsReady() then return doable end
     for _, questID in ipairs(data.GetCandidates(ctx.profile.level, rulesOf(ctx))) do
         if data.IsDoable(questID, ctx) then
             doable[#doable + 1] = questID
         end
     end
-    return doable
+    return doable, false
 end
 
 --- Is the quest's nearest objective too far from its giver (Efficient)?
@@ -211,7 +240,7 @@ end
 --- re-checked - only what the guide itself filters on.
 function Sources.WantsQuest(ctx, questID)
     if isSkipped(ctx, questID) then return false end
-    if isPriority(ctx, questID) then return true end
+    if listRank(ctx, questID) then return true end
     local data = ns.QuestieData
     if not data.IsReady() then return true end
 
@@ -228,10 +257,9 @@ function Sources.WantsQuest(ctx, questID)
     return true
 end
 
-local function acceptBonus(ctx, questID)
+local function acceptBonus(ctx, questID, listPosition)
     local rules = rulesOf(ctx)
-    local bonus = 0
-    if isPriority(ctx, questID) then bonus = bonus + PRIORITY_BONUS end
+    local bonus = listPosition and LIST_BONUSES[listPosition] or 0
     if (rules.chainBonus or 0) > 0 and ns.QuestieData.IsFollowUp(questID) then
         bonus = bonus + rules.chainBonus
     end
@@ -243,21 +271,26 @@ local function availableSteps(ctx, out)
     local rules = rulesOf(ctx)
     local found = {}
 
-    for _, questID in ipairs(ctx.doable or Sources.DoableQuests(ctx)) do
+    local doable, fromList = ctx.doable, ctx.doableFromList
+    if not doable then doable, fromList = Sources.DoableQuests(ctx) end
+
+    for _, questID in ipairs(doable) do
         if not isSkipped(ctx, questID) and not ctx.log[questID] then
-            -- Priority quests are fetched wherever their giver stands;
-            -- everything else stays inside the guide's zones.
-            local priority = isPriority(ctx, questID)
-            local maps = (not priority) and ctx.allowedMaps or nil
+            -- Listed quests are fetched wherever their giver stands and in
+            -- the list's order; zone quests stay inside the guide's zones.
+            local maps = (not fromList) and ctx.allowedMaps or nil
             local actor, point, dist = nearestActor(ctx.origin,
                 data.GetStarters(questID, ctx.profile.faction), maps)
-            if actor and (priority or not isDetour(questID, point, detourLimit(rules))) then
+            if actor and (fromList or not isDetour(questID, point, detourLimit(rules))) then
                 found[#found + 1] = { questID = questID, actor = actor, point = point, dist = dist }
             end
         end
     end
 
-    table.sort(found, function(a, b) return a.dist < b.dist end)
+    -- The list keeps its order; zone quests are taken nearest first.
+    if not fromList then
+        table.sort(found, function(a, b) return a.dist < b.dist end)
+    end
     for i = 1, math.min(#found, rules.maxAccept or DEFAULT_MAX_ACCEPT) do
         local f = found[i]
         local name = data.GetQuestName(f.questID) or ("quest " .. f.questID)
@@ -270,7 +303,7 @@ local function availableSteps(ctx, out)
             questIDs = { f.questID },
             actor = f.actor.kind .. ":" .. f.actor.id,
             target = target(f.point, f.actor.name),
-            bonus = acceptBonus(ctx, f.questID),
+            bonus = acceptBonus(ctx, f.questID, fromList and i or nil),
         }
     end
 end

@@ -1,16 +1,26 @@
 --[[
     ForeverPath - UI/GuideEditor.lua
 
-    One window for working with guide text, in five modes:
+    The guide editor. It works on a draft copy of a guide and has three
+    tabs:
 
+      Quests   the guide's quests in order. Select one and move it to the
+               top, up, down or to the bottom, or remove it. Search
+               QuestieDB by part of a quest's name (or its ID) and add
+               results after the selected quest.
+      Details  name, author, description and what it's based on.
+      JSON     the whole guide as JSON: zones, rules, reminder steps and
+               anything else. Also used to export and import.
+
+    Modes
       edit    one of your guides; Save overwrites it
-      new     a template (or a copy of another guide); Save creates a guide
-      import  an empty box to paste a shared guide into; Import creates it
-      export  the guide text, read-only and selected, ready for Ctrl+C
-      view    a built-in guide, read-only, with a "Copy & edit" button
+      new     a new guide or a copy; Save creates it
+      view    a built-in guide, read-only, with "Copy & edit"
+      export  the JSON, read-only and selected, ready for Ctrl+C
+      import  an empty JSON box to paste a shared guide into
 
-    "Check" validates without saving and lists problems with line numbers.
-    Saving runs the same checks, so a broken guide is never stored.
+    Saving always runs the full checks, so a broken guide is never stored.
+    The list operations (Ops) are pure functions and are unit-tested.
 ]]
 
 local _, ns = ...
@@ -22,20 +32,62 @@ local L = ns.L
 local C = ns.Util.Color
 
 local FRAME_NAME = "ForeverPathGuideEditor"
-local WIDTH, HEIGHT = 640, 520
+local WIDTH, HEIGHT = 780, 580
 local PADDING = 12
+local ROW_HEIGHT = 20
+local COLUMN_WIDTH = 360
 local MAX_MESSAGES = 6
+local SEARCH_LIMIT = 50
 
 local frame
-local state = { mode = nil, id = nil, original = "" }
-
-local TITLES = {
-    edit = "EDITOR_TITLE_EDIT", new = "EDITOR_TITLE_NEW", import = "EDITOR_TITLE_IMPORT",
-    export = "EDITOR_TITLE_EXPORT", view = "EDITOR_TITLE_VIEW",
+local state = {
+    mode = nil,        -- see the modes above
+    id = nil,          -- guide being edited / viewed / exported
+    draft = nil,       -- guide table being edited
+    tab = "quests",    -- "quests" | "details" | "json"
+    selected = nil,    -- index in draft.quests
+    results = {},      -- search results
+    resultSelected = nil,
+    jsonDirty = false, -- JSON box edited since it was filled
+    viewList = nil,    -- read-only quest list shown for built-in guides
 }
 
 ---------------------------------------------------------------------------
--- Messages (pure; tested)
+-- Quest list operations (pure; tested)
+---------------------------------------------------------------------------
+
+local Ops = {}
+GuideEditor.Ops = Ops
+
+--- Move list[from] to position `to`. Returns the new index.
+function Ops.Move(list, from, to)
+    if not list[from] then return from end
+    to = math.max(1, math.min(#list, to))
+    local item = table.remove(list, from)
+    table.insert(list, to, item)
+    return to
+end
+
+function Ops.Remove(list, index)
+    if not list[index] then return nil end
+    table.remove(list, index)
+    if #list == 0 then return nil end
+    return math.min(index, #list)
+end
+
+--- Add a quest after position `after` (or at the end). Ignores duplicates.
+-- @return index of the quest in the list, and whether it was added
+function Ops.Add(list, quest, after)
+    for i, q in ipairs(list) do
+        if q.id == quest.id then return i, false end
+    end
+    local at = after and (after + 1) or (#list + 1)
+    table.insert(list, at, { id = quest.id, name = quest.name })
+    return at, true
+end
+
+---------------------------------------------------------------------------
+-- Text helpers (pure; tested)
 ---------------------------------------------------------------------------
 
 --- Errors (red) and warnings (orange) as display text, capped in length.
@@ -44,8 +96,7 @@ function GuideEditor.FormatMessages(errors, warnings)
     local function add(list, color)
         for _, m in ipairs(list or {}) do
             if #lines >= MAX_MESSAGES then return end
-            local text = m.line and L.EDITOR_LINE_FMT:format(m.line, m.message) or m.message
-            lines[#lines + 1] = C(color, text)
+            lines[#lines + 1] = C(color, ns.GuideFormat.Describe(m))
         end
     end
     add(errors, "ff4040")
@@ -57,58 +108,346 @@ function GuideEditor.FormatMessages(errors, warnings)
     return table.concat(lines, "\n")
 end
 
+--- "12. [5] Vile Familiars - Durotar"
+function GuideEditor.QuestRowText(index, q)
+    local info = ns.QuestieData.Describe(q.id, q.name)
+    local level = info.level > 0 and ("[%d] "):format(info.level) or ""
+    local where = info.zone and C("muted", " - " .. info.zone) or ""
+    return ("%d. %s%s%s"):format(index, level, info.name, where)
+end
+
+--- "[5] Vile Familiars - Durotar  #101" (+ "in guide" when already listed)
+function GuideEditor.ResultRowText(r, inGuide)
+    local level = r.level > 0 and ("[%d] "):format(r.level) or ""
+    local where = r.zone and (" - " .. r.zone) or ""
+    local text = ("%s%s%s"):format(level, r.name, C("muted", where .. "  #" .. r.id))
+    if inGuide then text = C("muted", text .. "  " .. L.EDITOR_IN_GUIDE) end
+    return text
+end
+
 ---------------------------------------------------------------------------
--- Construction
+-- Widgets
 ---------------------------------------------------------------------------
 
 local function readOnly()
-    return state.mode == "export" or state.mode == "view"
+    return state.mode == "view" or state.mode == "export"
 end
 
-local function setStatus(text)
-    frame.status:SetText(text or "")
+local function setStatus(text) frame.status:SetText(text or "") end
+
+local function newButton(parent, text, width, onClick)
+    local b = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+    b:SetSize(width, 22)
+    b:SetText(text)
+    b:SetScript("OnClick", onClick)
+    return b
 end
 
-local function createTextArea(f)
-    local scroll = CreateFrame("ScrollFrame", nil, f, "UIPanelScrollFrameTemplate")
-    scroll:SetPoint("TOPLEFT", f, "TOPLEFT", PADDING, -32)
-    scroll:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -PADDING - 22, PADDING + 24 + 70)
+local function newLabel(parent, text, template)
+    local fs = parent:CreateFontString(nil, "OVERLAY", template or "GameFontNormal")
+    fs:SetText(text or "")
+    fs:SetJustifyH("LEFT")
+    return fs
+end
 
+local function newEditBox(parent, width)
+    local e = CreateFrame("EditBox", nil, parent, "InputBoxTemplate")
+    e:SetSize(width, 22)
+    e:SetAutoFocus(false)
+    e:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+    e:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
+    return e
+end
+
+--- A scrolling list of clickable rows.
+local function newList(parent, width, onClick)
+    local scroll = CreateFrame("ScrollFrame", nil, parent, "UIPanelScrollFrameTemplate")
+    local child = CreateFrame("Frame", nil, scroll)
+    child:SetSize(width - 24, 1)
+    scroll:SetScrollChild(child)
+    scroll.rows = {}
+
+    function scroll.SetItems(_, texts, selectedIndex)
+        for i, text in ipairs(texts) do
+            local row = scroll.rows[i]
+            if not row then
+                row = CreateFrame("Button", nil, child)
+                row:SetSize(width - 24, ROW_HEIGHT)
+                row:SetPoint("TOPLEFT", child, "TOPLEFT", 0, -(i - 1) * ROW_HEIGHT)
+                row:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
+                row.selected = row:CreateTexture(nil, "BACKGROUND")
+                row.selected:SetAllPoints()
+                row.selected:SetColorTexture(1, 0.82, 0, 0.18)
+                row.text = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+                row.text:SetPoint("LEFT", row, "LEFT", 4, 0)
+                row.text:SetPoint("RIGHT", row, "RIGHT", -4, 0)
+                row.text:SetJustifyH("LEFT")
+                row:SetScript("OnClick", function(self) onClick(self.index) end)
+                scroll.rows[i] = row
+            end
+            row.index = i
+            row.text:SetText(text)
+            if i == selectedIndex then row.selected:Show() else row.selected:Hide() end
+            row:Show()
+        end
+        for i = #texts + 1, #scroll.rows do scroll.rows[i]:Hide() end
+        child:SetHeight(math.max(1, #texts * ROW_HEIGHT))
+    end
+    return scroll
+end
+
+---------------------------------------------------------------------------
+-- Quests tab
+---------------------------------------------------------------------------
+
+local function questList()
+    if state.mode == "view" then return state.viewList or {} end
+    return state.draft.quests
+end
+
+local function inGuide(id)
+    for _, q in ipairs(questList()) do if q.id == id then return true end end
+    return false
+end
+
+local refreshQuests -- forward
+
+local function moveSelected(to)
+    if readOnly() or not state.selected then return end
+    state.selected = Ops.Move(state.draft.quests, state.selected, to)
+    refreshQuests()
+end
+
+local function createQuestsTab(f)
+    local p = CreateFrame("Frame", nil, f)
+    p:SetPoint("TOPLEFT", f, "TOPLEFT", PADDING, -60)
+    p:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -PADDING, PADDING + 24 + 60)
+
+    -- Left: the guide's quests.
+    p.listLabel = newLabel(p)
+    p.listLabel:SetPoint("TOPLEFT", p, "TOPLEFT", 0, 0)
+    p.list = newList(p, COLUMN_WIDTH, function(index)
+        state.selected = index
+        refreshQuests()
+    end)
+    p.list:SetPoint("TOPLEFT", p, "TOPLEFT", 0, -18)
+    p.list:SetPoint("BOTTOMLEFT", p, "BOTTOMLEFT", 0, 28)
+    p.list:SetWidth(COLUMN_WIDTH)
+
+    p.moveButtons = {}
+    local moves = {
+        { "EDITOR_TOP", function() moveSelected(1) end },
+        { "EDITOR_UP", function() moveSelected((state.selected or 1) - 1) end },
+        { "EDITOR_DOWN", function() moveSelected((state.selected or 0) + 1) end },
+        { "EDITOR_BOTTOM", function() moveSelected(#state.draft.quests) end },
+        { "EDITOR_REMOVE", function()
+            if readOnly() or not state.selected then return end
+            state.selected = Ops.Remove(state.draft.quests, state.selected)
+            refreshQuests()
+        end },
+    }
+    for i, m in ipairs(moves) do
+        local b = newButton(p, L[m[1]], 68, m[2])
+        b:SetPoint("BOTTOMLEFT", p, "BOTTOMLEFT", (i - 1) * 72, 0)
+        p.moveButtons[i] = b
+    end
+
+    -- Right: search and add.
+    local right = COLUMN_WIDTH + 20
+    p.searchLabel = newLabel(p, L.EDITOR_ADD_QUESTS)
+    p.searchLabel:SetPoint("TOPLEFT", p, "TOPLEFT", right, 0)
+    p.search = newEditBox(p, COLUMN_WIDTH - 10)
+    p.search:SetPoint("TOPLEFT", p, "TOPLEFT", right + 6, -18)
+    p.search:SetScript("OnTextChanged", function(self)
+        GuideEditor.Search(self:GetText())
+    end)
+    p.results = newList(p, COLUMN_WIDTH, function(index)
+        state.resultSelected = index
+        refreshQuests()
+    end)
+    p.results:SetPoint("TOPLEFT", p, "TOPLEFT", right, -46)
+    p.results:SetPoint("BOTTOMRIGHT", p, "BOTTOMRIGHT", 0, 28)
+    p.resultsHint = newLabel(p, "", "GameFontHighlightSmall")
+    p.resultsHint:SetPoint("TOPLEFT", p.results, "TOPLEFT", 4, -4)
+    p.resultsHint:SetWidth(COLUMN_WIDTH - 30)
+
+    p.add = newButton(p, L.EDITOR_ADD, 140, function() GuideEditor.AddSelectedResult() end)
+    p.add:SetPoint("BOTTOMLEFT", p, "BOTTOMLEFT", right, 0)
+
+    f.questsTab = p
+end
+
+refreshQuests = function()
+    local p = frame.questsTab
+    local list = questList()
+    local texts = {}
+    for i, q in ipairs(list) do texts[i] = GuideEditor.QuestRowText(i, q) end
+    p.list:SetItems(texts, state.selected)
+
+    local label = state.mode == "view" and L.EDITOR_GENERATED_FMT or L.EDITOR_QUESTS_FMT
+    p.listLabel:SetText(label:format(#list))
+
+    local rtexts = {}
+    for i, r in ipairs(state.results) do rtexts[i] = GuideEditor.ResultRowText(r, inGuide(r.id)) end
+    p.results:SetItems(rtexts, state.resultSelected)
+
+    local hint = ""
+    if ns.QuestieData.Status() == "missing" then
+        hint = L.EDITOR_SEARCH_NO_DB
+    elseif #state.results == 0 then
+        hint = (p.search:GetText() or "") == "" and L.EDITOR_SEARCH_HINT or L.EDITOR_SEARCH_NONE
+    end
+    p.resultsHint:SetText(C("muted", hint))
+
+    for _, b in ipairs(p.moveButtons) do
+        if readOnly() or not state.selected then b:Disable() else b:Enable() end
+    end
+    local r = state.results[state.resultSelected or 0]
+    if readOnly() or not r or inGuide(r.id) then p.add:Disable() else p.add:Enable() end
+    if readOnly() then p.search:Hide(); p.searchLabel:Hide() else p.search:Show(); p.searchLabel:Show() end
+end
+
+---------------------------------------------------------------------------
+-- Details tab
+---------------------------------------------------------------------------
+
+local function createDetailsTab(f)
+    local p = CreateFrame("Frame", nil, f)
+    p:SetPoint("TOPLEFT", f, "TOPLEFT", PADDING, -60)
+    p:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -PADDING, PADDING + 24 + 60)
+
+    local y = 0
+    p.fields = {}
+    for _, field in ipairs({ { "name", "EDITOR_NAME", 300 }, { "author", "EDITOR_AUTHOR", 300 },
+                             { "description", "EDITOR_DESCRIPTION", 600 } }) do
+        local label = newLabel(p, L[field[2]])
+        label:SetPoint("TOPLEFT", p, "TOPLEFT", 0, y)
+        local box = newEditBox(p, field[3])
+        box:SetPoint("TOPLEFT", p, "TOPLEFT", 6, y - 18)
+        box:SetScript("OnTextChanged", function(self, userInput)
+            if userInput and not readOnly() then
+                local text = self:GetText()
+                state.draft[field[1]] = text ~= "" and text or nil
+            end
+        end)
+        p.fields[field[1]] = box
+        y = y - 50
+    end
+
+    local baseLabel = newLabel(p, L.EDITOR_BASED_ON)
+    baseLabel:SetPoint("TOPLEFT", p, "TOPLEFT", 0, y)
+    p.baseButtons = {}
+    for i, base in ipairs({ "story", "efficient" }) do
+        local b = newButton(p, L["LIB_BASE_" .. base:upper()], 240, function()
+            if readOnly() then return end
+            -- Switching base resets the rules to that base's defaults.
+            state.draft.base = base
+            state.draft.rules = {}
+            for k, v in pairs(ns.GuideFormat.BASES[base]) do state.draft.rules[k] = v end
+            GuideEditor.Refresh()
+        end)
+        b:SetPoint("TOPLEFT", p, "TOPLEFT", (i - 1) * 246, y - 18)
+        b.base = base
+        p.baseButtons[i] = b
+    end
+
+    p.help = newLabel(p, L.EDITOR_DETAILS_HELP, "GameFontHighlightSmall")
+    p.help:SetPoint("TOPLEFT", p, "TOPLEFT", 0, y - 60)
+    p.help:SetWidth(WIDTH - PADDING * 2 - 20)
+    f.detailsTab = p
+end
+
+local function refreshDetails()
+    local p, d = frame.detailsTab, state.draft
+    for key, box in pairs(p.fields) do
+        box:SetText(d[key] or "")
+        if readOnly() then box:Disable() else box:Enable() end
+    end
+    for _, b in ipairs(p.baseButtons) do
+        if b.base == d.base then b:LockHighlight() else b:UnlockHighlight() end
+    end
+end
+
+---------------------------------------------------------------------------
+-- JSON tab
+---------------------------------------------------------------------------
+
+local function createJsonTab(f)
+    local p = CreateFrame("Frame", nil, f)
+    p:SetPoint("TOPLEFT", f, "TOPLEFT", PADDING, -60)
+    p:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -PADDING, PADDING + 24 + 60)
+
+    local scroll = CreateFrame("ScrollFrame", nil, p, "UIPanelScrollFrameTemplate")
+    scroll:SetPoint("TOPLEFT", p, "TOPLEFT", 0, 0)
+    scroll:SetPoint("BOTTOMRIGHT", p, "BOTTOMRIGHT", -22, 0)
     local edit = CreateFrame("EditBox", nil, scroll)
     edit:SetMultiLine(true)
     edit:SetAutoFocus(false)
     edit:SetFontObject(ChatFontNormal)
     edit:SetWidth(WIDTH - PADDING * 2 - 30)
-    edit:SetMaxLetters(ns.GuideFormat.MAX_TEXT)
+    edit:SetMaxLetters(ns.Json.MAX_LENGTH)
     edit:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
-    -- Keep the cursor in view while typing (Blizzard helpers, if present).
     edit:SetScript("OnCursorChanged", function(self, ...)
         if ScrollingEdit_OnCursorChanged then ScrollingEdit_OnCursorChanged(self, ...) end
     end)
     edit:SetScript("OnUpdate", function(self, elapsed)
         if ScrollingEdit_OnUpdate then ScrollingEdit_OnUpdate(self, elapsed, scroll) end
     end)
-    -- Read-only modes: undo any typing and keep everything selected.
     edit:SetScript("OnTextChanged", function(self, userInput)
-        if userInput and readOnly() then
-            self:SetText(state.original)
+        if not userInput then return end
+        if readOnly() then
+            self:SetText(state.jsonText or "")
             self:HighlightText()
+        else
+            state.jsonDirty = true
         end
     end)
     scroll:SetScrollChild(edit)
     scroll:EnableMouse(true)
     scroll:SetScript("OnMouseDown", function() edit:SetFocus() end)
-
-    f.scroll, f.edit = scroll, edit
+    p.edit = edit
+    f.jsonTab = p
 end
 
-local function newButton(parent, text, onClick)
-    local b = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
-    b:SetSize(110, 22)
-    b:SetText(text)
-    b:SetScript("OnClick", onClick)
-    return b
+local function fillJson()
+    if state.mode == "import" then
+        state.jsonText = state.jsonText or ""
+    else
+        state.jsonText = ns.GuideFormat.ToJson(state.draft)
+    end
+    frame.jsonTab.edit:SetText(state.jsonText)
+    state.jsonDirty = false
 end
+
+--- Read the JSON box back into the draft. Returns false (and shows the
+--- problems) if it doesn't parse.
+local function applyJson()
+    if not state.jsonDirty or readOnly() then return true end
+    local guide, errors, warnings = ns.GuideFormat.FromJson(frame.jsonTab.edit:GetText())
+    if not guide then
+        setStatus(GuideEditor.FormatMessages(errors, warnings))
+        return false
+    end
+    state.draft = guide
+    state.jsonDirty = false
+    state.selected = nil
+    return true
+end
+
+---------------------------------------------------------------------------
+-- Window
+---------------------------------------------------------------------------
+
+local TABS = {
+    { id = "quests", label = "EDITOR_TAB_QUESTS" },
+    { id = "details", label = "EDITOR_TAB_DETAILS" },
+    { id = "json", label = "EDITOR_TAB_JSON" },
+}
+
+local TITLES = {
+    edit = "EDITOR_TITLE_EDIT", new = "EDITOR_TITLE_NEW", import = "EDITOR_TITLE_IMPORT",
+    export = "EDITOR_TITLE_EXPORT", view = "EDITOR_TITLE_VIEW",
+}
 
 local function create()
     local f = CreateFrame("Frame", FRAME_NAME, UIParent, "BasicFrameTemplateWithInset")
@@ -125,83 +464,157 @@ local function create()
     f.title = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     f.title:SetPoint("TOP", f, "TOP", 0, -6)
 
-    createTextArea(f)
+    f.tabButtons = {}
+    for i, tab in ipairs(TABS) do
+        local b = newButton(f, L[tab.label], 110, function() GuideEditor.ShowTab(tab.id) end)
+        b:SetPoint("TOPLEFT", f, "TOPLEFT", PADDING + (i - 1) * 114, -28)
+        b.tabId = tab.id
+        f.tabButtons[i] = b
+    end
+
+    createQuestsTab(f)
+    createDetailsTab(f)
+    createJsonTab(f)
 
     f.status = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    f.status:SetPoint("TOPLEFT", f.scroll, "BOTTOMLEFT", 0, -8)
+    f.status:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", PADDING, PADDING + 30)
     f.status:SetWidth(WIDTH - PADDING * 2)
     f.status:SetJustifyH("LEFT")
-    f.status:SetJustifyV("TOP")
+    f.status:SetJustifyV("BOTTOM")
 
-    f.close = newButton(f, L.EDITOR_CLOSE, function() GuideEditor.Close() end)
+    f.close = newButton(f, L.EDITOR_CLOSE, 110, function() GuideEditor.Close() end)
     f.close:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -PADDING, PADDING)
-    f.save = newButton(f, L.EDITOR_SAVE, function() GuideEditor.Save() end)
+    f.save = newButton(f, L.EDITOR_SAVE, 110, function() GuideEditor.Save() end)
     f.save:SetPoint("RIGHT", f.close, "LEFT", -6, 0)
-    f.check = newButton(f, L.EDITOR_CHECK, function() GuideEditor.Check() end)
+    f.check = newButton(f, L.EDITOR_CHECK, 110, function() GuideEditor.Check() end)
     f.check:SetPoint("RIGHT", f.save, "LEFT", -6, 0)
-    f.selectAll = newButton(f, L.EDITOR_SELECT_ALL, function()
-        f.edit:SetFocus()
-        f.edit:HighlightText()
-    end)
-    f.selectAll:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", PADDING, PADDING)
-    f.copyEdit = newButton(f, L.EDITOR_COPY_EDIT, function()
-        GuideEditor.Open("new", nil, ns.Library.CopyText(state.id))
+    f.copyEdit = newButton(f, L.EDITOR_COPY_EDIT, 130, function()
+        GuideEditor.Open("new", nil, ns.Library.CopyDraft(state.id, ns.Engine.BuildContext()))
     end)
     f.copyEdit:SetPoint("RIGHT", f.close, "LEFT", -6, 0)
+    f.selectAll = newButton(f, L.EDITOR_SELECT_ALL, 110, function()
+        f.jsonTab.edit:SetFocus()
+        f.jsonTab.edit:HighlightText()
+    end)
+    f.selectAll:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", PADDING, PADDING)
 
     table.insert(UISpecialFrames, FRAME_NAME) -- close with Escape
     f:Hide()
     return f
 end
 
----------------------------------------------------------------------------
--- Public API
----------------------------------------------------------------------------
+local function show(widget, on)
+    if on then widget:Show() else widget:Hide() end
+end
 
-local function show(widget, shown)
-    if shown then widget:Show() else widget:Hide() end
+--- Redraw everything for the current state.
+function GuideEditor.Refresh()
+    local f = frame
+    f.title:SetText(L[TITLES[state.mode]] .. (state.draft and state.draft.name and (": " .. state.draft.name) or ""))
+
+    -- Export and import only make sense as JSON.
+    local jsonOnly = state.mode == "export" or state.mode == "import"
+    if jsonOnly then state.tab = "json" end
+    for _, b in ipairs(f.tabButtons) do
+        show(b, not jsonOnly)
+        if b.tabId == state.tab then b:LockHighlight() else b:UnlockHighlight() end
+    end
+    show(f.questsTab, state.tab == "quests")
+    show(f.detailsTab, state.tab == "details")
+    show(f.jsonTab, state.tab == "json")
+    if state.tab == "quests" then refreshQuests() end
+    if state.tab == "details" then refreshDetails() end
+
+    show(f.check, not readOnly())
+    show(f.save, not readOnly())
+    show(f.copyEdit, state.mode == "view")
+    show(f.selectAll, state.tab == "json")
+    f.save:SetText(state.mode == "import" and L.EDITOR_IMPORT or L.EDITOR_SAVE)
+end
+
+function GuideEditor.ShowTab(tabId)
+    if state.tab == "json" and tabId ~= "json" and not applyJson() then
+        return -- stay on the JSON tab until it parses
+    end
+    state.tab = tabId
+    if tabId == "json" then fillJson() end
+    GuideEditor.Refresh()
 end
 
 --- Open the editor.
--- @param mode "edit" | "new" | "import" | "export" | "view"
--- @param id   guide id (edit, export, view)
--- @param text optional starting text (new: a template or a copy)
-function GuideEditor.Open(mode, id, text)
+-- @param mode  "edit" | "new" | "view" | "export" | "import"
+-- @param id    guide id (edit, view, export)
+-- @param draft optional starting guide for "new" (e.g. a copy)
+function GuideEditor.Open(mode, id, draft)
     if not frame then frame = create() end
     state.mode, state.id = mode, id
+    state.selected, state.results, state.resultSelected = nil, {}, nil
+    state.jsonText, state.viewList = nil, nil
 
-    if mode == "edit" or mode == "export" or mode == "view" then
-        text = ns.Library.Text(id)
+    if mode == "edit" or mode == "view" or mode == "export" then
+        state.draft = ns.Library.Draft(id)
     elseif mode == "new" then
-        text = text or ns.GuideFormat.Template()
-    else -- import
-        text = ""
+        state.draft = draft or ns.GuideFormat.NewGuide()
+    else
+        state.draft = ns.GuideFormat.NewGuide()
+        state.jsonText = ""
     end
-    state.original = text or ""
+    if mode == "view" then
+        -- Built-in guides have no list of their own: show the quests they
+        -- would pick for this character.
+        state.viewList = ns.Library.QuestList(ns.Library.Get(id), ns.Engine.BuildContext())
+    end
 
-    frame.title:SetText(L[TITLES[mode]])
-    frame.edit:SetText(state.original)
-
-    show(frame.check, not readOnly())
-    show(frame.save, not readOnly())
-    show(frame.copyEdit, mode == "view")
-    show(frame.selectAll, readOnly())
-    frame.save:SetText(mode == "import" and L.EDITOR_IMPORT or L.EDITOR_SAVE)
+    frame.questsTab.search:SetText("")
+    state.tab = (mode == "export" or mode == "import") and "json" or "quests"
+    if state.tab == "json" then fillJson() end
 
     local hints = {
-        export = L.EDITOR_EXPORT_HINT, import = L.EDITOR_IMPORT_HINT,
-        view = L.EDITOR_VIEW_HINT,
+        export = L.EDITOR_EXPORT_HINT, import = L.EDITOR_IMPORT_HINT, view = L.EDITOR_VIEW_HINT,
     }
     setStatus(C("muted", hints[mode] or L.EDITOR_HELP))
 
+    GuideEditor.Refresh()
     frame:Show()
-    frame.edit:SetFocus()
-    if mode == "export" then frame.edit:HighlightText() end
+    if mode == "export" then
+        frame.jsonTab.edit:SetFocus()
+        frame.jsonTab.edit:HighlightText()
+    elseif mode == "import" then
+        frame.jsonTab.edit:SetFocus()
+    end
 end
 
---- Validate the text without saving.
+---------------------------------------------------------------------------
+-- Actions
+---------------------------------------------------------------------------
+
+--- Update the search results for `text`.
+function GuideEditor.Search(text)
+    state.results = ns.QuestieData.Search(text, SEARCH_LIMIT)
+    -- Without QuestieDB a quest ID can still be added by number.
+    local asNumber = tonumber(text)
+    if #state.results == 0 and asNumber and asNumber > 0 and asNumber == math.floor(asNumber) then
+        state.results = { ns.QuestieData.Describe(asNumber) }
+    end
+    state.resultSelected = #state.results > 0 and 1 or nil
+    refreshQuests()
+end
+
+--- Add the selected search result after the selected quest (or at the end).
+function GuideEditor.AddSelectedResult()
+    if readOnly() then return end
+    local r = state.results[state.resultSelected or 0]
+    if not r then return end
+    local index, added = Ops.Add(state.draft.quests, r, state.selected)
+    state.selected = index
+    if not added then setStatus(C("warn", L.EDITOR_ALREADY_FMT:format(r.name))) end
+    refreshQuests()
+end
+
+--- Validate without saving.
 function GuideEditor.Check()
-    local guide, errors, warnings = ns.GuideFormat.Parse(frame.edit:GetText())
+    if state.tab == "json" and not applyJson() then return false end
+    local guide, errors, warnings = ns.GuideFormat.Check(state.draft)
     if guide and #warnings == 0 then
         setStatus(C("good", L.EDITOR_OK))
     else
@@ -212,28 +625,29 @@ end
 
 --- Save (edit/new) or import, then show the result in the Guides tab.
 function GuideEditor.Save()
-    if readOnly() then return end
-    local text = frame.edit:GetText()
+    if readOnly() then return nil end
     local id, errors, warnings
-    if state.mode == "edit" then
-        id, errors, warnings = ns.Library.Save(text, state.id)
-    else
-        id, errors, warnings = ns.Library.Save(text, nil)
-    end
+    local wasImport = state.mode == "import"
 
+    if wasImport then
+        id, errors, warnings = ns.Library.Import(frame.jsonTab.edit:GetText())
+    else
+        if state.tab == "json" and not applyJson() then return nil end
+        id, errors, warnings = ns.Library.Save(state.draft, state.mode == "edit" and state.id or nil)
+    end
     if not id then
         setStatus(GuideEditor.FormatMessages(errors, warnings))
         return nil
     end
 
-    local guide = ns.Library.Get(id)
-    local wasImport = state.mode == "import"
-    -- Later saves go to the same guide.
+    -- Keep editing the saved guide; later saves update it.
     state.mode, state.id = "edit", id
-    state.original = ns.Library.Text(id)
-    frame.title:SetText(L.EDITOR_TITLE_EDIT)
-    frame.save:SetText(L.EDITOR_SAVE)
+    state.draft = ns.Library.Draft(id)
+    state.jsonText = nil
+    if state.tab == "json" then fillJson() end
+    GuideEditor.Refresh()
 
+    local guide = ns.Library.Get(id)
     local done = wasImport and L.EDITOR_IMPORTED_FMT:format(guide.name) or L.EDITOR_SAVED
     local extra = GuideEditor.FormatMessages(nil, warnings)
     setStatus(C("good", done) .. (extra ~= "" and ("\n" .. extra) or ""))
@@ -250,8 +664,38 @@ function GuideEditor.IsShown()
     return frame ~= nil and frame:IsShown()
 end
 
---- For tests.
-function GuideEditor.SetText(text) frame.edit:SetText(text) end
-function GuideEditor.GetText() return frame.edit:GetText() end
+---------------------------------------------------------------------------
+-- For tests
+---------------------------------------------------------------------------
+
+function GuideEditor.GetState() return state end
 function GuideEditor.GetStatus() return frame.status:GetText() end
 function GuideEditor.GetMode() return state.mode end
+function GuideEditor.GetJson() return frame.jsonTab.edit:GetText() end
+function GuideEditor.SetJson(text)
+    frame.jsonTab.edit:SetText(text)
+    state.jsonDirty = true
+    state.jsonText = text
+end
+function GuideEditor.SelectQuest(index) state.selected = index; refreshQuests() end
+function GuideEditor.SelectResult(index) state.resultSelected = index; refreshQuests() end
+function GuideEditor.PressMove(i) frame.questsTab.moveButtons[i]:GetScript("OnClick")() end
+function GuideEditor.SetField(key, text)
+    local box = frame.detailsTab.fields[key]
+    box:SetText(text)
+    box:GetScript("OnTextChanged")(box, true)
+end
+function GuideEditor.QuestRows()
+    local out = {}
+    for _, r in ipairs(frame.questsTab.list.rows) do
+        if r:IsShown() then out[#out + 1] = r.text:GetText() end
+    end
+    return out
+end
+function GuideEditor.ResultRows()
+    local out = {}
+    for _, r in ipairs(frame.questsTab.results.rows) do
+        if r:IsShown() then out[#out + 1] = r.text:GetText() end
+    end
+    return out
+end

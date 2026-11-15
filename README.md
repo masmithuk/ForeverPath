@@ -21,56 +21,74 @@ Each character follows one guide; pick it in the **Guides** tab. Rogues start on
 ### Your own guides
 
 In the **Guides** tab:
-- **Copy** turns any guide, including the two built-in ones, into your own editable version.
-- **New guide** starts from a template that explains the format.
-- **Edit** opens your guide in the in-game editor. **Check** lists any problems with line numbers, and **Save** won't store a broken guide.
-- **Export** shows the whole guide selected, ready for Ctrl+C. Paste it into Discord, a forum or a text file.
+- **Copy** makes your own version of any guide. Copying Story or Efficient also fills in the full quest list those guides would pick for your character, so you can trim and reorder it.
+- **New guide** starts from scratch.
+- **Edit** opens the guide editor. **View** does the same for the read-only built-ins.
+- **Export** shows the guide's JSON already selected, ready for Ctrl+C. Paste it into Discord, a forum or a file.
 - **Import** takes a pasted guide.
 - **Delete** removes your guide. Click it twice to confirm.
 
-Your guides are saved account-wide, so every character can use them. If you edit the guide you're following, the step guide updates straight away. The built-in guides are read-only, so updates to ForeverPath can improve them without overwriting your work.
+Your guides are saved account-wide, so every character can use them. If you edit the guide you're following, the step guide updates straight away.
 
-### Guide format
+### The guide editor
 
-Guides are plain text, so you can also write them in any text editor:
-
-```
-# Lines starting with # are comments.
-guide: Hillsbrad Rush
-author: Mike
-description: My fastest Horde route.
-based on: efficient
-rules: greyGap=2 levelsAbove=2 maxAccept=10 turninBonus=120 chainBonus=0 maxDetour=350
-
-[1-10]
-both: START
-note: Talents open at level 10.
-
-[11-20]
-alliance: Westfall, Loch Modan
-horde: The Barrens, Silverpine Forest
-
-[21-60]
-both: Stranglethorn Vale
-
-skip quests: 123, 456
-priority quests: 789
-step 12 buy: Buy bags before leaving town.
-```
-
-| Line | Meaning |
+| Tab | What you do there |
 |---|---|
-| `guide:` | Name (required). `author:` and `description:` are optional. |
-| `based on:` | `story` or `efficient`. Each one's rules are the defaults. |
-| `rules:` | Optional overrides, all whole numbers:<br>• `greyGap`: skip quests this many levels below you<br>• `levelsAbove`: allow quests this many levels above you<br>• `maxAccept`: quest givers considered at once<br>• `turninBonus` and `chainBonus`: yards a hand-in or story follow-up counts as closer<br>• `maxDetour`: skip quests whose objectives are this far from the giver (0 = no limit) |
-| `[11-20]` | A level band. Bands must cover 1-60 in order, with no gaps or overlaps. `[60]` is a single level. |
-| `alliance:`, `horde:`, `both:` | Zones for the band, separated by commas. `START` means your race's starting zone. |
-| `note:` | A tip shown for the band in the Plan tab. |
-| `skip quests:` | Quest IDs the guide never picks up or auto-accepts. |
-| `priority quests:` | Quest IDs picked up first, wherever their giver stands. |
-| `step 12 buy: ...` | A reminder from a level. Kinds are `train`, `buy`, `note` and `hearth`. `train` clears when you open your class trainer, `hearth` when you set your hearthstone. You click the others off. |
+| **Quests** | Your guide's quests, in order, with level and zone. Select one and use **Top**, **Up**, **Down**, **Bottom** or **Remove**. On the right, type part of a quest's name ("famil") or a quest ID to search QuestieDB, select a result, and click **Add after selected**. Quests already in the guide are marked. |
+| **Details** | Name, author, description, and whether it's based on **Story** or **Efficient**, which sets the default rules. |
+| **JSON** | The whole guide as JSON, for the less common settings: zones per level, rules, skipped quests and reminder steps. Changes here carry over to the other tabs. If the JSON doesn't parse, the editor keeps you here and shows the line and column. |
 
-Quest IDs are the numbers in Wowhead and Questie quest links. Guides are read as data only, never run as code. Imported text has the `|` character replaced, because the game would read it as a colour or link code.
+**Check** validates the guide without saving. **Save** always validates, so a broken guide is never stored.
+
+**How a quest list is followed:**
+- The step guide picks up the next quests on your list, in order. The next three get a strong head start, so they come first even when other quest givers are closer.
+- Hand-ins and objectives still fit in by distance.
+- Listed quests are offered wherever their giver stands, and whatever their level. Only the quest's own required level and earlier quests in its chain still count.
+- Once nothing on the list is available, the guide's zones take over, so you're never stuck.
+
+Guides without a list, like Story and Efficient, use their zones from the start.
+
+### Guide format (JSON)
+
+JSON is easier to share than XML: it's shorter to paste, any text editor or online checker can validate it, and there are no closing tags to get wrong. A guide looks like this:
+
+```json
+{
+  "format": "ForeverPath guide",
+  "version": 2,
+  "name": "Hillsbrad Rush",
+  "author": "Mike",
+  "description": "My fastest Horde route.",
+  "basedOn": "efficient",
+  "rules": { "greyGap": 3, "maxDetour": 200 },
+  "quests": [
+    { "id": 788, "name": "Your Place In The World" },
+    { "id": 789, "name": "Cutting Teeth" }
+  ],
+  "bands": [
+    { "levels": [1, 10], "zones": ["START"], "notes": ["Talents open at level 10."] },
+    { "levels": [11, 60], "alliance": ["Westfall"], "horde": ["The Barrens"] }
+  ],
+  "skipQuests": [123, 456],
+  "steps": [ { "level": 12, "kind": "buy", "text": "Buy bags before leaving town." } ]
+}
+```
+
+| Key | Meaning |
+|---|---|
+| `name` | Required. `author` and `description` are optional. |
+| `basedOn` | `"story"` or `"efficient"`. Each one's rules are the defaults. |
+| `rules` | Optional overrides, all whole numbers:<br>• `greyGap`: skip quests this many levels below you<br>• `levelsAbove`: allow quests this many levels above you<br>• `maxAccept`: quest givers considered at once<br>• `turninBonus` and `chainBonus`: yards a hand-in or story follow-up counts as closer<br>• `maxDetour`: skip quests whose objectives are this far from the giver (0 = no limit) |
+| `quests` | Your quests, in order. Each is `{ "id": 788, "name": "..." }` or just `788`. Only the id matters; the name is there for people reading the file. |
+| `bands` | Zones per level range, covering 1-60 in order with no gaps or overlaps. `levels` is `[from, to]`. `zones` sets both factions; otherwise use `alliance` and `horde`. `"START"` means your race's starting zone. `notes` show in the Plan tab. |
+| `skipQuests` | Quest IDs the guide never picks up or auto-accepts. |
+| `steps` | Reminders from a level. `kind` is `train`, `buy`, `note` or `hearth`. `train` clears when you open your class trainer, `hearth` when you set your hearthstone. You click the others off. |
+
+Quest IDs are the numbers in Wowhead and Questie quest links, or search for the quest in the editor.
+
+A few things are forgiving: trailing commas and `//` comments are allowed. Guides shared as 0.6 plain text still import, with their "priority quests" becoming the start of the quest list.
+
+Guides are read as data only, never run as code. Sizes are capped, and `|` is replaced because the game would read it as a colour or link code.
 
 ## The step guide
 
@@ -153,7 +171,7 @@ Everything runs from the game's own UI.
 
 | Tab | What's in it |
 |---|---|
-| **Guides** | Every guide: the built-in ones, then yours. Select one to see its details, then **Use this guide**, **Edit** (or **View** for built-ins), **Copy**, **New guide**, **Delete**, **Export** or **Import**. |
+| **Guides** | Every guide: the built-in ones, then yours. Select one to see its details, then **Use this guide**, **Edit** (or **View** for built-ins), **Copy**, **New guide**, **Delete**, **Export** or **Import**. Edit and View open the guide editor described above. |
 | **Zones** | Every zone in your guide. Each shows its level range and how many of its quests you've done. Zones for your level are gold, and the one you're following has an arrow. Click a zone to see all its quests: level, quest giver and your status (Done, Ready to turn in, In your log, Available, the level you need, or Requirements not met yet). **Follow this zone** keeps the step guide in that zone. **Automatic** goes back to your guide's zones for your level. |
 | **Plan** | Leveling spec and tips for your class, your route's level bands, dungeons for your level, upcoming milestones and rested XP. |
 | **Settings** | Quest automation: accept, turn in, only quests your guide wants, skip grey or repeatable quests, and the pause key. Also: turn step-by-step guiding on or off, show or hide the guide window and the minimap button, and turn level-up announcements on or off. Choose the waypoint arrow (Automatic, TomTom, Map pin, Off). Bring back skipped quests, and reset window positions. |
@@ -181,13 +199,15 @@ Integrations/        QuestieDB adapter and waypoint providers (Shortest Path For
 Guide/Sources.lua    Live game state -> candidate steps
 Guide/Planner.lua    Pure: merge steps at the same NPC, order as a walking route
 Guide/Engine.lua     Events -> replans, sticky current step, skip/done, chosen guide, caching
-Guide/GuideFormat.lua  Guide text format: parse, validate, write (no code execution)
-Guide/Library.lua    Built-in and player guides: save, copy, delete, import, export
+Guide/Json.lua       Safe JSON encode/decode (size/depth limits, line:column errors)
+Guide/GuideFormat.lua  Guide schema: check, normalise, to/from JSON (no code execution)
+Guide/LegacyText.lua Reads 0.6 plain-text guides so old exports still import
+Guide/Library.lua    Built-in and player guides: save, copy, delete, import, export, quest lists
 Guide/Catalog.lua    Zones of a guide and their quest overviews (Zones tab data)
 Guide/AutoQuest.lua  Auto accept / turn in: pure decisions plus the quest dialog events
 UI/MainFrame.lua     Main window shell: tabs and route picker
 UI/*Tab.lua          Guides (library), Zones, Plan and Settings tabs
-UI/GuideEditor.lua   Guide editor window (edit, new, import, export, view)
+UI/GuideEditor.lua   Guide editor: Quests (search/add/reorder), Details, JSON; export/import
 UI/GuideFrame.lua    Step guide window
 UI/MinimapButton.lua Library-free minimap button
 UI/TargetButton.lua  Secure button cycling quest mobs nearest-to-furthest (Bindings.xml adds its key)

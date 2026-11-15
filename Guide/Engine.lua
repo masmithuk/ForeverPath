@@ -107,10 +107,12 @@ function Engine.Replan()
 
     local questsChanged = false
     if not doableCache and ns.QuestieData.IsReady() then
-        doableCache = ns.Sources.DoableQuests(ctx)
+        local list, fromList = ns.Sources.DoableQuests(ctx)
+        doableCache = { list = list, fromList = fromList }
         questsChanged = true
     end
-    ctx.doable = doableCache
+    ctx.doable = doableCache and doableCache.list
+    ctx.doableFromList = doableCache and doableCache.fromList
 
     local candidates, reminders = ns.Sources.Collect(ctx)
     local state = Engine.state
