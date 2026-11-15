@@ -196,4 +196,19 @@ return {
         T.eq(ns.Engine.FocusedQuest(), nil)
         T.contains(mock.printed[#mock.printed], "Best step from here")
     end },
+
+    { "built-in guides list the zones for your level and the next", function(T)
+        local ns, mock = T.fresh()
+        mock.player.race = { "Orc", "Orc", 2 }
+        fixtures.durotar(mock, { mode = "efficient" })
+        fixtures.login(ns)
+        ns.MainFrame.ShowTab("steps")
+        local list = ns.StepsTab.GetList()
+        T.truthy(list.byZone)
+        local ids = {}
+        for _, r in ipairs(list.rows) do ids[r.id] = true end
+        T.truthy(ids[101], "Durotar (this band)")
+        T.truthy(ids[104], "The Barrens (next band)")
+        T.contains(ns.StepsTab.GetPanel().header:GetText(), "this level and the next")
+    end },
 }

@@ -226,7 +226,11 @@ function SettingsTab.Refresh()
         panel.autoNote:SetText(ns.Util.Color("muted", L.AUTO_NOTES))
     end
     local inUse = ns.Waypoints.Resolve(ns.Settings.account.guide.waypoints)
-    panel.waypointStatus:SetText(L.WAYPOINTS_IN_USE_FMT:format(L["WAYPOINTS_" .. inUse:upper()]))
+    local status = L.WAYPOINTS_IN_USE_FMT:format(L["WAYPOINTS_" .. inUse:upper()])
+    if ns.Waypoints.NeedsArrowAddon(ns.Settings.account.guide.waypoints) then
+        status = status .. "\n" .. ns.Util.Color("warn", L.GUIDE_NEEDS_ARROW)
+    end
+    panel.waypointStatus:SetText(status)
 end
 
 --- For tests: click a checkbox by its label key.

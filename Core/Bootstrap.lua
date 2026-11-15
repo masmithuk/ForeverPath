@@ -50,12 +50,15 @@ ns:RegisterEvent("PLAYER_LOGIN", function()
     ns.MinimapButton.Init()
     ns.Engine.Start()
     ns.AutoQuest.Start()
+    if ns.Waypoints.NeedsArrowAddon(ns.Settings.account.guide.waypoints) then
+        Util.Print(L.LOGIN_NEEDS_ARROW)
+    end
 end)
 
 ns:RegisterEvent("PLAYER_LEVEL_UP", onLevelUp)
 
--- Keep the rested/XP numbers live while the Plan tab is open.
-local function refresh() ns.MainFrame.RefreshIf("plan") end
+-- Keep the rested/XP numbers live while the Home tab is open.
+local function refresh() ns.MainFrame.RefreshIf("home") end
 ns:RegisterEvent("PLAYER_XP_UPDATE", refresh)
 ns:RegisterEvent("UPDATE_EXHAUSTION", refresh)
 ns:RegisterEvent("PLAYER_UPDATE_RESTING", refresh)

@@ -115,7 +115,7 @@ ns.Data.Classes = {
             "Still fragile - pull one enemy at a time and keep bandages handy.",
             "Stealth past enemies you don't need to kill for a quest.",
         },
-        defaultRoute = "story",
+        defaultRoute = "efficient",
     },
     WARRIOR = {
         name = "Warrior",

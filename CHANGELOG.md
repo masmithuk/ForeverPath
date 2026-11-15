@@ -4,6 +4,12 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 
 ## [0.8.0] - 2026-11-15
 
+### Changed (getting you from quest to quest)
+- **Every class starts on Speedrun** for its race (Rogues used to start on Story).
+- **Out-levelled your zone?** The step that takes you on says "You've out-levelled Durotar - head to The Barrens", and chat announces the move once.
+- **No arrow addon?** The guide window, Home, Settings and a login tip tell you to install Shortest Path Forever or TomTom; a map pin marks the next stop until then.
+- The Steps tab for the built-in guides lists the quests of your zones for this level and the next, so it stays short and quick.
+
 ### Changed (interface overhaul)
 - **Home tab**, the new first tab: your character and guide, where you're levelling now and next, your current step, rested XP, class tips, dungeons for your level, and what every part of ForeverPath does.
 - **Guides per race:** a Speedrun and a Story guide, levels 1-60, for each starting area (Orc & Troll, Tauren, Undead, Human, Dwarf & Gnome, Night Elf, Skyborne). The Guides tab shows yours plus your own guides. Choices saved as "Efficient" or "Story" now mean your race's version.

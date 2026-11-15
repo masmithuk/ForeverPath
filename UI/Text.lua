@@ -87,6 +87,9 @@ local function renderGuide(lines, plan, step)
         bullet(lines, L.HOME_NEXT_FMT:format(nxt.band.min, Util.Join(nxt.zones)), "muted")
     end
     bullet(lines, L.HOME_STEP_FMT:format(step and step.title or L.GUIDE_NOTHING))
+    if ns.Waypoints.NeedsArrowAddon(ns.Settings.account.guide.waypoints) then
+        bullet(lines, L.HOME_NEEDS_ARROW, "warn")
+    end
 end
 
 local function renderClassTips(lines, profile)

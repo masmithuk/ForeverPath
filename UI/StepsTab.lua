@@ -81,10 +81,11 @@ end
 
 function StepsTab.HeaderText(guideName, list)
     if list.total == 0 then return C("accent", guideName) .. "  " .. C("muted", L.STEPS_EMPTY) end
-    return ("%s   %s   %s"):format(
+    return ("%s   %s   %s%s"):format(
         C("accent", guideName),
         L.STEPS_POSITION_FMT:format(list.position, list.total),
-        C("muted", L.STEPS_COUNTS_FMT:format(list.done, list.skipped, list.missed)))
+        C("muted", L.STEPS_COUNTS_FMT:format(list.done, list.skipped, list.missed)),
+        list.byZone and C("muted", "  " .. L.STEPS_BY_ZONE) or "")
 end
 
 ---------------------------------------------------------------------------

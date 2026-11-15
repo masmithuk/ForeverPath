@@ -63,6 +63,18 @@ local function hasBuiltin()
 end
 
 --- Which provider will actually be used for a setting.
+--- Is an arrow addon (Shortest Path Forever or TomTom) installed?
+function Waypoints.HasArrowAddon()
+    return shortestPath() ~= nil or hasTomTom()
+end
+
+--- Should the player be told to install an arrow addon? (Arrows aren't
+--- turned off, and neither addon is there - only the map pin is left.)
+function Waypoints.NeedsArrowAddon(setting)
+    if setting == "off" then return false end
+    return not Waypoints.HasArrowAddon()
+end
+
 function Waypoints.Resolve(setting)
     if setting == "off" then return "off" end
     if setting == "shortestpath" then return shortestPath() and "shortestpath" or "off" end

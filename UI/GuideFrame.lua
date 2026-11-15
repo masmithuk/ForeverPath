@@ -99,7 +99,9 @@ function GuideFrame.StatusText(dataStatus, providerSetting)
     elseif dataStatus == "indexing" then
         parts[#parts + 1] = L.GUIDE_INDEXING
     end
-    if ns.Waypoints.Resolve(providerSetting) == "off" and providerSetting ~= "off" then
+    if ns.Waypoints.NeedsArrowAddon(providerSetting) then
+        parts[#parts + 1] = L.GUIDE_NEEDS_ARROW
+    elseif ns.Waypoints.Resolve(providerSetting) == "off" and providerSetting ~= "off" then
         parts[#parts + 1] = L.GUIDE_NO_WAYPOINTS
     end
     if #parts == 0 then return nil end

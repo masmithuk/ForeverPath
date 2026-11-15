@@ -212,4 +212,23 @@ return {
         T.eq(f.columnWidth, math.floor((1100 - 24 - 20) / 2))
         T.eq(f.questsTab.search:GetWidth(), f.columnWidth - 10)
     end },
+
+    { "without TomTom or Shortest Path the player is told to install one", function(T)
+        local ns, mock = login(T)
+        T.contains(table.concat(mock.printed, "\n"), "install Shortest Path Forever or TomTom")
+        T.contains(ns.GuideFrame.StatusText("ready", "auto"), "install Shortest Path Forever or TomTom")
+        ns.MainFrame.ShowTab("home")
+        T.contains(ns.HomeTab.GetText(), "No arrow addon found")
+        T.eq(mock.userWaypoint ~= nil, true, "a map pin is used meanwhile")
+    end },
+
+    { "with TomTom there's no nagging", function(T)
+        local ns, mock = T.fresh()
+        mock.installTomTom()
+        fixtures.durotar(mock)
+        fixtures.login(ns)
+        T.truthy(not table.concat(mock.printed, "\n"):find("install Shortest Path"))
+        T.eq(ns.GuideFrame.StatusText("ready", "auto"), nil)
+        T.eq(ns.Waypoints.NeedsArrowAddon("off"), false, "not when arrows are turned off")
+    end },
 }

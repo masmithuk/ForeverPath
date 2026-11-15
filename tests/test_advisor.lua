@@ -16,7 +16,10 @@ return {
         T.eq(ns.Advisor.ResolveRouteId(troll, "bogus"), "speedrun-orc-troll", "deleted guide falls back")
         T.eq(ns.Advisor.ResolveRouteId(troll, "dungeon"), "speedrun-orc-troll", "0.4 Dungeon mode migrated")
         T.eq(ns.Advisor.ResolveRouteId(troll, "story-human"), "story-human", "an explicit guide is kept")
-        T.eq(ns.Advisor.ResolveRouteId({ class = ns.Data.Classes.ROGUE, raceKey = "Human" }, nil), "story-human")
+        for file, class in pairs(ns.Data.Classes) do
+            T.eq(ns.Advisor.ResolveRouteId({ class = class, raceKey = "Human" }, nil), "speedrun-human",
+                file .. " starts on Speedrun")
+        end
         T.eq(ns.Advisor.ResolveRouteId({ raceKey = "Scourge" }, nil), "speedrun-undead")
         T.eq(ns.Advisor.ResolveRouteId({ faction = "Alliance" }, nil), "speedrun-human", "unknown race")
         T.eq(ns.Advisor.ResolveRouteId({}, nil), "speedrun-orc-troll")

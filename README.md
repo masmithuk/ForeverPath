@@ -16,7 +16,7 @@ A guide decides which zones you level in and how the step guide picks quests. Fo
 | **Skipped** | Quests whose objectives are more than 350 yards from the quest giver | Stand-alone side quests count as 350 yards further away, so they're only picked up when they're on the way |
 | **Ordering** | Hand-ins first (120 yd bonus), then the nearest step | Quest chains first: follow-ups jump the queue (250 yd bonus), so each zone's story is told in order |
 
-Each character follows one guide; pick it in the **Guides** tab. Rogues start on Story and everyone else on Speedrun.
+Each character follows one guide; pick it in the **Guides** tab. Every character starts on its race's Speedrun guide: a new character on the first quest, and an existing one on the best quest for its level and where it's standing. When you out-level your zone, the guide moves you on to the next one and says so.
 
 ### Your own guides
 
@@ -136,7 +136,7 @@ Steps advance on their own:
 
 - **[Questie](https://www.curseforge.com/wow/addons/questie) with QuestieDB (Forever bundle): strongly recommended.** QuestieDB is where quest-giver locations come from. ForeverPath reads it through its documented `LibQuestieDB` API (contract 4). If Questie itself is also loaded, ForeverPath uses Questie's own availability check, which knows about hidden and event quests. Without QuestieDB, the guide only covers quests already in your log.
 - **[Shortest Path Forever](https://www.curseforge.com/wow/addons/shortest-path-forever): recommended, and used first when installed.** It plans real routes on foot, by flight path and by boat. ForeverPath hands it the next several steps through its public API (`ShortestPathForever.API.NavigateRoute`, versions 1 and 2) as one journey with numbered, quest-badged stops. The current stop is held until the step really completes, so walking up to a quest giver doesn't skip ahead. Routes refused during combat are sent again when combat ends.
-- **[TomTom](https://www.curseforge.com/wow/addons/tomtom): the fallback.** It provides the on-screen arrow. Addons that work from TomTom waypoints, such as Well Trodden (walking trails) and Map Shortcuts, then follow ForeverPath's steps too. With neither addon installed, ForeverPath places the game's own map pin instead.
+- **[TomTom](https://www.curseforge.com/wow/addons/tomtom): the alternative.** It provides the on-screen arrow. Addons that work from TomTom waypoints, such as Well Trodden (walking trails) and Map Shortcuts, then follow ForeverPath's steps too. With neither addon installed, ForeverPath tells you to install one (in the guide window, on Home, in Settings and once at login) and places the game's own map pin meanwhile.
 
 ## Features
 

@@ -275,4 +275,40 @@ return {
         ns:FireEvent("QUEST_REMOVED", 113)
         T.eq(ns.Engine.state.steps[1].key, "complete:101")
     end },
+
+    { "out-levelling your zone sends you on to the next one, and says so", function(T)
+        local ns, mock = T.fresh()
+        mock.player.race = { "Orc", "Orc", 2 }
+        fixtures.durotar(mock, { level = 11, mode = "efficient" })
+        ForeverPathCharDB.guide.trainedLevel = 60
+        local state = fixtures.login(ns)
+        local step = state.steps[1]
+        T.eq(step.title, "Talk to Barrens Scout", "Durotar's quests are grey now")
+        T.eq(step.target.mapID, 1413)
+        T.contains(step.lines, "You've out-levelled Durotar - head to The Barrens.")
+        T.contains(table.concat(mock.printed, "\n"), "Time to move on to The Barrens")
+        local count = #mock.printed
+        ns.Engine.Replan()
+        T.eq(#mock.printed, count, "announced once")
+    end },
+
+    { "no zone change while your zone is still in the guide", function(T)
+        local ns, mock = T.fresh()
+        mock.player.race = { "Orc", "Orc", 2 }
+        fixtures.durotar(mock, { level = 6, mode = "efficient" })
+        local state = fixtures.login(ns)
+        T.eq(state.steps[1].zoneChange, nil)
+    end },
+
+    { "a new character starts on its guide's first quest", function(T)
+        local ns, mock = T.fresh()
+        mock.player.race = { "Orc", "Orc", 2 }
+        local db = fixtures.durotar(mock, { level = 1, mode = "efficient" })
+        db.Quest[4641] = { name = "Your Place In The World", startedBy = { { 10176 } }, requiredLevel = 1, questLevel = 2 }
+        db.Npc[10176] = { name = "Kaltunk", friendlyToFaction = "H", spawns = { [14] = { { 43, 68 } } } }
+        mock.player.position = { mapID = 1411, x = 0.43, y = 0.68 }
+        local state = fixtures.login(ns)
+        T.eq(ns.Engine.CurrentGuide().id, "speedrun-orc-troll")
+        T.eq(state.steps[1].title, "Talk to Kaltunk")
+    end },
 }

@@ -85,14 +85,35 @@ local REACHED = { done = true, ready = true, active = true }
 --   quest rows: { index, id, name, level, requiredLevel, zone, giver,
 --                 status, isCurrent, isFocus }
 --   step rows:  { index, isStep, key, kind, name, where, status, isCurrent }
+--- The quests to list: the guide's own list, or - for guides that go by
+--- zones (the built-in ones) - the quests of the zones for your level and
+--- the next band, so the list stays short and quick to build.
+function StepList.Quests(ctx)
+    local guide = ctx.guide
+    if #guide.quests > 0 then return guide.quests, false end
+    local list, seen = {}, {}
+    for _, entry in ipairs({ ctx.route and ctx.route.current, ctx.route and ctx.route.next }) do
+        for _, zone in ipairs(entry and entry.zones or {}) do
+            for _, q in ipairs(ns.Catalog.Overview(zone, ctx).quests) do
+                if not seen[q.id] and not guide.skipSet[q.id] then
+                    seen[q.id] = true
+                    list[#list + 1] = { id = q.id, name = q.name }
+                end
+            end
+        end
+    end
+    return list, true
+end
+
 function StepList.Build(ctx, currentStep)
-    local quests = ns.Library.QuestList(ctx.guide, ctx)
+    local quests, byZone = StepList.Quests(ctx)
     local inCurrent = {}
     for _, id in ipairs(currentStep and currentStep.questIDs or {}) do inCurrent[id] = true end
     local listSteps = {}
     for _, item in ipairs(ns.Sources.ListSteps(ctx)) do listSteps[item.index] = item end
 
-    local result = { rows = {}, done = 0, skipped = 0, missed = 0, total = #quests, position = 0 }
+    local result = { rows = {}, done = 0, skipped = 0, missed = 0, total = #quests, position = 0,
+                     byZone = byZone }
     for i, q in ipairs(quests) do
         local row
         if q.step then

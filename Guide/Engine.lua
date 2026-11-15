@@ -87,6 +87,7 @@ function Engine.BuildContext()
         log = ns.GameApi.GetQuestLog(),
         isCompleted = isCompleted,
         origin = origin,
+        playerMapID = mapID,
         allowedMaps = allowedMaps(route, mapID),
         skipped = char.skipped,
         char = char,
@@ -164,6 +165,7 @@ function Engine.Replan()
     local first = state.steps[1]
     -- Already standing on a "go to" spot: tick it off (which plans again).
     if Engine.Arrived(first, origin) and Engine.MarkDone(first.key) then return end
+    Engine.AnnotateZoneChange(ctx, first)
     state.currentKey = first and first.key or nil
     ns.Waypoints.Set(state.steps, guideSettings().waypoints)
 
@@ -181,6 +183,38 @@ function Engine.RequestReplan()
     if replanPending then return end
     replanPending = true
     C_Timer.After(REPLAN_DELAY, Engine.Replan)
+end
+
+--- You've out-levelled the zone you're in: the guide's zones for your
+--- level don't include it, and the next step is in one of them. Returns
+--- { from = zone name, to = zone name } or nil.
+function Engine.ZoneChange(ctx, step)
+    local target = step and step.target
+    local here = ctx.playerMapID
+    if not target or not target.mapID or not here or target.mapID == here then return nil end
+    local bandMaps = {}
+    for _, zone in ipairs(ctx.route.current and ctx.route.current.zones or {}) do
+        local mapID = ns.ZoneMap.MapIdByName(zone)
+        if mapID then bandMaps[mapID] = zone end
+    end
+    if bandMaps[here] or not bandMaps[target.mapID] then return nil end
+    return { from = ns.GameApi.GetMapName(here) or "?", to = bandMaps[target.mapID] }
+end
+
+--- Tell the player on the step (and once in chat) when it takes them to a
+--- new zone because they've out-levelled this one.
+function Engine.AnnotateZoneChange(ctx, step)
+    local change = Engine.ZoneChange(ctx, step)
+    if not change then return end
+    local line = ns.L.ZONE_CHANGE_FMT:format(change.from, change.to)
+    step.lines = step.lines or {}
+    if step.lines[1] ~= line then table.insert(step.lines, 1, line) end
+    step.zoneChange = change
+    local char = charGuide()
+    if char.zoneHint ~= change.to then
+        char.zoneHint = change.to
+        ns.Util.Print(ns.L.ZONE_CHANGE_CHAT_FMT:format(change.from, change.to, step.title))
+    end
 end
 
 --- Has the player arrived at a "go to" step's spot?
