@@ -1,30 +1,28 @@
 -- Data integrity: catches typos and gaps when the data files are edited.
 
 return {
-    { "every route covers levels 1-60 with no gaps or overlaps", function(T)
+    { "built-in guides are valid and cover levels 1-60", function(T)
         local ns = T.fresh()
-        for id, route in pairs(ns.Data.Routes) do
-            local expected = 1
-            for i, b in ipairs(route.bands) do
-                T.eq(b.min, expected, id .. " band " .. i .. " min")
-                T.truthy(b.max >= b.min, id .. " band " .. i .. " max >= min")
-                T.truthy(#b.Alliance > 0 and #b.Horde > 0, id .. " band " .. i .. " has zones")
-                expected = b.max + 1
-            end
-            T.eq(expected - 1, 60, id .. " ends at 60")
+        T.eq(#ns.Data.BuiltinGuides, 2, "Story and Efficient")
+        for _, def in ipairs(ns.Data.BuiltinGuides) do
+            local guide = ns.Library.Get(def.id)
+            local errors, warnings = {}, {}
+            ns.GuideFormat.Validate(guide, errors, warnings)
+            T.eq(#errors, 0, def.id .. " errors: " .. tostring(errors[1] and errors[1].message))
+            T.eq(#warnings, 0, def.id .. " warnings")
+            T.eq(guide.bands[#guide.bands].max, 60, def.id .. " ends at 60")
         end
     end },
 
-    { "route order lists every route exactly once", function(T)
+    { "built-in guides survive a round trip through the text format", function(T)
         local ns = T.fresh()
-        local seen, count = {}, 0
-        for _, id in ipairs(ns.Data.RouteOrder) do
-            T.truthy(ns.Data.Routes[id], "route exists: " .. id)
-            T.truthy(not seen[id], "no duplicate: " .. id)
-            seen[id] = true
+        for _, def in ipairs(ns.Data.BuiltinGuides) do
+            local text = ns.Library.Text(def.id)
+            local parsed, errors = ns.GuideFormat.Parse(text)
+            T.truthy(parsed, def.id .. " parses: " .. tostring(errors[1] and errors[1].message))
+            T.eq(ns.GuideFormat.Write(parsed), text, def.id .. " writes back identically")
+            T.eq(#parsed.bands, #def.bands)
         end
-        for _ in pairs(ns.Data.Routes) do count = count + 1 end
-        T.eq(#ns.Data.RouteOrder, count, "route count")
     end },
 
     { "every class has complete advice and a valid default route", function(T)
@@ -36,7 +34,7 @@ return {
                 T.truthy(type(c[field]) == "string" and c[field] ~= "", file .. "." .. field)
             end
             T.truthy(#c.tips > 0, file .. " has tips")
-            T.truthy(ns.Data.Routes[c.defaultRoute], file .. " default route exists")
+            T.truthy(ns.Library.Get(c.defaultRoute), file .. " default guide exists")
         end
         T.eq(n, 9, "nine classes")
     end },

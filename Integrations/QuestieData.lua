@@ -291,13 +291,6 @@ function QuestieData.GetQuestName(questID)
     return get("Quest", questID, "name")
 end
 
---- The quest that follows this one in its chain, if any.
-function QuestieData.NextInChain(questID)
-    local nextID = get("Quest", questID, "nextQuestInChain")
-    if type(nextID) == "number" and nextID > 0 then return nextID end
-    return nil
-end
-
 --- True when the quest continues a chain (it has prerequisite quests).
 function QuestieData.IsFollowUp(questID)
     for _, field in ipairs({ "preQuestSingle", "preQuestGroup" }) do
@@ -407,18 +400,6 @@ function QuestieData.DungeonOf(questID)
         return QuestieData.DungeonForArea(zoneOrSort)
     end
     return nil
-end
-
---- Every indexed quest for this character that takes place in `dungeonName`.
-function QuestieData.GetQuestsForDungeon(dungeonName)
-    local result = {}
-    for _, q in ipairs(state.candidates) do
-        local d = QuestieData.DungeonForArea(q.areaID)
-        if d and d.name == dungeonName then
-            result[#result + 1] = q
-        end
-    end
-    return result
 end
 
 --- Every indexed quest for this character whose zone is `mapID`,

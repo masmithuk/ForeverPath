@@ -13,7 +13,21 @@ local L = ns.L
 local Util = ns.Util
 
 local function routeIds()
-    return Util.Join(ns.Data.RouteOrder, ", ")
+    local ids = {}
+    for _, g in ipairs(ns.Library.List()) do ids[#ids + 1] = g.id end
+    return Util.Join(ids, ", ")
+end
+
+--- A guide by id or by name (case-insensitive), or nil.
+local function findGuide(text)
+    if not text then return nil end
+    local id = ns.Data.LegacyRouteIds[text:lower()] or text
+    local guide = ns.Library.Get(id) or ns.Library.Get(id:lower())
+    if guide then return guide end
+    for _, g in ipairs(ns.Library.List()) do
+        if g.name:lower() == text:lower() then return g end
+    end
+    return nil
 end
 
 local function printHelp()
@@ -92,14 +106,13 @@ local subcommands = {
         Util.Print(L.WAYPOINTS_SET_FMT:format(setting, ns.Waypoints.Resolve(setting)))
     end,
     route = function(arg)
-        local id = arg and arg:lower()
-        id = ns.Data.LegacyRouteIds[id] or id
-        if not id or not ns.Data.Routes[id] then
+        local guide = findGuide(arg)
+        if not guide then
             Util.Print(L.ROUTE_UNKNOWN:format(routeIds()))
             return
         end
-        ns.MainFrame.SetRoute(id)
-        Util.Print(L.ROUTE_SET_FMT:format(ns.Data.Routes[id].name))
+        ns.MainFrame.SetRoute(guide.id)
+        Util.Print(L.ROUTE_SET_FMT:format(guide.name))
     end,
 }
 

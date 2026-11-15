@@ -12,14 +12,16 @@ return {
         local warrior = { class = ns.Data.Classes.WARRIOR }
         T.eq(ns.Advisor.ResolveRouteId(warrior, "story"), "story")
         T.eq(ns.Advisor.ResolveRouteId(warrior, "story"), "story", "0.3 id migrated")
-        T.eq(ns.Advisor.ResolveRouteId(warrior, nil), "dungeon")
-        T.eq(ns.Advisor.ResolveRouteId(warrior, "bogus"), "dungeon")
+        T.eq(ns.Advisor.ResolveRouteId(warrior, nil), "efficient")
+        T.eq(ns.Advisor.ResolveRouteId(warrior, "bogus"), "efficient", "deleted guide falls back")
+        T.eq(ns.Advisor.ResolveRouteId(warrior, "dungeon"), "efficient", "0.4 Dungeon mode migrated")
+        T.eq(ns.Advisor.ResolveRouteId({ class = ns.Data.Classes.ROGUE }, nil), "story")
         T.eq(ns.Advisor.ResolveRouteId({}, nil), "efficient")
     end },
 
     { "band lookup is clamped at both ends", function(T)
         local ns = T.fresh()
-        local route = ns.Data.Routes.story
+        local route = ns.Library.Get("story")
         T.eq(ns.Advisor.FindBandIndex(route, 0), 1)
         T.eq(ns.Advisor.FindBandIndex(route, 1), 1)
         T.eq(ns.Advisor.FindBandIndex(route, 15), 2)

@@ -4,22 +4,73 @@ A step-by-step leveling guide for **World of Warcraft: Forever**, in the style o
 
 It reads your race, class, faction and level. From those it picks a leveling route, a spec to play and dungeons that fit your level, and it tracks your rested XP.
 
-## Three leveling modes
+## Guides
 
-Pick a mode with the buttons at the top of the main window. Each character remembers its own mode.
+A guide decides which zones you level in and how the step guide picks quests. ForeverPath comes with two, and you can make, share and import your own.
 
-| | **Story (Completionist)** | **Efficient (Speedrun)** | **Dungeon** |
-|---|---|---|---|
-| **Goal** | Do every quest and follow each story through | Quickest path through each zone | Level through dungeons |
-| **Zones** | Every zone for your level, Classic and Forever | The densest zones only (Riverglades carries 35-45) | Zones next to dungeon entrances |
-| **Quests offered** | Everything from 10 levels below you to 3 above | Only from 2 below to 2 above you | From 4 below to 3 above, plus every quest for dungeons in your range, wherever its giver stands |
-| **Skipped** | Nothing | Quests whose objectives are more than 350 yards from the quest giver | Non-dungeon quests outside the entrance zones |
-| **Ordering** | Follow-ups in a chain jump the queue (150 yd bonus), so stories are told in order | Hand-ins first (120 yd bonus), then the nearest step | Dungeon quest pickups first (200 yd bonus) |
-| **Guide browser** | One guide per zone | One guide per zone | One guide per dungeon, with its entrance and quests |
+| | **Story (Completionist)** | **Efficient (Speedrun)** |
+|---|---|---|
+| **Goal** | Do every quest and follow each story through | Quickest path through each zone |
+| **Zones** | Every zone for your level, Classic and Forever | The densest zones only (Riverglades carries 35-45) |
+| **Quests offered** | Everything from 10 levels below you to 3 above | Only from 2 below to 2 above you |
+| **Skipped** | Nothing | Quests whose objectives are more than 350 yards from the quest giver |
+| **Ordering** | Follow-ups in a chain jump the queue (150 yd bonus), so stories are told in order | Hand-ins first (120 yd bonus), then the nearest step |
 
-In Dungeon mode, quests for the same dungeon in your log merge into one **Run (dungeon)** step. Its arrow points at Blizzard's own waypoint for the quest, which leads to the entrance.
+Each character follows one guide; pick it in the **Guides** tab. Rogues start on Story and everyone else on Efficient.
 
-All the numbers live in `rules` in `Data/Routes.lua`, so they're easy to tune.
+### Your own guides
+
+In the **Guides** tab:
+- **Copy** turns any guide, including the two built-in ones, into your own editable version.
+- **New guide** starts from a template that explains the format.
+- **Edit** opens your guide in the in-game editor. **Check** lists any problems with line numbers, and **Save** won't store a broken guide.
+- **Export** shows the whole guide selected, ready for Ctrl+C. Paste it into Discord, a forum or a text file.
+- **Import** takes a pasted guide.
+- **Delete** removes your guide. Click it twice to confirm.
+
+Your guides are saved account-wide, so every character can use them. If you edit the guide you're following, the step guide updates straight away. The built-in guides are read-only, so updates to ForeverPath can improve them without overwriting your work.
+
+### Guide format
+
+Guides are plain text, so you can also write them in any text editor:
+
+```
+# Lines starting with # are comments.
+guide: Hillsbrad Rush
+author: Mike
+description: My fastest Horde route.
+based on: efficient
+rules: greyGap=2 levelsAbove=2 maxAccept=10 turninBonus=120 chainBonus=0 maxDetour=350
+
+[1-10]
+both: START
+note: Talents open at level 10.
+
+[11-20]
+alliance: Westfall, Loch Modan
+horde: The Barrens, Silverpine Forest
+
+[21-60]
+both: Stranglethorn Vale
+
+skip quests: 123, 456
+priority quests: 789
+step 12 buy: Buy bags before leaving town.
+```
+
+| Line | Meaning |
+|---|---|
+| `guide:` | Name (required). `author:` and `description:` are optional. |
+| `based on:` | `story` or `efficient`. Each one's rules are the defaults. |
+| `rules:` | Optional overrides, all whole numbers:<br>• `greyGap`: skip quests this many levels below you<br>• `levelsAbove`: allow quests this many levels above you<br>• `maxAccept`: quest givers considered at once<br>• `turninBonus` and `chainBonus`: yards a hand-in or story follow-up counts as closer<br>• `maxDetour`: skip quests whose objectives are this far from the giver (0 = no limit) |
+| `[11-20]` | A level band. Bands must cover 1-60 in order, with no gaps or overlaps. `[60]` is a single level. |
+| `alliance:`, `horde:`, `both:` | Zones for the band, separated by commas. `START` means your race's starting zone. |
+| `note:` | A tip shown for the band in the Plan tab. |
+| `skip quests:` | Quest IDs the guide never picks up or auto-accepts. |
+| `priority quests:` | Quest IDs picked up first, wherever their giver stands. |
+| `step 12 buy: ...` | A reminder from a level. Kinds are `train`, `buy`, `note` and `hearth`. `train` clears when you open your class trainer, `hearth` when you set your hearthstone. You click the others off. |
+
+Quest IDs are the numbers in Wowhead and Questie quest links. Guides are read as data only, never run as code. Imported text has the `|` character replaced, because the game would read it as a colour or link code.
 
 ## The step guide
 
@@ -27,7 +78,7 @@ The guide window shows your current step, the next few steps and a short list of
 
 | Step | Where it comes from |
 |---|---|
-| **Talk to (NPC) - Accept: (quests)** | Quests you can pick up now in your route's zones. QuestieDB supplies the quest givers and checks prerequisites, race, class, faction and level. |
+| **Talk to (NPC) - Accept: (quests)** | Quests you can pick up now in your guide's zones. QuestieDB supplies the quest givers and checks prerequisites, race, class, faction and level. |
 | **Complete: (quest)** | Quests in your log. The step shows live objective progress, and the arrow points to Blizzard's own quest waypoint or the nearest QuestieDB spawn. |
 | **Turn in to (NPC)** | Finished quests in your log, pointing to the NPC who ends the quest. |
 | **Train at (trainer)** | Every two levels from level 4, pointing to your nearest class trainer. |
@@ -53,8 +104,7 @@ Steps advance on their own:
 ## Features
 
 - **Detects your character automatically.** It covers all 10 Forever races, including the Skyborne and their faction-specific classes. It also points out when you're playing one of the six new race/class combinations, such as an Undead Paladin or a Dwarf Shaman.
-- **Three modes: Story, Efficient and Dungeon.** See the table above.
-- **Picks a starting mode for your class.** Warriors and Priests start on Dungeon, Rogues on Story, and everyone else on Efficient. You can switch at any time.
+- **Guides you can edit and share:** Story and Efficient are built in, and you can copy, write, export and import your own. See above.
 - **Target button.** Click it, or press its key, to target the nearest creature you still need for a quest.
 - **Gives class advice.** You get a leveling spec, an alternative, the class's launch leveling tier and practical tips.
 - **Suggests dungeons.** All Classic and new Forever dungeons in your level range are listed. Dungeons deep in enemy territory go to the bottom of the list.
@@ -96,22 +146,23 @@ Everything runs from the game's own UI.
 **Quest automation:** talking to a quest giver accepts their quests and hands in finished ones, with the reward taken for you.
 - **Pausing:** hold **Shift** while you open the NPC and nothing is automated for that conversation. The pause key can be changed in Settings.
 - **Never automated:** choosing between several rewards, quests that cost gold to complete, quests shared by other players, and escort confirmations are always left to you.
-- **Accept filters**, all set in Settings: quests you skipped in the guide, grey quests and repeatable quests are skipped. By default it also only accepts quests your mode would pick, so Efficient won't load you up with low-value quests. Quests QuestieDB doesn't know yet are accepted.
+- **Accept filters**, all set in Settings: quests you skipped in the guide, grey quests and repeatable quests are skipped. By default it also only accepts quests your guide would pick, so Efficient won't load you up with low-value quests, and a guide's `skip quests` list is respected. Quests QuestieDB doesn't know yet are accepted.
 - **Questie:** if Questie's own auto-accept or auto-complete is on, ForeverPath stands aside and Settings tells you, so the two don't fight over the same window.
 
-**Main window**, with three tabs. The mode buttons at the top (Story, Efficient, Dungeon) apply to Guides and Plan.
+**Main window**, with four tabs. The line at the top shows the guide you're following, with a **Change guide** button.
 
 | Tab | What's in it |
 |---|---|
-| **Guides** | A list of every zone guide on your route. Each guide shows its level range and how many of its quests you've done, guides for your level are gold, and the one you're following has an arrow. Click a guide to see all its quests: level, quest giver and your status (Done, Ready to turn in, In your log, Available, the level you need, or Requirements not met yet). **Follow this guide** keeps the step guide in that zone. **Automatic** goes back to following your route for your level. |
+| **Guides** | Every guide: the built-in ones, then yours. Select one to see its details, then **Use this guide**, **Edit** (or **View** for built-ins), **Copy**, **New guide**, **Delete**, **Export** or **Import**. |
+| **Zones** | Every zone in your guide. Each shows its level range and how many of its quests you've done. Zones for your level are gold, and the one you're following has an arrow. Click a zone to see all its quests: level, quest giver and your status (Done, Ready to turn in, In your log, Available, the level you need, or Requirements not met yet). **Follow this zone** keeps the step guide in that zone. **Automatic** goes back to your guide's zones for your level. |
 | **Plan** | Leveling spec and tips for your class, your route's level bands, dungeons for your level, upcoming milestones and rested XP. |
-| **Settings** | Quest automation: accept, turn in, only quests your mode wants, skip grey or repeatable quests, and the pause key. Also: turn step-by-step guiding on or off, show or hide the guide window and the minimap button, and turn level-up announcements on or off. Choose the waypoint arrow (Automatic, TomTom, Map pin, Off). Bring back skipped quests, and reset window positions. |
+| **Settings** | Quest automation: accept, turn in, only quests your guide wants, skip grey or repeatable quests, and the pause key. Also: turn step-by-step guiding on or off, show or hide the guide window and the minimap button, and turn level-up announcements on or off. Choose the waypoint arrow (Automatic, TomTom, Map pin, Off). Bring back skipped quests, and reset window positions. |
 
 The minimap's addon compartment also opens the main window, even if you hide the minimap button.
 
 ### Slash commands (optional)
 
-Everything above can also be done with commands, which is handy for macros: `/fp`, `/fp guide [on|off]`, `/fp skip`, `/fp done`, `/fp unskip`, `/fp waypoints auto|shortestpath|tomtom|builtin|off`, `/fp route story|efficient|dungeon`, `/fp next`, `/fp reset` and `/fp help`.
+Everything above can also be done with commands, which is handy for macros: `/fp`, `/fp guide [on|off]`, `/fp skip`, `/fp done`, `/fp unskip`, `/fp waypoints auto|shortestpath|tomtom|builtin|off`, `/fp route <guide id or name>`, `/fp next`, `/fp reset` and `/fp help`.
 
 ## Project layout
 
@@ -119,7 +170,7 @@ Everything above can also be done with commands, which is handy for macros: `/fp
 ForeverPath.toc      Load order and metadata (Interface 16001 = Forever 1.60.1)
 Core/Init.lua        Namespace and event dispatcher
 Locales/enUS.lua     UI strings
-Data/                Races, classes, dungeons, routes, milestones, suggestions (plain tables)
+Data/                Races, classes, dungeons, built-in guides, milestones, suggestions (plain tables)
 Core/Util.lua        Helpers (secret-value guards, formatting, 64-bit-safe flag checks)
 Core/Settings.lua    SavedVariables with defaults and schema versioning
 Core/GameApi.lua     Every quest-log, map and position call, guarded and swappable in tests
@@ -130,10 +181,13 @@ Integrations/        QuestieDB adapter and waypoint providers (Shortest Path For
 Guide/Sources.lua    Live game state -> candidate steps
 Guide/Planner.lua    Pure: merge steps at the same NPC, order as a walking route
 Guide/Engine.lua     Events -> replans, sticky current step, skip/done, chosen guide, caching
-Guide/Catalog.lua    Zone guides per route and their quest overviews (guide browser data)
+Guide/GuideFormat.lua  Guide text format: parse, validate, write (no code execution)
+Guide/Library.lua    Built-in and player guides: save, copy, delete, import, export
+Guide/Catalog.lua    Zones of a guide and their quest overviews (Zones tab data)
 Guide/AutoQuest.lua  Auto accept / turn in: pure decisions plus the quest dialog events
 UI/MainFrame.lua     Main window shell: tabs and route picker
-UI/*Tab.lua          Guides (browser), Plan and Settings tabs
+UI/*Tab.lua          Guides (library), Zones, Plan and Settings tabs
+UI/GuideEditor.lua   Guide editor window (edit, new, import, export, view)
 UI/GuideFrame.lua    Step guide window
 UI/MinimapButton.lua Library-free minimap button
 UI/TargetButton.lua  Secure button cycling quest mobs nearest-to-furthest (Bindings.xml adds its key)

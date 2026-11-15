@@ -212,7 +212,7 @@ local function create()
     end)
     f.done:SetPoint("LEFT", f.skip, "RIGHT", 4, 0)
 
-    f.guides = newButton(f, L.GUIDE_BROWSE, function() ns.MainFrame.ShowTab("guides") end)
+    f.guides = newButton(f, L.GUIDE_BROWSE, function() ns.MainFrame.ShowTab("zones") end)
     -- Sits after Done's slot so it doesn't move when Done is hidden.
     f.guides:SetPoint("LEFT", f.skip, "RIGHT", 78, 0)
 

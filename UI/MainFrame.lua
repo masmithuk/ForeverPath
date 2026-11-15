@@ -1,15 +1,19 @@
 --[[
     ForeverPath - UI/MainFrame.lua
 
-    The main window: a movable frame with three tabs and a route picker.
+    The main window: a movable frame with four tabs and a line showing the
+    guide you're following.
 
-      Guides    browse every zone guide on your route and pick one
-      Plan      class advice, route bands, dungeons and rested XP
+      Guides    every guide (built-in and your own): use, edit, copy,
+                create, delete, export and import
+      Zones     the zones of your guide and their quests; follow one
+      Plan      class advice, level bands, dungeons and rested XP
       Settings  everything that used to need a slash command
 
-    Each tab lives in its own file (UI/GuidesTab.lua, UI/PlanTab.lua,
-    UI/SettingsTab.lua) and exposes Create(parent) and Refresh(). This file
-    only owns the frame, the tab buttons and the route buttons.
+    Each tab lives in its own file (UI/LibraryTab.lua, UI/ZonesTab.lua,
+    UI/PlanTab.lua, UI/SettingsTab.lua) and exposes Create(parent) and
+    Refresh(). This file only owns the frame, the tab buttons and the
+    current-guide line.
 
     The frame is created lazily on first show. It is not a protected
     frame, so it can be opened and closed in combat.
@@ -30,7 +34,8 @@ MainFrame.BUTTON_HEIGHT = 22
 MainFrame.CONTENT_TOP = -32 - 2 * (22 + 6)
 
 local TABS = {
-    { id = "guides",   label = "TAB_GUIDES",   module = "GuidesTab" },
+    { id = "library",  label = "TAB_LIBRARY",  module = "LibraryTab" },
+    { id = "zones",    label = "TAB_ZONES",    module = "ZonesTab" },
     { id = "plan",     label = "TAB_PLAN",     module = "PlanTab" },
     { id = "settings", label = "TAB_SETTINGS", module = "SettingsTab" },
 }
@@ -76,19 +81,13 @@ local function createTabButtons(f)
     end
 end
 
-local function createRouteButtons(f)
-    f.routeLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    f.routeLabel:SetPoint("TOPLEFT", f, "TOPLEFT", MainFrame.PADDING, -30 - 28 - 4)
-    f.routeLabel:SetText(L.ROUTE_LABEL)
+--- "Guide: Efficient (Speedrun)   [Change guide]"
+local function createGuideLine(f)
+    f.guideLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    f.guideLabel:SetPoint("TOPLEFT", f, "TOPLEFT", MainFrame.PADDING, -30 - 28 - 4)
 
-    f.routeButtons = {}
-    for i, routeId in ipairs(ns.Data.RouteOrder) do
-        local route = ns.Data.Routes[routeId]
-        local b = newButton(f, route.name, 150, function() MainFrame.SetRoute(routeId) end)
-        b:SetPoint("TOPLEFT", f, "TOPLEFT", MainFrame.PADDING + 60 + (i - 1) * 154, -30 - 28)
-        b.routeId = routeId
-        f.routeButtons[i] = b
-    end
+    f.changeGuide = newButton(f, L.CHANGE_GUIDE, 130, function() MainFrame.ShowTab("library") end)
+    f.changeGuide:SetPoint("TOPRIGHT", f, "TOPRIGHT", -MainFrame.PADDING - 4, -30 - 28)
 end
 
 local function create()
@@ -112,7 +111,7 @@ local function create()
     f.title:SetText(L.TITLE)
 
     createTabButtons(f)
-    createRouteButtons(f)
+    createGuideLine(f)
 
     f.panels = {}
     for _, tab in ipairs(TABS) do
@@ -182,14 +181,8 @@ function MainFrame.Refresh()
     local routeId = ns.Advisor.ResolveRouteId(profile, ns.Settings.char.routeId)
 
     highlight(frame.tabButtons, "tabId", tabId)
-    highlight(frame.routeButtons, "routeId", routeId)
-
-    -- The route picker matters on Guides and Plan, not on Settings.
-    local showRoutes = tabId ~= "settings"
-    for _, b in ipairs(frame.routeButtons) do
-        if showRoutes then b:Show() else b:Hide() end
-    end
-    if showRoutes then frame.routeLabel:Show() else frame.routeLabel:Hide() end
+    frame.guideLabel:SetText(L.CURRENT_GUIDE_FMT:format(ns.Library.Get(routeId).name))
+    if tabId == "library" then frame.changeGuide:Hide() else frame.changeGuide:Show() end
 
     for _, tab in ipairs(TABS) do
         if tab.id == tabId then
@@ -232,7 +225,7 @@ function MainFrame.IsShown()
     return frame ~= nil and frame:IsShown()
 end
 
---- Save a route choice for this character and redraw everything.
+--- Follow a guide on this character and redraw everything.
 function MainFrame.SetRoute(routeId)
     if ns.Settings.char.routeId ~= routeId then
         ns.Settings.char.routeId = routeId

@@ -71,13 +71,13 @@ return {
         T.eq(questStatus(overview, 102), "ready")
     end },
 
-    { "the Guides tab lists guides and shows the selected guide's quests", function(T)
+    { "the Zones tab lists zones and shows the selected zone's quests", function(T)
         local ns = orc(T)
-        ns.MainFrame.ShowTab("guides")
-        local rows = ns.GuidesTab.GetRows()
+        ns.MainFrame.ShowTab("zones")
+        local rows = ns.ZonesTab.GetRows()
         T.truthy(#rows >= 10, "a row per guide")
         T.contains(rows[1].text:GetText(), "Durotar")
-        local detail = ns.GuidesTab.GetDetailText()
+        local detail = ns.ZonesTab.GetDetailText()
         T.contains(detail, "Vile Familiars")
         T.contains(detail, "Requirements not met yet")
         T.contains(detail, "Level 30")
@@ -85,8 +85,8 @@ return {
 
     { "following a guide limits new quests to that zone", function(T)
         local ns = orc(T, 11)
-        ns.MainFrame.ShowTab("guides")
-        ns.GuidesTab.Select("The Barrens")
+        ns.MainFrame.ShowTab("zones")
+        ns.ZonesTab.Select("The Barrens")
         ns.Engine.SetGuide("The Barrens")
         T.eq(ForeverPathCharDB.guideId, "The Barrens")
 
@@ -98,7 +98,7 @@ return {
             T.truthy(s.kind ~= "ACCEPT" or s.target.mapID == 1413, "only Barrens givers")
         end
         T.contains(ns.GuideFrame.HeaderText(), "The Barrens")
-        T.contains(ns.GuidesTab.FollowingText(), "The Barrens")
+        T.contains(ns.ZonesTab.FollowingText(), "The Barrens")
 
         ns.Engine.SetGuide(nil)
         T.contains(ns.GuideFrame.HeaderText(), "Automatic")
@@ -130,11 +130,11 @@ return {
 
     { "browser text helpers", function(T)
         local ns = orc(T)
-        local row = ns.GuidesTab.RowText({ name = "Durotar", min = 1, max = 10, active = true },
+        local row = ns.ZonesTab.RowText({ name = "Durotar", min = 1, max = 10, active = true },
             { total = 12, done = 3 })
         T.contains(row, "> ")
         T.contains(row, "3/12")
-        T.contains(ns.GuidesTab.DetailText({ name = "X", min = 1, max = 2 },
+        T.contains(ns.ZonesTab.DetailText({ name = "X", min = 1, max = 2 },
             { dataStatus = "missing", quests = {}, total = 0, done = 0 }), "Install Questie")
     end },
 }

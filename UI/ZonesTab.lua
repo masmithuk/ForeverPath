@@ -1,19 +1,19 @@
 --[[
-    ForeverPath - UI/GuidesTab.lua
+    ForeverPath - UI/ZonesTab.lua
 
-    "Guides" tab: the guide browser.
+    "Zones" tab: the zones of the guide you're following.
 
-      Left   every zone guide on the selected route, with its level range
-             and progress (quests done / total). Guides for your level are
-             gold; the one you're following is marked with an arrow.
-      Right  the selected guide's quests with level, quest giver and your
-             status, plus "Follow this guide" and "Automatic" buttons.
+      Left   every zone in the guide, with its level range and progress
+             (quests done / total). Zones for your level are gold; the one
+             you're following is marked with an arrow.
+      Right  the selected zone's quests with level, quest giver and your
+             status, plus "Follow this zone" and "Automatic" buttons.
 ]]
 
 local _, ns = ...
 
-local GuidesTab = {}
-ns.GuidesTab = GuidesTab
+local ZonesTab = {}
+ns.ZonesTab = ZonesTab
 
 local L = ns.L
 local Util = ns.Util
@@ -38,7 +38,7 @@ local STATUS_TEXT = {
 -- Text (pure; tested)
 ---------------------------------------------------------------------------
 
-function GuidesTab.RowText(guide, overview)
+function ZonesTab.RowText(guide, overview)
     local marker = guide.active and C("good", "> ") or ""
     local name = guide.recommended and C("accent", guide.name) or guide.name
     if guide.isNew then name = name .. C("new", " *") end
@@ -49,23 +49,16 @@ function GuidesTab.RowText(guide, overview)
     return ("%s%s  %s%s"):format(marker, name, C("muted", guide.min .. "-" .. guide.max), progress)
 end
 
-function GuidesTab.StatusLabel(q)
+function ZonesTab.StatusLabel(q)
     local entry = STATUS_TEXT[q.status]
     local label = L[entry[2]]
     if q.status == "level" then label = label:format(q.requiredLevel) end
     return C(entry[1], label)
 end
 
-function GuidesTab.DetailText(guide, overview)
+function ZonesTab.DetailText(guide, overview)
     local lines = {}
     lines[#lines + 1] = C("accent", ("%s  (%d-%d)"):format(guide.name, guide.min, guide.max))
-    if guide.isDungeon then
-        local where = L.GUIDES_ENTRANCE_FMT:format(guide.zone)
-        if guide.territory then
-            where = where .. ", " .. L.FACTION_TERRITORY:format(guide.territory)
-        end
-        lines[#lines + 1] = C("muted", where)
-    end
 
     if overview.dataStatus ~= "ready" then
         lines[#lines + 1] = C("warn", L.GUIDES_NEED_QUESTIE)
@@ -80,12 +73,12 @@ function GuidesTab.DetailText(guide, overview)
     lines[#lines + 1] = " "
     for _, q in ipairs(overview.quests) do
         lines[#lines + 1] = ("[%d] %s  %s  %s"):format(
-            q.level, q.name, C("muted", "- " .. q.giver), GuidesTab.StatusLabel(q))
+            q.level, q.name, C("muted", "- " .. q.giver), ZonesTab.StatusLabel(q))
     end
     return table.concat(lines, "\n")
 end
 
-function GuidesTab.FollowingText()
+function ZonesTab.FollowingText()
     local guideId = ns.Settings.char.guideId
     if guideId then return L.GUIDES_FOLLOWING_FMT:format(guideId) end
     return L.GUIDES_FOLLOWING_AUTO
@@ -111,12 +104,12 @@ local function createListRow(parent, index)
 
     row:SetScript("OnClick", function(self)
         selectedId = self.guideId
-        GuidesTab.Refresh()
+        ZonesTab.Refresh()
     end)
     return row
 end
 
-function GuidesTab.Create(parent)
+function ZonesTab.Create(parent)
     local MF = ns.MainFrame
     panel = MF.NewPanel(parent)
 
@@ -137,13 +130,13 @@ function GuidesTab.Create(parent)
 
     panel.follow = MF.NewButton(panel, L.GUIDES_FOLLOW, 150, function()
         if selectedId then ns.Engine.SetGuide(selectedId) end
-        GuidesTab.Refresh()
+        ZonesTab.Refresh()
     end)
     panel.follow:SetPoint("TOPLEFT", panel.following, "BOTTOMLEFT", 0, -6)
 
     panel.auto = MF.NewButton(panel, L.GUIDES_AUTO, 150, function()
         ns.Engine.SetGuide(nil)
-        GuidesTab.Refresh()
+        ZonesTab.Refresh()
     end)
     panel.auto:SetPoint("LEFT", panel.follow, "RIGHT", 6, 0)
 
@@ -168,7 +161,7 @@ local function pickDefault(guides)
     return fallback
 end
 
-function GuidesTab.Refresh()
+function ZonesTab.Refresh()
     if not panel then return end
     local ctx = ns.Engine.BuildContext()
     local guides = ns.Catalog.List(ctx.profile, ns.Settings.char.routeId)
@@ -186,16 +179,16 @@ function GuidesTab.Refresh()
         local row = panel.rows[i] or createListRow(panel.listChild, i)
         panel.rows[i] = row
         row.guideId = guide.id
-        row.text:SetText(GuidesTab.RowText(guide, ns.Catalog.Overview(guide.id, ctx)))
+        row.text:SetText(ZonesTab.RowText(guide, ns.Catalog.Overview(guide.id, ctx)))
         if guide.id == selectedId then row.selected:Show() else row.selected:Hide() end
         row:Show()
     end
     for i = #guides + 1, #panel.rows do panel.rows[i]:Hide() end
     panel.listChild:SetHeight(#guides * ROW_HEIGHT)
 
-    panel.following:SetText(GuidesTab.FollowingText())
+    panel.following:SetText(ZonesTab.FollowingText())
     if selected then
-        panel.detail:SetContent(GuidesTab.DetailText(selected, ns.Catalog.Overview(selected.id, ctx)))
+        panel.detail:SetContent(ZonesTab.DetailText(selected, ns.Catalog.Overview(selected.id, ctx)))
         if selected.active then panel.follow:Disable() else panel.follow:Enable() end
     else
         panel.detail:SetContent("")
@@ -205,15 +198,15 @@ function GuidesTab.Refresh()
 end
 
 --- For tests: select a guide as if its row were clicked.
-function GuidesTab.Select(guideId)
+function ZonesTab.Select(guideId)
     selectedId = guideId
-    GuidesTab.Refresh()
+    ZonesTab.Refresh()
 end
 
-function GuidesTab.GetDetailText()
+function ZonesTab.GetDetailText()
     return panel and panel.detail.text:GetText()
 end
 
-function GuidesTab.GetRows()
+function ZonesTab.GetRows()
     return panel and panel.rows or {}
 end

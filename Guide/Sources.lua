@@ -81,21 +81,24 @@ local function rulesOf(ctx)
     return ctx.rules or {}
 end
 
---- Is this quest part of a dungeon the character is ready for (or chosen)?
---- Counts the dungeon's own quests and the quest just before one in a chain.
-local function dungeonFor(questID, ctx)
-    local data = ns.QuestieData
-    local d = data.DungeonOf(questID)
-    if not d then
-        local nextID = data.NextInChain(questID)
-        d = nextID and data.DungeonOf(nextID) or nil
-    end
-    if not d then return nil end
-    if ctx.chosenDungeon then
-        return d.name == ctx.chosenDungeon and d or nil
-    end
-    local level = ctx.profile.level
-    if level >= d.min - 2 and level <= d.max then return d end
+-- Yards a guide's "priority quests" are treated as closer than they are.
+local PRIORITY_BONUS = 1000
+
+--- Quests the chosen guide never picks up (its "skip quests" list), or
+--- that you skipped in the step guide.
+local function isSkipped(ctx, questID)
+    if ctx.skipped[questID] then return true end
+    return ctx.guide ~= nil and ctx.guide.skipSet ~= nil and ctx.guide.skipSet[questID] == true
+end
+
+local function isPriority(ctx, questID)
+    return ctx.guide ~= nil and ctx.guide.prioritySet ~= nil and ctx.guide.prioritySet[questID] == true
+end
+
+--- maxDetour of 0 (or unset) means "no limit".
+local function detourLimit(rules)
+    local limit = rules.maxDetour
+    if limit and limit > 0 then return limit end
     return nil
 end
 
@@ -134,7 +137,7 @@ local function dungeonStep(ctx, questID, quest, dungeon)
         questIDs = { questID },
         actor = "dungeon:" .. dungeon.name,
         target = target(point, dungeon.name),
-        bonus = rulesOf(ctx).dungeonBonus,
+        bonus = rulesOf(ctx).turninBonus,
     }
 end
 
@@ -162,7 +165,7 @@ end
 
 local function questLogSteps(ctx, out)
     for questID, quest in pairs(ctx.log) do
-        if not ctx.skipped[questID] then
+        if not ctx.skipped[questID] then -- quests already taken are always shown
             if quest.complete then
                 out[#out + 1] = turnInStep(ctx, questID, quest)
             else
@@ -196,40 +199,39 @@ function Sources.DoableQuests(ctx)
     return doable
 end
 
---- Efficient mode: is the quest's nearest objective too far from its giver?
+--- Is the quest's nearest objective too far from its giver (Efficient)?
 local function isDetour(questID, giverPoint, maxDetour)
     if not maxDetour or not giverPoint or not giverPoint.world then return false end
     local _, _, dist = nearestActor(giverPoint.world, ns.QuestieData.GetObjectiveTargets(questID))
     return dist ~= nil and dist > maxDetour
 end
 
---- Would the current mode pick this quest up? Used by auto-accept.
+--- Would the current guide pick this quest up? Used by auto-accept.
 --- A quest an NPC offers is clearly available, so prerequisites aren't
---- re-checked - only what the mode itself filters on.
+--- re-checked - only what the guide itself filters on.
 function Sources.WantsQuest(ctx, questID)
-    if ctx.skipped[questID] then return false end
+    if isSkipped(ctx, questID) then return false end
+    if isPriority(ctx, questID) then return true end
     local data = ns.QuestieData
     if not data.IsReady() then return true end
 
     local rules = rulesOf(ctx)
-    -- Dungeon mode always wants the quests for dungeons you're ready for.
-    if rules.dungeons and dungeonFor(questID, ctx) then return true end
-
     local inWindow = data.InLevelWindow(questID, ctx.profile.level, rules)
     if inWindow == nil then return true end -- unknown to QuestieDB: allow
     if not inWindow then return false end
 
-    if rules.maxDetour then
+    local limit = detourLimit(rules)
+    if limit then
         local _, point = nearestActor(ctx.origin, data.GetStarters(questID, ctx.profile.faction))
-        if isDetour(questID, point, rules.maxDetour) then return false end
+        if isDetour(questID, point, limit) then return false end
     end
     return true
 end
 
-local function acceptBonus(ctx, questID, isDungeon)
+local function acceptBonus(ctx, questID)
     local rules = rulesOf(ctx)
     local bonus = 0
-    if isDungeon then bonus = bonus + (rules.dungeonBonus or 0) end
+    if isPriority(ctx, questID) then bonus = bonus + PRIORITY_BONUS end
     if (rules.chainBonus or 0) > 0 and ns.QuestieData.IsFollowUp(questID) then
         bonus = bonus + rules.chainBonus
     end
@@ -242,18 +244,15 @@ local function availableSteps(ctx, out)
     local found = {}
 
     for _, questID in ipairs(ctx.doable or Sources.DoableQuests(ctx)) do
-        if not ctx.skipped[questID] and not ctx.log[questID] then
-            -- Dungeon mode picks up dungeon quests wherever their giver
-            -- stands; everything else stays inside the allowed zones.
-            local dungeon = rules.dungeons and dungeonFor(questID, ctx) or nil
-            local maps = (not dungeon) and ctx.allowedMaps or nil
+        if not isSkipped(ctx, questID) and not ctx.log[questID] then
+            -- Priority quests are fetched wherever their giver stands;
+            -- everything else stays inside the guide's zones.
+            local priority = isPriority(ctx, questID)
+            local maps = (not priority) and ctx.allowedMaps or nil
             local actor, point, dist = nearestActor(ctx.origin,
                 data.GetStarters(questID, ctx.profile.faction), maps)
-            if actor and not isDetour(questID, point, rules.maxDetour) then
-                found[#found + 1] = {
-                    questID = questID, actor = actor, point = point, dist = dist,
-                    dungeon = dungeon,
-                }
+            if actor and (priority or not isDetour(questID, point, detourLimit(rules))) then
+                found[#found + 1] = { questID = questID, actor = actor, point = point, dist = dist }
             end
         end
     end
@@ -263,7 +262,6 @@ local function availableSteps(ctx, out)
         local f = found[i]
         local name = data.GetQuestName(f.questID) or ("quest " .. f.questID)
         local line = "Accept: " .. name
-        if f.dungeon then line = line .. " (" .. f.dungeon.name .. ")" end
         out[#out + 1] = {
             key = "accept:" .. f.questID,
             kind = "ACCEPT",
@@ -272,7 +270,7 @@ local function availableSteps(ctx, out)
             questIDs = { f.questID },
             actor = f.actor.kind .. ":" .. f.actor.id,
             target = target(f.point, f.actor.name),
-            bonus = acceptBonus(ctx, f.questID, f.dungeon ~= nil),
+            bonus = acceptBonus(ctx, f.questID),
         }
     end
 end
@@ -290,10 +288,30 @@ function Sources.DueTrainingLevel(level, trainedLevel)
     return due
 end
 
+local GUIDE_STEP_DETECT = { TRAIN = "trainer", HEARTH = "hearth" }
+
+--- Built-in suggestions plus the chosen guide's own "step" lines, in the
+--- same shape. A guide step's id is built from its content, so editing
+--- other lines of the guide doesn't reset what you've ticked off.
+function Sources.AllSuggestions(guide)
+    local list = {}
+    for _, s in ipairs(ns.Data.Suggestions) do list[#list + 1] = s end
+    for _, s in ipairs(guide and guide.steps or {}) do
+        list[#list + 1] = {
+            id = ("guide:%s:%d:%s:%s"):format(guide.id or "?", s.level, s.kind, s.text),
+            level = s.level,
+            kind = s.kind,
+            text = s.text,
+            detect = GUIDE_STEP_DETECT[s.kind],
+        }
+    end
+    return list
+end
+
 local function suggestionSteps(ctx, out, reminders)
     local profile, char = ctx.profile, ctx.char
 
-    for _, s in ipairs(ns.Data.Suggestions) do
+    for _, s in ipairs(Sources.AllSuggestions(ctx.guide)) do
         local forClass = not s.classes or s.classes[profile.classFile]
         if forClass and profile.level >= s.level and not char.done[s.id] then
             reminders[#reminders + 1] = {
@@ -340,7 +358,7 @@ end
 --     profile, log, isCompleted(id), origin (world pos or nil),
 --     allowedMaps, skipped = { [questID] = true },
 --     doable = optional cached result of Sources.DoableQuests(ctx),
---     rules = the mode's rules (Data/Routes.lua), chosenDungeon = name or nil,
+--     rules = the guide's rules, guide = the guide (skip/priority lists, steps),
 --     char = { done = {}, trainedLevel = n } }
 -- @return steps (route candidates), reminders (no route position)
 function Sources.Collect(ctx)

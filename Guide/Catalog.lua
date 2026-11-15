@@ -25,37 +25,12 @@ ns.Catalog = Catalog
 
 
 
---- Dungeon guides (Dungeon mode), in level order.
-local function dungeonGuides(profile)
-    local list = {}
-    for _, d in ipairs(ns.Data.Dungeons) do
-        list[#list + 1] = {
-            id = d.name, name = d.name, min = d.min, max = d.max,
-            zone = d.zone, isNew = d.isNew, territory = d.territory, isDungeon = true,
-            -- Dungeon quests are worth collecting a couple of levels early.
-            recommended = profile.level >= d.min - 2 and profile.level <= d.max,
-        }
-    end
-    return list
-end
-
---- Guides for a mode, in level order: zones, or dungeons in Dungeon mode.
--- @return list of { id, name, min, max, recommended, active, isDungeon? }
+--- Zones of a guide, in level order.
+-- @return list of { id, name, min, max, recommended, active }
 function Catalog.List(profile, routeId)
     local id = ns.Advisor.ResolveRouteId(profile, routeId)
-    local route = ns.Data.Routes[id]
+    local route = ns.Library.Get(id)
     local byName, list = {}, {}
-
-    if route.guidesAreDungeons then
-        list = dungeonGuides(profile)
-        local chosen = ns.Settings.char.guideId
-        for _, guide in ipairs(list) do guide.active = guide.id == chosen end
-        table.sort(list, function(a, b)
-            if a.min ~= b.min then return a.min < b.min end
-            return a.name < b.name
-        end)
-        return list
-    end
 
     for _, band in ipairs(route.bands) do
         for _, zone in ipairs(ns.Advisor.ResolveZones(band, profile, false)) do
@@ -95,17 +70,14 @@ function Catalog.QuestStatus(q, ctx)
     return "locked"
 end
 
---- Quest records for a guide: a zone's quests, or a dungeon's quests.
-local function guideQuests(guideId, ctx)
-    if ctx.route and ctx.route.route.guidesAreDungeons then
-        return ns.QuestieData.GetQuestsForDungeon(guideId)
-    end
-    local mapID = ns.ZoneMap.MapIdByName(guideId)
+--- Quest records for a zone.
+local function guideQuests(zoneName)
+    local mapID = ns.ZoneMap.MapIdByName(zoneName)
     return mapID and ns.QuestieData.GetQuestsForMap(mapID) or {}
 end
 
 --- The quests in a guide.
--- @param guideId zone or dungeon name
+-- @param guideId zone name
 -- @param ctx from Engine.BuildContext()
 -- @return { quests = list, total, done, dataStatus }
 --   each quest: { id, name, level, requiredLevel, status, giver }
@@ -113,7 +85,7 @@ function Catalog.Overview(guideId, ctx)
     local overview = { quests = {}, total = 0, done = 0, dataStatus = ns.QuestieData.Status() }
     if not ns.QuestieData.IsReady() then return overview end
 
-    for _, q in ipairs(guideQuests(guideId, ctx)) do
+    for _, q in ipairs(guideQuests(guideId)) do
         local givers = ns.QuestieData.GetStarters(q.id, ctx.profile.faction)
         -- No friendly quest giver means it's the other faction's quest.
         if #givers > 0 then

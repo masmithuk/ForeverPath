@@ -91,6 +91,9 @@ function Frame:GetPoint() return "CENTER", nil, "CENTER", 10, 20 end
 function Frame:GetTop() return 500 end
 function Frame:GetBottom() return 400 end
 function Frame:CreateFontString() return mock.newFrame() end
+function Frame:Enable() rawset(self, "disabled", false) end
+function Frame:Disable() rawset(self, "disabled", true) end
+function Frame:IsEnabled() return not rawget(self, "disabled") end
 function Frame:CreateTexture() return mock.newFrame() end
 function Frame:SetTexture(t) self.texture = t end
 function Frame:HookScript(name, fn)

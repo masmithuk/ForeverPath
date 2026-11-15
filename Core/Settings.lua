@@ -17,7 +17,7 @@ local Settings = {}
 ns.Settings = Settings
 
 -- Bump when the shape of saved data changes, and add a migration below.
-Settings.SCHEMA_VERSION = 3
+Settings.SCHEMA_VERSION = 4
 
 local ACCOUNT_DEFAULTS = {
     schema = Settings.SCHEMA_VERSION,
@@ -30,7 +30,8 @@ local ACCOUNT_DEFAULTS = {
     },
     showAllBands = false,
     announceLevelUp = true,
-    tab = "guides",                       -- main window tab last shown
+    tab = "library",                      -- main window tab last shown
+    guides = {},                          -- player-made guides: [id] = guide text
     minimap = { angle = 225, hide = false },
     targetButton = true,                  -- show the Target button
     auto = {
@@ -69,6 +70,14 @@ local function migrate(db)
     -- Story/Efficient modes; carry each character's choice across.
     if from < 3 and db.routeId then
         db.routeId = ns.Data.LegacyRouteIds[db.routeId] or db.routeId
+    end
+    -- Schema 4 (0.6.0) removed Dungeon mode and added the guide library.
+    if from < 4 then
+        if db.routeId == "dungeon" then
+            db.routeId = ns.Data.LegacyRouteIds.dungeon
+            db.guideId = nil -- was a dungeon name, not a zone
+        end
+        if db.tab == "guides" then db.tab = "zones" end
     end
     db.schema = Settings.SCHEMA_VERSION
 end

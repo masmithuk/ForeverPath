@@ -59,27 +59,20 @@ local function currentOrigin()
     return ns.GameApi.GetWorldPosition(pos.mapID, pos.x, pos.y), pos.mapID
 end
 
-local function findDungeon(name)
-    for _, d in ipairs(ns.Data.Dungeons) do
-        if d.name == name then return d end
-    end
-    return nil
+--- Maps where the guide may suggest new quests:
+---   * a zone chosen in the Zones tab: that zone
+---   * Automatic: your guide's zones for your level, plus where you stand
+local function allowedMaps(plan, playerMapID)
+    local zone = ns.Settings.char.guideId
+    local mapID = zone and ns.ZoneMap.MapIdByName(zone)
+    if mapID then return { [mapID] = true } end
+    return ns.Sources.AllowedMaps(plan, playerMapID)
 end
 
---- Maps where the guide may suggest new (non-dungeon) quests:
----   * a chosen zone guide: that zone
----   * a chosen dungeon guide: the zone its entrance is in
----   * Automatic: your mode's zones for your level, plus where you stand
--- @return allowed maps, chosen dungeon name (or nil)
-local function allowedMaps(plan, playerMapID)
-    local guideId = ns.Settings.char.guideId
-    if guideId then
-        local dungeon = plan.route.guidesAreDungeons and findDungeon(guideId)
-        local zone = dungeon and dungeon.zone or guideId
-        local mapID = ns.ZoneMap.MapIdByName(zone)
-        if mapID then return { [mapID] = true }, dungeon and dungeon.name or nil end
-    end
-    return ns.Sources.AllowedMaps(plan, playerMapID), nil
+--- The guide this character is following.
+function Engine.CurrentGuide()
+    local profile = ns.Character.Detect()
+    return ns.Library.Get(ns.Advisor.ResolveRouteId(profile, ns.Settings.char.routeId))
 end
 
 --- Everything a planning pass (or the guide browser) needs to know about
@@ -89,17 +82,16 @@ function Engine.BuildContext()
     local route = ns.Advisor.BuildPlan(profile, ns.Settings.char.routeId)
     local origin, mapID = currentOrigin()
     local char = charGuide()
-    local maps, chosenDungeon = allowedMaps(route, mapID)
     return {
         profile = profile,
         level = profile.level,
         route = route,
+        guide = route.route,
         rules = route.route.rules,
         log = ns.GameApi.GetQuestLog(),
         isCompleted = isCompleted,
         origin = origin,
-        allowedMaps = maps,
-        chosenDungeon = chosenDungeon,
+        allowedMaps = allowedMaps(route, mapID),
         skipped = char.skipped,
         char = char,
     }
@@ -204,8 +196,8 @@ function Engine.WantsQuest(questID)
     return ns.Sources.WantsQuest(Engine.BuildContext(), questID)
 end
 
---- The mode changed: different zones and rules, so rebuild everything.
---- A guide chosen in the old mode no longer applies.
+--- The guide changed: different zones and rules, so rebuild everything.
+--- A zone chosen under the old guide no longer applies.
 function Engine.OnModeChanged()
     ns.Settings.char.guideId = nil
     Engine.state.currentKey = nil
@@ -213,7 +205,14 @@ function Engine.OnModeChanged()
     Engine.RequestReplan()
 end
 
---- Follow one guide (zone or dungeon name), or nil for Automatic.
+--- The guide being followed was edited: same guide, new zones/rules.
+function Engine.OnGuideEdited()
+    Engine.state.currentKey = nil
+    invalidateDoable()
+    Engine.RequestReplan()
+end
+
+--- Follow one zone (by name), or nil for Automatic.
 function Engine.SetGuide(guideId)
     ns.Settings.char.guideId = guideId
     Engine.state.currentKey = nil
@@ -236,14 +235,14 @@ local function onTrainerShow()
     local level = ns.Character.Detect().level
     local char = charGuide()
     char.trainedLevel = math.max(char.trainedLevel or 0, level)
-    for _, s in ipairs(ns.Data.Suggestions) do
+    for _, s in ipairs(ns.Sources.AllSuggestions(Engine.CurrentGuide())) do
         if s.detect == "trainer" and level >= s.level then char.done[s.id] = true end
     end
     Engine.RequestReplan()
 end
 
 local function onHearthBound()
-    for _, s in ipairs(ns.Data.Suggestions) do
+    for _, s in ipairs(ns.Sources.AllSuggestions(Engine.CurrentGuide())) do
         if s.detect == "hearth" then charGuide().done[s.id] = true end
     end
     Engine.RequestReplan()

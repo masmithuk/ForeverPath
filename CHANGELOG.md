@@ -2,6 +2,22 @@
 
 All notable changes are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.6.0] - 2026-11-15
+
+### Added
+- Your own guides. Every guide, built-in or yours, is plain text in a documented format: header, rules, level bands per faction, notes, skip and priority quest lists, and custom reminder steps.
+- **Guides** tab, the guide library: use, edit, view, copy, create, delete (with confirmation), export and import.
+- Guide editor window. It has Check and Save with line-numbered errors, export (text pre-selected for Ctrl+C), import and read-only view with "Copy & edit".
+- Guides' skip lists, priority quests and custom steps drive the step guide and auto-accept.
+- Player guides are saved account-wide. The parser never runs code and strips `|` escape codes.
+
+### Changed
+- The old zone browser is now the **Zones** tab, with "Follow this zone". The main window shows the current guide with a "Change guide" button.
+- `/fp route` accepts any guide's id or name.
+
+### Removed
+- Dungeon mode. Characters using it move to Efficient. The "Run (dungeon)" step for dungeon quests already in your log is kept.
+
 ## [0.5.0] - 2026-11-15
 
 ### Changed

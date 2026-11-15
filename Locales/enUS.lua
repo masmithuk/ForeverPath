@@ -15,20 +15,69 @@ ns.L = L
 
 -- Frame
 L.TITLE                 = "ForeverPath"
-L.TAB_GUIDES            = "Guides"
+L.TAB_LIBRARY           = "Guides"
+L.TAB_ZONES             = "Zones"
 L.TAB_PLAN              = "Plan"
 L.TAB_SETTINGS          = "Settings"
-L.ROUTE_LABEL           = "Mode:"
+L.CURRENT_GUIDE_FMT     = "Guide: %s"
+L.CHANGE_GUIDE          = "Change guide"
 
 -- Guide browser
-L.GUIDES_FOLLOW         = "Follow this guide"
+L.GUIDES_FOLLOW         = "Follow this zone"
 L.GUIDES_AUTO           = "Automatic"
 L.GUIDES_FOLLOWING_FMT  = "Following: %s"
-L.GUIDES_FOLLOWING_AUTO = "Following: Automatic (your route's zones for your level)"
+L.GUIDES_FOLLOWING_AUTO = "Following: Automatic (your guide's zones for your level)"
 L.GUIDES_PROGRESS_FMT   = "%d of %d quests done"
 L.GUIDES_NO_QUESTS      = "QuestieDB has no quests for you here yet."
-L.GUIDES_ENTRANCE_FMT   = "Entrance: %s"
-L.GUIDES_NEED_QUESTIE   = "Install Questie (with QuestieDB) to see the quests in each guide."
+L.GUIDES_NEED_QUESTIE   = "Install Questie (with QuestieDB) to see the quests in each zone."
+
+-- Guide library (Guides tab)
+L.LIB_BUILTIN           = "built-in"
+L.LIB_IN_USE            = "in use"
+L.LIB_BY_FMT            = "by %s"
+L.LIB_BASED_ON_FMT      = "Based on: %s"
+L.LIB_BASE_STORY        = "Story - every quest, chains in order"
+L.LIB_BASE_EFFICIENT    = "Efficient - speedrun"
+L.LIB_RULES_FMT         = "Quests from %d levels below to %d above you; detour limit: %s"
+L.LIB_NO_LIMIT          = "none"
+L.LIB_YARDS_FMT         = "%d yd"
+L.LIB_ZONES_FMT         = "%d zones across levels 1-60"
+L.LIB_EXTRAS_FMT        = "%d skipped quests, %d priority quests, %d custom steps"
+L.LIB_BUILTIN_NOTE      = "Built-in guides can't be changed - use Copy to make your own version."
+L.LIB_USE               = "Use this guide"
+L.LIB_USING             = "In use"
+L.LIB_EDIT              = "Edit"
+L.LIB_VIEW              = "View"
+L.LIB_COPY              = "Copy"
+L.LIB_NEW               = "New guide"
+L.LIB_DELETE            = "Delete"
+L.LIB_DELETE_CONFIRM    = "Click again to delete"
+L.LIB_EXPORT            = "Export"
+L.LIB_IMPORT            = "Import"
+L.LIB_DELETED_FMT       = "Deleted the guide %q."
+L.LIB_USING_FMT         = "Now following the guide %q."
+
+-- Guide editor
+L.EDITOR_TITLE_EDIT     = "Edit guide"
+L.EDITOR_TITLE_NEW      = "New guide"
+L.EDITOR_TITLE_IMPORT   = "Import a guide"
+L.EDITOR_TITLE_EXPORT   = "Export guide"
+L.EDITOR_TITLE_VIEW     = "View guide"
+L.EDITOR_CHECK          = "Check"
+L.EDITOR_SAVE           = "Save"
+L.EDITOR_IMPORT         = "Import"
+L.EDITOR_CLOSE          = "Close"
+L.EDITOR_SELECT_ALL     = "Select all"
+L.EDITOR_COPY_EDIT      = "Copy & edit"
+L.EDITOR_OK             = "No problems found."
+L.EDITOR_SAVED          = "Saved."
+L.EDITOR_IMPORTED_FMT   = "Imported %q."
+L.EDITOR_LINE_FMT       = "Line %d: %s"
+L.EDITOR_MORE_FMT       = "...and %d more."
+L.EDITOR_EXPORT_HINT    = "The whole guide is selected - press Ctrl+C to copy it, then paste it anywhere to share."
+L.EDITOR_IMPORT_HINT    = "Paste a guide here with Ctrl+V, then click Import."
+L.EDITOR_VIEW_HINT      = "Built-in guides are read-only. Click Copy & edit to make your own version."
+L.EDITOR_HELP           = "See the comments at the top of a new guide, or the README, for the format."
 L.QUEST_DONE            = "Done"
 L.QUEST_READY           = "Ready to turn in"
 L.QUEST_ACTIVE          = "In your log"
@@ -113,7 +162,7 @@ L.ALT_SPEC              = "Alternative: %s"
 L.LEVEL_TIER            = "Leveling tier: %s"
 
 -- Route section
-L.ROUTE_HEADER          = "Mode: %s"
+L.ROUTE_HEADER          = "Guide: %s"
 L.NOW                   = "Now"
 L.NEXT                  = "Next"
 L.LEVELS                = "Levels"
@@ -137,8 +186,8 @@ L.GENERAL_HEADER        = "Good to know"
 L.LOADED                = "loaded. Click the map button on your minimap to pick a guide."
 L.DING_FMT              = "Level %d! Your route now suggests: %s"
 L.DING_MILESTONE_FMT    = "Level %d unlocks: %s"
-L.ROUTE_SET_FMT         = "Mode set to %s."
-L.ROUTE_UNKNOWN         = "Unknown mode. Choose one of: %s"
+L.ROUTE_SET_FMT         = "Now following the guide %s."
+L.ROUTE_UNKNOWN         = "Unknown guide. Choose one of: %s"
 L.POSITION_RESET        = "Window position reset."
 L.HELP = {
     "/fp - toggle the leveling plan window",
@@ -148,7 +197,7 @@ L.HELP = {
     "/fp done - mark the current step done",
     "/fp unskip - bring back every skipped quest",
     "/fp waypoints auto|shortestpath|tomtom|builtin|off - choose the arrow",
-    "/fp route <story|efficient|dungeon> - pick a leveling mode",
+    "/fp route <guide id or name> - follow a guide (story, efficient or your own)",
     "/fp next - print your current and next zones to chat",
     "/fp reset - reset window positions",
     "/fp help - show this help",
@@ -157,7 +206,7 @@ L.HELP = {
 -- Step guide
 L.GUIDE_TITLE                = "ForeverPath Guide"
 L.GUIDE_AUTOMATIC            = "Automatic"
-L.GUIDE_BROWSE               = "Guides"
+L.GUIDE_BROWSE               = "Zones"
 L.GUIDE_SKIP                 = "Skip"
 L.GUIDE_DONE                 = "Done"
 L.GUIDE_NOTHING              = "No steps right now. Check the leveling plan (/fp) for where to head next."

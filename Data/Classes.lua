@@ -10,7 +10,7 @@
       tier          consensus leveling tier at launch (S+ best .. C)
       why           one-line reason the spec levels well
       tips          short, practical tips
-      defaultRoute  route id from Data/Routes.lua that suits the class
+      defaultRoute  built-in guide id (Data/Routes.lua) that suits the class
 
     Tiers and specs follow the launch consensus of the Timesaver and
     MMOnster leveling tier lists (as compiled by AxeeTech, 6 Nov 2026).
@@ -91,7 +91,7 @@ ns.Data.Classes = {
             "Pick up a wand as early as you can - it does much of your solo damage.",
             "Priests level much faster in groups; healers find dungeon groups quickly.",
         },
-        defaultRoute = "dungeon",
+        defaultRoute = "efficient",
     },
     SHAMAN = {
         name = "Shaman",
@@ -128,7 +128,7 @@ ns.Data.Classes = {
             "Upgrade your weapon whenever you can - it matters more for Warriors than anyone.",
             "Train First Aid early to cut downtime.",
         },
-        defaultRoute = "dungeon",
+        defaultRoute = "efficient",
     },
 }
 

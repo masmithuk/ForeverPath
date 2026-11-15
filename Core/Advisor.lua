@@ -17,16 +17,16 @@ local DEFAULT_ROUTE = "efficient"
 -- Routes
 ---------------------------------------------------------------------------
 
---- Resolve which route to use: explicit choice, then class default, then
---- the global default.
+--- Resolve which guide to use: the character's choice (if it still
+--- exists), then the class default, then the global default.
 function Advisor.ResolveRouteId(profile, chosenId)
-    local routes = ns.Data.Routes
+    local Library = ns.Library
     chosenId = ns.Data.LegacyRouteIds[chosenId] or chosenId
-    if chosenId and routes[chosenId] then
+    if chosenId and Library.Get(chosenId) then
         return chosenId
     end
     local class = profile and profile.class
-    if class and class.defaultRoute and routes[class.defaultRoute] then
+    if class and class.defaultRoute and Library.Get(class.defaultRoute) then
         return class.defaultRoute
     end
     return DEFAULT_ROUTE
@@ -193,7 +193,7 @@ end
 --- Everything the UI needs, in one table.
 function Advisor.BuildPlan(profile, chosenRouteId)
     local routeId = Advisor.ResolveRouteId(profile, chosenRouteId)
-    local route = ns.Data.Routes[routeId]
+    local route = ns.Library.Get(routeId)
     local level = profile.level
     local index = Advisor.FindBandIndex(route, level)
 

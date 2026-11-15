@@ -1,4 +1,4 @@
--- The three leveling modes, Shortest Path Forever routing and the Target button.
+-- The Story and Efficient guides, Shortest Path Forever routing and the Target button.
 
 local fixtures = require("fixtures")
 
@@ -88,22 +88,8 @@ return {
         T.eq(state.steps[1].title, "Talk to Foreman Thazz'ril")
     end },
 
-    { "Dungeon mode picks up dungeon quests anywhere", function(T)
-        local ns = setup(T, "dungeon", 16)
-        local state = fixtures.login(ns)
-        local lines = table.concat(acceptLines(state), "|")
-        T.contains(lines, "Serpentbloom (Wailing Caverns)")
-        T.contains(lines, "Leaders of the Fang (Wailing Caverns)")
-    end },
-
-    { "other modes don't send you across the world for dungeon quests", function(T)
-        local ns = setup(T, "story", 16)
-        local state = fixtures.login(ns)
-        T.truthy(not table.concat(acceptLines(state), "|"):find("Serpentbloom"))
-    end },
-
     { "dungeon quests in your log merge into one Run step", function(T)
-        local ns, mock = setup(T, "dungeon", 16)
+        local ns, mock = setup(T, "story", 16)
         fixtures.addToLog(mock, 120, "Serpentbloom", false)
         fixtures.addToLog(mock, 121, "Leaders of the Fang", false)
         local state = fixtures.login(ns)
@@ -114,33 +100,11 @@ return {
         T.contains(run.lines, "  Entrance: The Barrens")
     end },
 
-    { "Dungeon mode's guide browser lists dungeons and their quests", function(T)
-        local ns = setup(T, "dungeon", 16)
-        fixtures.login(ns)
-        local ctx = ns.Engine.BuildContext()
-        local guides = ns.Catalog.List(ctx.profile, "dungeon")
-        T.eq(guides[1].isDungeon, true)
-        T.eq(guides[1].min, 13, "lowest dungeons first")
-        local overview = ns.Catalog.Overview("Wailing Caverns", ctx)
-        T.eq(overview.total, 2)
-        T.eq(overview.quests[1].giver, "Apothecary Zamah")
-        T.contains(ns.GuidesTab.DetailText(guides[3], overview), "Entrance:")
-    end },
-
-    { "choosing a dungeon guide limits pickups to that dungeon", function(T)
-        local ns = setup(T, "dungeon", 16)
-        fixtures.login(ns)
-        ns.Engine.SetGuide("Ragefire Chasm")
-        T.truthy(not table.concat(acceptLines(ns.Engine.state), "|"):find("Wailing Caverns"))
-        ns.Engine.SetGuide("Wailing Caverns")
-        T.contains(table.concat(acceptLines(ns.Engine.state), "|"), "Serpentbloom")
-    end },
-
     { "switching mode forgets the guide chosen in the old mode", function(T)
         local ns = setup(T, "story")
         fixtures.login(ns)
         ns.Engine.SetGuide("Durotar")
-        ns.MainFrame.SetRoute("dungeon")
+        ns.MainFrame.SetRoute("efficient")
         T.eq(ForeverPathCharDB.guideId, nil)
     end },
 

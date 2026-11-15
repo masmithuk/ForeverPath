@@ -139,14 +139,8 @@ function Text.Render(profile, plan, xp, opts)
     renderXp(lines, profile, xp)
     renderClass(lines, profile)
 
-    -- The dungeon route leads with dungeons; others lead with zones.
-    if plan.route.dungeonFirst then
-        renderDungeons(lines, plan, profile)
-        renderRoute(lines, plan, opts.showAllBands)
-    else
-        renderRoute(lines, plan, opts.showAllBands)
-        renderDungeons(lines, plan, profile)
-    end
+    renderRoute(lines, plan, opts.showAllBands)
+    renderDungeons(lines, plan, profile)
 
     renderMilestones(lines, plan)
     renderGeneral(lines)

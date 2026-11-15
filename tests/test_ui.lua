@@ -63,7 +63,7 @@ return {
     { "unknown route prints the valid choices", function(T)
         local _, mock = T.fresh()
         SlashCmdList.FOREVERPATH("route nowhere")
-        T.contains(mock.printed[#mock.printed], "story, efficient, dungeon")
+        T.contains(mock.printed[#mock.printed], "story, efficient")
     end },
 
     { "level-up into a new band announces zones and milestones", function(T)
@@ -90,7 +90,7 @@ return {
         T.reload()
         T.eq(ForeverPathDB.showAllBands, true, "kept")
         T.eq(ForeverPathDB.frame.point, "CENTER", "defaults filled")
-        T.eq(ForeverPathDB.schema, 3, "schema stamped")
+        T.eq(ForeverPathDB.schema, 4, "schema stamped")
     end },
 
     { "a 0.3 route choice carries over to the new modes", function(T)
@@ -98,5 +98,15 @@ return {
         ForeverPathCharDB = { schema = 2, routeId = "frontier" }
         T.reload()
         T.eq(ForeverPathCharDB.routeId, "efficient")
+    end },
+
+    { "a 0.4 Dungeon mode choice becomes Efficient", function(T)
+        T.fresh()
+        ForeverPathCharDB = { schema = 3, routeId = "dungeon", guideId = "Wailing Caverns" }
+        ForeverPathDB = { schema = 3, tab = "guides" }
+        T.reload()
+        T.eq(ForeverPathCharDB.routeId, "efficient")
+        T.eq(ForeverPathCharDB.guideId, nil, "dungeon guide choice dropped")
+        T.eq(ForeverPathDB.tab, "zones", "old Guides tab is now Zones")
     end },
 }

@@ -37,6 +37,7 @@ end
 ns:RegisterEvent("ADDON_LOADED", function(_, loadedName)
     if loadedName ~= addonName then return end
     ns.Settings.Init()
+    ns.Library.Init()
     ns.Commands.Register()
     ns:UnregisterEvent("ADDON_LOADED")
 end)
