@@ -5,6 +5,7 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 ## [0.8.0] - 2026-11-15
 
 ### Fixed
+- **Hearthstone:** the guide suggested setting it at whatever inn you were near, even far from your quests. It now picks the inn nearest the middle of your current quest steps, and only suggests it while you're there.
 - **Quests the NPC doesn't actually offer** (e.g. "Friend of the Library", which needs books first): when you talk to the quest giver and a quest the guide expected isn't in its list, the guide says so in chat, marks it "Not offered" in the Steps tab and moves on. It's checked again when you level up, or when you pick it with Go to this step.
 - **Auto accept** could silently turn quests down: "only quests my guide would pick" was on by default and Speedrun's filters rejected many quests. It's now off by default (and turned off once on upgrade), so every offered quest is taken unless it's grey, repeatable or skipped.
 - Auto accept no longer relies on Blizzard's gossip and quest windows to tell when a conversation ends, so dialog replacements such as DialogueUI don't stop it.

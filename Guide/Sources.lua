@@ -388,9 +388,32 @@ local function trainingStep(ctx, out)
 end
 
 --- Set your hearthstone when you're at an inn and it's bound elsewhere.
+--- The middle of where you're questing: the average position of the quest
+--- steps (pick-ups, objectives, hand-ins) on your continent, or nil.
+function Sources.QuestingCentre(steps, continent)
+    local x, y, n = 0, 0, 0
+    for _, step in ipairs(steps) do
+        local w = step.target and step.target.world
+        if w and w.continent == continent
+            and (step.kind == "ACCEPT" or step.kind == "COMPLETE" or step.kind == "TURNIN") then
+            x, y, n = x + w.x, y + w.y, n + 1
+        end
+    end
+    if n == 0 then return nil end
+    return { continent = continent, x = x / n, y = y / n }
+end
+
+--- Set your hearthstone at the inn nearest to where you're questing -
+--- only while you're at that inn and it's bound somewhere else. (Another
+--- inn you pass on the way isn't suggested.)
 local function hearthStep(ctx, out)
-    local actor, point = nearby(ctx, ns.Data.Services.innkeeperTitle)
-    if not actor then return end
+    if not ctx.origin then return end
+    local centre = Sources.QuestingCentre(out, ctx.origin.continent)
+    if not centre then return end
+    local inns = ns.QuestieData.GetNpcsByTitle(ns.Data.Services.innkeeperTitle, ctx.profile.faction)
+    local actor, point = nearestActor(centre, inns)
+    if not actor or not point or not point.world then return end
+    if ns.Util.Distance(ctx.origin, point.world) > ns.Data.Services.nearDistance then return end
     local bind = ns.GameApi.GetBindLocation()
     local zone, subzone = ns.GameApi.GetZoneNames()
     if bind and (bind == subzone or bind == zone) then return end

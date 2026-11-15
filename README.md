@@ -118,7 +118,7 @@ The guide window shows your current step and the next few steps. Steps are built
 | **Complete: (quest)** | Quests in your log. The step shows live objective progress, and the arrow points to Blizzard's own quest waypoint or the nearest QuestieDB spawn. Quests whose objectives are in the same area (within about 150 yards of each other) are one step, such as "Complete: Cutting Teeth & Wayward Weapons", and the Target button cycles through all their creatures. |
 | **Turn in to (NPC)** | Finished quests in your log, pointing to the NPC who ends the quest. |
 | **Train at (trainer)** | When new class abilities are due (every two levels from 4) **and** your class trainer is within about 400 yards. |
-| **Set your hearthstone at (innkeeper)** | When an innkeeper is nearby and your hearthstone is bound somewhere else. Skip it and that inn won't ask again. |
+| **Set your hearthstone at (innkeeper)** | At the inn nearest to where you're questing (the middle of your current quest steps), when you're there and your hearthstone is bound somewhere else. Inns you pass while travelling aren't suggested. Skip it and that inn won't ask again. |
 | **Train (profession) at (trainer)** | For professions you've learned, when you're close to your skill cap, old enough for the next rank (Journeyman 10, Expert 20, Artisan 35) and a trainer for it is nearby. |
 
 There's no separate reminders list: these service steps only appear in the route when they matter and you're close by.

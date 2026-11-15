@@ -138,6 +138,34 @@ return {
         T.truthy(not hasKey(ns.Engine.state, "hearth:npc:3002"), "bound here - step gone")
     end },
 
+    { "the hearthstone goes to the inn nearest your quests, not the one you're at", function(T)
+        local ns, mock = T.fresh()
+        local db = fixtures.durotar(mock)
+        -- Your quests are around (50,50); you've travelled to another inn at (10,10).
+        db.Npc[3002] = { name = "Innkeeper Grosk", subName = "Innkeeper", friendlyToFaction = "H",
+                         spawns = { [14] = { { 51, 51 } } } }
+        db.Npc[3005] = { name = "Innkeeper Faraway", subName = "Innkeeper", friendlyToFaction = "H",
+                         spawns = { [14] = { { 10, 10 } } } }
+        fixtures.addToLog(mock, 101, "Vile Familiars", false, { "Vile Familiar slain: 2/8" })
+        mock.player.position = { mapID = 1411, x = 0.10, y = 0.10 }
+        local state = fixtures.login(ns)
+        T.truthy(not hasKey(state, "hearth:npc:3005"), "not the inn you happen to be at")
+        T.truthy(not hasKey(state, "hearth:npc:3002"), "the right inn is too far to suggest now")
+        mock.player.position = { mapID = 1411, x = 0.51, y = 0.50 }
+        ns.Engine.Replan()
+        T.truthy(hasKey(ns.Engine.state, "hearth:npc:3002"), "suggested once you're at the right inn")
+    end },
+
+    { "the questing centre is the middle of your quest steps", function(T)
+        local ns = T.fresh()
+        local function at(kind, x, y) return { kind = kind, target = { world = { continent = 1, x = x, y = y } } } end
+        local c = ns.Sources.QuestingCentre({ at("ACCEPT", 0, 0), at("COMPLETE", 100, 0), at("TURNIN", 50, 90),
+            at("TRAIN", 9999, 9999), { kind = "COMPLETE", target = { world = { continent = 2, x = 5, y = 5 } } } }, 1)
+        T.eq(c.x, 50)
+        T.eq(c.y, 30)
+        T.eq(ns.Sources.QuestingCentre({}, 1), nil)
+    end },
+
     { "skipping an inn keeps it skipped, and Back brings it back", function(T)
         local ns, mock = T.fresh()
         local db = fixtures.durotar(mock)
