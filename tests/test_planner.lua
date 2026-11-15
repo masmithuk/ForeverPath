@@ -104,4 +104,46 @@ return {
         T.eq(ns.Util.HasFlag(8589934592, 16), false, "unset")
         T.eq(ns.Util.HasFlag(nil, 16), false, "nil mask")
     end },
+
+    ---------------------------------------------------------------------
+    -- Objectives in the same area are one step
+    ---------------------------------------------------------------------
+    { "objectives close together are grouped into one step", function(T)
+        local ns = T.fresh()
+        local function complete(id, name, x, y)
+            return { key = "complete:" .. id, kind = "COMPLETE", title = "Complete: " .. name, questTitle = name,
+                     lines = { name, "  objective" }, questIDs = { id },
+                     target = { world = { continent = 1, x = x, y = y } } }
+        end
+        local out = ns.Planner.GroupObjectives({
+            complete(788, "Cutting Teeth", 0, 0),
+            complete(97279, "Wayward Weapons", 100, 0),
+            complete(790, "Sarkoth", 1000, 0),
+            { key = "accept:npc:1", kind = "ACCEPT", title = "Talk to X", lines = {}, questIDs = { 5 },
+              target = { world = { continent = 1, x = 0, y = 0 } } },
+        }, 150, { continent = 1, x = 90, y = 0 })
+        T.eq(#out, 3)
+        local grouped
+        for _, s in ipairs(out) do if s.grouped then grouped = s end end
+        T.eq(grouped.title, "Complete: Cutting Teeth & Wayward Weapons")
+        T.eq(#grouped.questIDs, 2)
+        T.eq(#grouped.lines, 4, "every quest's objectives listed")
+        T.eq(grouped.target.world.x, 100, "points at the member nearest to you")
+    end },
+
+    { "groups chain through neighbours, and names read naturally", function(T)
+        local ns = T.fresh()
+        T.eq(ns.Planner.JoinNames({ "A" }), "A")
+        T.eq(ns.Planner.JoinNames({ "A", "B", "C" }), "A, B & C")
+        local function c(id, x)
+            return { key = "complete:" .. id, kind = "COMPLETE", title = "Complete: Q" .. id, questTitle = "Q" .. id,
+                     lines = {}, questIDs = { id }, target = { world = { continent = 1, x = x, y = 0 } } }
+        end
+        local out = ns.Planner.GroupObjectives({ c(1, 0), c(2, 140), c(3, 280), c(4, 0) }, 150)
+        T.eq(#out, 1)
+        T.eq(out[1].title, "Complete: Q1, Q2, Q3 & Q4")
+        local other = ns.Planner.GroupObjectives({ c(1, 0), { key = "complete:9", kind = "COMPLETE",
+            title = "x", lines = {}, questIDs = { 9 }, target = { world = { continent = 2, x = 0, y = 0 } } } }, 150)
+        T.eq(#other, 2, "other continent stays apart")
+    end },
 }

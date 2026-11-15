@@ -5,13 +5,13 @@ local fixtures = require("fixtures")
 
 -- The current step is "Vile Familiars", which needs three creatures that are
 -- 20, ~141 and ~636 yards away. Another quest in the log ("Boars") has its
--- own creature, which the button should leave alone.
+-- own creature in another area, which the button should leave alone.
 local function setup(T)
     local ns, mock = T.fresh()
     local db = fixtures.durotar(mock)
     db.Npc[2002] = { name = "Distant Boar", spawns = { [14] = { { 95, 95 } } } }
     db.Npc[2003] = { name = "Near Scorpid", spawns = { [14] = { { 52, 50 } } } }
-    db.Npc[2004] = { name = "Other Quest Raptor", spawns = { [14] = { { 51, 50 } } } }
+    db.Npc[2004] = { name = "Other Quest Raptor", spawns = { [14] = { { 95, 5 } } } } -- another area
     db.Quest[101].objectives = { { { 2001 }, { 2002 }, { 2003 } } }
     db.Quest[112] = { name = "Boars", startedBy = { { 1002 } }, objectives = { { { 2004 } } } }
     fixtures.addToLog(mock, 101, "Vile Familiars", false,

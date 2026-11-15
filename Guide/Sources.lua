@@ -160,6 +160,7 @@ local function objectiveStep(ctx, questID, quest)
         key = "complete:" .. questID,
         kind = "COMPLETE",
         title = "Complete: " .. quest.title,
+        questTitle = quest.title,
         lines = lines,
         questIDs = { questID },
         target = target(point, label or quest.title),

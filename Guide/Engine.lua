@@ -132,8 +132,24 @@ function Engine.Replan()
 
     local candidates = ns.Sources.Collect(ctx)
     local state = Engine.state
-    local merged = ns.Planner.Merge(candidates)
+    local merged = ns.Planner.GroupObjectives(ns.Planner.Merge(candidates), nil, origin)
     local pinned = state.currentKey
+    -- Keep following the same quests when a group grows or shrinks (its
+    -- key changes as quests join or finish).
+    local previous = state.steps[1]
+    local pinnedFound = false
+    for _, step in ipairs(merged) do if step.key == pinned then pinnedFound = true end end
+    if pinned and not pinnedFound and previous and previous.kind == "COMPLETE" then
+        local wanted = {}
+        for _, id in ipairs(previous.questIDs or {}) do wanted[id] = true end
+        for _, step in ipairs(merged) do
+            if step.kind == "COMPLETE" and not pinnedFound then
+                for _, id in ipairs(step.questIDs or {}) do
+                    if wanted[id] then pinned, pinnedFound = step.key, true; break end
+                end
+            end
+        end
+    end
     for _, step in ipairs(merged) do
         if char.focusStep and step.key == char.focusStep then pinned = step.key end
     end

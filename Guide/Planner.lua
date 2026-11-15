@@ -2,7 +2,8 @@
     ForeverPath - Guide/Planner.lua
 
     Pure route planning: takes candidate steps that already know where they
-    are, merges steps at the same NPC, and orders them into a walking route.
+    are, merges steps at the same NPC, groups quest objectives in the same
+    area into one step, and orders them into a walking route.
 
     No game API calls in here - everything arrives as plain tables, so the
     whole file is covered by tests/test_planner.lua.
@@ -63,6 +64,80 @@ function Planner.Merge(steps)
         end
     end
     return merged
+end
+
+-- Objectives this close together (yards) are done as one step.
+Planner.GROUP_RADIUS = 150
+
+local function near(a, b, radius)
+    return a and b and a.continent == b.continent and ns.Util.Distance(a, b) <= radius
+end
+
+--- "A", "A & B", "A, B & C"
+function Planner.JoinNames(names)
+    if #names <= 1 then return names[1] or "" end
+    return table.concat(names, ", ", 1, #names - 1) .. " & " .. names[#names]
+end
+
+--- Group COMPLETE steps whose objectives are in the same area (each
+--- within `radius` of another in the group) into one step, so quests
+--- like "Cutting Teeth" and "Wayward Weapons" are done together. The
+--- group points at the member nearest to `origin`.
+-- @return new list of steps (other steps untouched)
+function Planner.GroupObjectives(steps, radius, origin)
+    radius = radius or Planner.GROUP_RADIUS
+    local out, solo = {}, {}
+    for _, step in ipairs(steps) do
+        if step.kind == "COMPLETE" and step.target and step.target.world then
+            solo[#solo + 1] = step
+        else
+            out[#out + 1] = step
+        end
+    end
+    -- Deterministic order (the quest log arrives in no particular order).
+    table.sort(solo, function(a, b) return (a.questIDs[1] or 0) < (b.questIDs[1] or 0) end)
+
+    local groups = {}
+    for _, step in ipairs(solo) do
+        local home
+        for _, g in ipairs(groups) do
+            for _, member in ipairs(g) do
+                if near(member.target.world, step.target.world, radius) then home = g; break end
+            end
+            if home then break end
+        end
+        if home then home[#home + 1] = step else groups[#groups + 1] = { step } end
+    end
+
+    for _, g in ipairs(groups) do
+        if #g == 1 then
+            out[#out + 1] = g[1]
+        else
+            local ids, names, lines, keys = {}, {}, {}, {}
+            local best, bestDist, bonus = g[1], math.huge, 0
+            for _, m in ipairs(g) do
+                for _, id in ipairs(m.questIDs) do ids[#ids + 1] = id end
+                names[#names + 1] = m.questTitle or m.title
+                for _, l in ipairs(m.lines or {}) do lines[#lines + 1] = l end
+                keys[#keys + 1] = m.key
+                bonus = math.max(bonus, m.bonus or 0)
+                local d = origin and m.target.world.continent == origin.continent
+                    and ns.Util.Distance(origin, m.target.world) or math.huge
+                if d < bestDist then best, bestDist = m, d end
+            end
+            out[#out + 1] = {
+                key = table.concat(keys, "+"),
+                kind = "COMPLETE",
+                title = "Complete: " .. Planner.JoinNames(names),
+                lines = lines,
+                questIDs = ids,
+                target = best.target,
+                bonus = bonus > 0 and bonus or nil,
+                grouped = #g,
+            }
+        end
+    end
+    return out
 end
 
 --- Yards between two world positions, with penalties for the unknown.
@@ -146,5 +221,5 @@ end
 
 --- Full planning pass: merge, then order.
 function Planner.Build(origin, steps, pinnedKey, limit)
-    return Planner.Order(origin, Planner.Merge(steps), pinnedKey, limit)
+    return Planner.Order(origin, Planner.GroupObjectives(Planner.Merge(steps), nil, origin), pinnedKey, limit)
 end

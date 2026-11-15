@@ -253,4 +253,26 @@ return {
         SlashCmdList.FOREVERPATH("done")
         T.contains(mock.printed[#mock.printed], "complete on their own")
     end },
+
+    { "quests in the same area show up as one step in the guide", function(T)
+        local ns, mock = T.fresh()
+        local db = fixtures.durotar(mock)
+        ForeverPathCharDB.guide.trainedLevel = 60
+        db.Npc[2003] = { name = "Mottled Boar", spawns = { [14] = { { 61, 61 } } } }
+        db.Quest[113] = { name = "Cutting Teeth", startedBy = { { 1002 } }, objectives = { { { 2003 } } } }
+        fixtures.addToLog(mock, 101, "Vile Familiars", false, { "Vile Familiar slain: 2/8" })
+        fixtures.addToLog(mock, 113, "Cutting Teeth", false, { "Mottled Boar slain: 0/8" })
+        local state = fixtures.login(ns)
+        local step
+        for _, s in ipairs(state.steps) do if s.kind == "COMPLETE" then step = s end end
+        T.contains(step.title, "Vile Familiars & Cutting Teeth")
+        T.contains(step.lines, "  Mottled Boar slain: 0/8")
+        T.contains(step.lines, "  Vile Familiar slain: 2/8")
+        -- Finishing one keeps the guide on the other.
+        ns.Engine.FocusQuest(101)
+        mock.questLog[2].objectives = nil
+        fixtures.removeFromLog(mock, 113)
+        ns:FireEvent("QUEST_REMOVED", 113)
+        T.eq(ns.Engine.state.steps[1].key, "complete:101")
+    end },
 }

@@ -20,6 +20,7 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
   - Train a profession you've learned when you're near its skill cap and old enough for the next rank.
 
 ### Changed
+- Quests whose objectives are in the **same area** are now one step ("Complete: Cutting Teeth & Wayward Weapons"), listing every quest's objectives. The arrow points at the nearest part, and the Target button cycles through all of their creatures.
 - The **Target button** only shows the current step's creatures and hides on steps without any.
 - The guide window's Back button is now **Steps**, which opens the list. Undo last skip lives in the Steps tab.
 - A guide's `note`, `buy` and `hearth` steps are now steps in the route that you tick off with Done. Its `train` steps make class training due from that level.

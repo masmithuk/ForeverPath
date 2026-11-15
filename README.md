@@ -113,7 +113,7 @@ The guide window shows your current step and the next few steps. Steps are built
 | Step | Where it comes from |
 |---|---|
 | **Talk to (NPC) - Accept: (quests)** | Quests you can pick up now in your guide's zones. QuestieDB supplies the quest givers and checks prerequisites, race, class, faction and level. |
-| **Complete: (quest)** | Quests in your log. The step shows live objective progress, and the arrow points to Blizzard's own quest waypoint or the nearest QuestieDB spawn. |
+| **Complete: (quest)** | Quests in your log. The step shows live objective progress, and the arrow points to Blizzard's own quest waypoint or the nearest QuestieDB spawn. Quests whose objectives are in the same area (within about 150 yards of each other) are one step, such as "Complete: Cutting Teeth & Wayward Weapons", and the Target button cycles through all their creatures. |
 | **Turn in to (NPC)** | Finished quests in your log, pointing to the NPC who ends the quest. |
 | **Train at (trainer)** | When new class abilities are due (every two levels from 4) **and** your class trainer is within about 400 yards. |
 | **Set your hearthstone at (innkeeper)** | When an innkeeper is nearby and your hearthstone is bound somewhere else. Skip it and that inn won't ask again. |
