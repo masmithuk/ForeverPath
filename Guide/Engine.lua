@@ -491,6 +491,47 @@ function Engine.OnGuideEdited()
     Engine.RequestReplan()
 end
 
+--- Quests in your log that aren't part of your guide. A quest is part of
+--- it when it's on the guide's quest list or in one of the guide's zones
+--- for your level or the next band. Kept anyway: quests ready to hand
+--- in, class quests, and quests whose zone QuestieDB doesn't know.
+-- @return list of { id, title }, sorted by title
+function Engine.UnrelatedQuests()
+    local ctx = Engine.BuildContext()
+    local data = ns.QuestieData
+    local listed = ctx.guide.questRank or {}
+    local guideMaps = {}
+    for _, entry in ipairs({ ctx.route.current, ctx.route.next }) do
+        for _, zone in ipairs(entry and entry.zones or {}) do
+            local mapID = ns.ZoneMap.MapIdByName(zone)
+            if mapID then guideMaps[mapID] = true end
+        end
+    end
+    local out = {}
+    for id, quest in pairs(ctx.log) do
+        local known = data.IsReady() and data.Describe(id).level > 0
+        local mapID = known and data.QuestMapID(id)
+        local related = not known or not mapID or quest.complete or listed[id]
+            or data.IsClassQuest(id) or guideMaps[mapID]
+        if not related then
+            out[#out + 1] = { id = id, title = quest.title }
+        end
+    end
+    table.sort(out, function(a, b) return a.title < b.title end)
+    return out
+end
+
+--- Abandon every unrelated quest. @return how many were abandoned
+function Engine.AbandonUnrelated()
+    local n = 0
+    for _, q in ipairs(Engine.UnrelatedQuests()) do
+        if ns.GameApi.AbandonQuest(q.id) then n = n + 1 end
+    end
+    invalidateDoable()
+    Engine.RequestReplan()
+    return n
+end
+
 function Engine.UnskipAll()
     local char = charGuide()
     char.skipped = {}

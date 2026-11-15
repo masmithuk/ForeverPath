@@ -4,6 +4,9 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 
 ## [0.8.0] - 2026-11-15
 
+### Added
+- **Abandon unrelated quests** in Settings > Tools: abandons log quests that aren't on your guide's list or in its zones for your level and the next. Hand-ins, class quests and quests QuestieDB doesn't know are kept. Two clicks: the first lists them in chat.
+
 ### Changed (getting you from quest to quest)
 - **Every class starts on Speedrun** for its race (Rogues used to start on Story).
 - **Out-levelled your zone?** The step that takes you on says "You've out-levelled Durotar - head to The Barrens", and chat announces the move once.

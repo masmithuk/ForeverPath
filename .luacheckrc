@@ -44,7 +44,7 @@ read_globals = {
     "GetTime",
     "InCombatLockdown",
     "IsShiftKeyDown",
-    "IsTradeskillTrainer", "GetBindLocation", "GetZoneText", "GetSubZoneText",
+    "IsTradeskillTrainer", "SelectQuestLogEntry", "SetAbandonQuest", "AbandonQuest", "GetBindLocation", "GetZoneText", "GetSubZoneText",
     "GetProfessions", "GetProfessionInfo", "GetNumSkillLines", "GetSkillLineInfo",
     "Minimap",
     "UiMapPoint",

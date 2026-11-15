@@ -315,6 +315,19 @@ function QuestieData.IsFollowUp(questID)
     return false
 end
 
+--- The uiMapID of the zone a quest belongs to (its zone, or where its
+--- quest giver stands), or nil.
+function QuestieData.QuestMapID(questID)
+    local areaID = questArea(questID)
+    return areaID and ns.ZoneMap.ToUiMap(areaID) or nil
+end
+
+--- Is it a class quest (only some classes can take it)?
+function QuestieData.IsClassQuest(questID)
+    local classes = get("Quest", questID, "requiredClasses")
+    return type(classes) == "number" and classes > 0
+end
+
 --- Is the quest part of a chain - a follow-up, or one that leads on to
 --- another quest? Stand-alone side quests aren't. (Story mode uses this.)
 function QuestieData.IsChainQuest(questID)

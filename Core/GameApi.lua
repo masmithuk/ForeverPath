@@ -53,6 +53,27 @@ function GameApi.GetQuestLog()
     return log
 end
 
+--- Abandon a quest in the log (as the quest log's Abandon button does).
+-- @return true if the game was asked to abandon it
+function GameApi.AbandonQuest(questID)
+    local QL = C_QuestLog
+    if QL and QL.SetSelectedQuest and QL.SetAbandonQuest and QL.AbandonQuest then
+        safe(QL.SetSelectedQuest, questID)
+        safe(QL.SetAbandonQuest)
+        safe(QL.AbandonQuest)
+        return true
+    end
+    -- Classic-style API: select by log index.
+    local index = QL and QL.GetLogIndexForQuestID and num(safe(QL.GetLogIndexForQuestID, questID))
+    if index and SelectQuestLogEntry and SetAbandonQuest and AbandonQuest then
+        safe(SelectQuestLogEntry, index)
+        safe(SetAbandonQuest)
+        safe(AbandonQuest)
+        return true
+    end
+    return false
+end
+
 function GameApi.IsQuestCompleted(questID)
     local QL = C_QuestLog
     if QL and QL.IsQuestFlaggedCompleted then

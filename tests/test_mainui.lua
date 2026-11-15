@@ -231,4 +231,65 @@ return {
         T.eq(ns.GuideFrame.StatusText("ready", "auto"), nil)
         T.eq(ns.Waypoints.NeedsArrowAddon("off"), false, "not when arrows are turned off")
     end },
+
+    { "Abandon unrelated quests lists them first, then abandons on a second click", function(T)
+        local ns, mock = T.fresh()
+        mock.player.race = { "Orc", "Orc", 2 }
+        local db = fixtures.durotar(mock, { level = 8, mode = "efficient" })
+        db.Quest[106].requiredClasses = 128 -- a class quest
+        mock.maps[1416] = { name = "Alterac Mountains", areaID = 36, continent = 0, offset = 5000 }
+        db.Npc[1006] = { name = "Far Away Giver", friendlyToFaction = "H", spawns = { [36] = { { 50, 50 } } } }
+        db.Quest[130] = { name = "Far Errand", startedBy = { { 1006 } }, requiredLevel = 8, questLevel = 9 }
+        db.Quest[131] = { name = "Far Chore", startedBy = { { 1006 } }, requiredLevel = 8, questLevel = 10 }
+        fixtures.addToLog(mock, 101, "Vile Familiars", false)  -- Durotar: the guide's zone
+        fixtures.addToLog(mock, 104, "Barrens Errand", false)  -- The Barrens: the guide's next zone
+        fixtures.addToLog(mock, 130, "Far Errand", false)      -- a zone the guide doesn't use
+        fixtures.addToLog(mock, 131, "Far Chore", false)
+        fixtures.addToLog(mock, 109, "Too High", true)         -- ready to hand in: kept
+        fixtures.addToLog(mock, 106, "Paladin Only", false)    -- class quest: kept
+        fixtures.addToLog(mock, 999, "Unknown Quest", false)   -- QuestieDB doesn't know it: kept
+        fixtures.login(ns)
+        ns.MainFrame.ShowTab("settings")
+        local button = ns.SettingsTab.GetPanel().abandon
+
+        button:GetScript("OnClick")()
+        T.eq(mock.abandoned, nil, "first click only lists")
+        T.contains(mock.printed[#mock.printed], "Far Chore, Far Errand")
+        for _, kept in ipairs({ "Vile Familiars", "Barrens Errand", "Too High", "Paladin Only", "Unknown" }) do
+            T.truthy(not mock.printed[#mock.printed]:find(kept), kept .. " kept")
+        end
+        T.eq(button:GetText(), "Abandon 2 quests? Click again")
+
+        button:GetScript("OnClick")()
+        T.eq(#mock.abandoned, 2)
+        T.contains(mock.printed[#mock.printed], "Abandoned 2 quests")
+        local left = {}
+        for _, q in ipairs(mock.questLog) do left[#left + 1] = q.id end
+        T.eq(table.concat(left, ","), "101,104,109,106,999")
+        T.eq(button:GetText(), "Abandon unrelated quests")
+    end },
+
+    { "leaving Settings cancels a half-done abandon", function(T)
+        local ns, mock = T.fresh()
+        local db = fixtures.durotar(mock, { level = 8, mode = "efficient" })
+        mock.maps[1416] = { name = "Alterac Mountains", areaID = 36, continent = 0, offset = 5000 }
+        db.Npc[1006] = { name = "Far Away Giver", friendlyToFaction = "H", spawns = { [36] = { { 50, 50 } } } }
+        db.Quest[130] = { name = "Far Errand", startedBy = { { 1006 } }, requiredLevel = 8, questLevel = 9 }
+        fixtures.addToLog(mock, 130, "Far Errand", false)
+        fixtures.login(ns)
+        ns.MainFrame.ShowTab("settings")
+        ns.SettingsTab.Abandon()
+        ns.MainFrame.ShowTab("home")
+        ns.MainFrame.ShowTab("settings")
+        T.eq(ns.SettingsTab.GetPanel().abandon:GetText(), "Abandon unrelated quests")
+        ns.SettingsTab.Abandon()
+        T.eq(mock.abandoned, nil, "starts over with a list, not an abandon")
+    end },
+
+    { "nothing to abandon says so", function(T)
+        local ns, mock = login(T)
+        ns.MainFrame.ShowTab("settings")
+        T.eq(ns.SettingsTab.Abandon(), 0)
+        T.contains(mock.printed[#mock.printed], "nothing to abandon")
+    end },
 }

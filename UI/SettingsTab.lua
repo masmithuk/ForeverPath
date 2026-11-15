@@ -6,7 +6,8 @@
 
       Step guide         guide window, Target button, minimap button,
                          level-up messages; the waypoint arrow (dropdown);
-                         bring back skipped quests, reset window positions
+                         bring back skipped quests, abandon quests the guide
+                         doesn't use (two clicks), reset window positions
       Quest automation   auto accept / hand in, and the key that pauses it
 
     The two columns sit side by side when the window is wide enough and
@@ -116,6 +117,9 @@ local function stack(anchor, items)
     return last
 end
 
+local abandonArmed = nil -- unrelated quests listed by a first click on Abandon
+local function disarm() abandonArmed = nil end
+
 function SettingsTab.Create(parent)
     local MF = ns.MainFrame
     panel = MF.NewPanel(parent)
@@ -149,6 +153,14 @@ function SettingsTab.Create(parent)
         ns.Engine.UnskipAll()
         ns.Util.Print(L.GUIDE_UNSKIPPED)
     end)
+    panel.abandon = MF.NewButton(panel, L.SETTING_ABANDON, 200, function() SettingsTab.Abandon() end)
+    panel.abandon:SetScript("OnEnter", function(self)
+        if not GameTooltip then return end
+        GameTooltip:SetOwner(self, "ANCHOR_TOP")
+        GameTooltip:SetText(L.SETTING_ABANDON_TOOLTIP, 1, 1, 1, 1, true)
+        GameTooltip:Show()
+    end)
+    panel.abandon:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
     panel.reset = MF.NewButton(panel, L.SETTING_RESET, 200, function()
         ns.Settings.ResetFramePosition()
         ns.MainFrame.ResetPosition()
@@ -176,6 +188,7 @@ function SettingsTab.Create(parent)
             SettingsTab.Refresh()
         end)
     panel.autoNote = label(panel, "", "GameFontHighlightSmall")
+    panel:SetScript("OnHide", disarm) -- leaving the tab cancels a half-done abandon
     return panel
 end
 
@@ -192,6 +205,7 @@ local function layout()
     leftItems[#leftItems + 1] = { panel.waypointStatus, -4 }
     leftItems[#leftItems + 1] = { panel.toolsLabel, -14 }
     leftItems[#leftItems + 1] = { panel.unskip, -6 }
+    leftItems[#leftItems + 1] = { panel.abandon, -4 }
     leftItems[#leftItems + 1] = { panel.reset, -4 }
     local leftLast = stack(panel.guideHeading, leftItems)
 
@@ -212,9 +226,37 @@ local function layout()
     panel.twoColumns = twoColumns
 end
 
+--- "Abandon unrelated quests": the first click lists them and asks for a
+--- second click; the second abandons them. Switching tab cancels.
+function SettingsTab.Abandon()
+    if abandonArmed then
+        local n = ns.Engine.AbandonUnrelated()
+        abandonArmed = nil
+        ns.Util.Print(L.ABANDONED_FMT:format(n))
+        SettingsTab.Refresh()
+        return n
+    end
+    local list = ns.Engine.UnrelatedQuests()
+    if #list == 0 then
+        ns.Util.Print(L.ABANDON_NONE)
+        return 0
+    end
+    local names = {}
+    for i, q in ipairs(list) do names[i] = q.title end
+    ns.Util.Print(L.ABANDON_LIST_FMT:format(#list, table.concat(names, ", ")))
+    abandonArmed = list
+    SettingsTab.Refresh()
+    return nil
+end
+
 function SettingsTab.Refresh()
     if not panel then return end
     layout()
+    if abandonArmed then
+        panel.abandon:SetText(L.SETTING_ABANDON_CONFIRM_FMT:format(#abandonArmed))
+    else
+        panel.abandon:SetText(L.SETTING_ABANDON)
+    end
     for _, cb in ipairs(panel.checkboxes) do
         cb:SetChecked(cb.def.get() and true or false)
     end

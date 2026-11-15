@@ -189,6 +189,8 @@ Everything runs from the game's own UI.
 - **Moving it:** Shift + left-drag, out of combat. Its position is saved.
 - **Turning it off:** use the checkbox in Settings.
 
+**Abandon unrelated quests** (Settings > Tools): abandons quests in your log that aren't part of your guide, meaning not on its quest list and not in its zones for your level or the next band. Quests ready to hand in, class quests and quests QuestieDB doesn't know are always kept. The first click lists them in chat and the button asks "Abandon N quests? Click again"; leaving the tab cancels.
+
 **Quest automation:** talking to a quest giver accepts their quests and hands in finished ones, with the reward taken for you.
 - **Pausing:** hold **Shift** while you open the NPC and nothing is automated for that conversation. The pause key can be changed in Settings.
 - **Never automated:** choosing between several rewards, quests that cost gold to complete, quests shared by other players, and escort confirmations are always left to you.
@@ -202,7 +204,7 @@ Everything runs from the game's own UI.
 | **Home** | Your character, the guide you're following, where you're levelling now and next, your current step, rested XP, class tips, dungeons for your level, and a short explanation of every part of ForeverPath. Buttons show or hide the guide window and open Steps or Guides. |
 | **Steps** | Every quest in your guide, as described above. |
 | **Guides** | The Speedrun and Story guides for your race, then yours. Select one to see its details, then **Use this guide**, **Edit** (or **View** for built-ins), **Copy**, **New guide**, **Delete**, **Export** or **Import**. Edit and View open the guide editor described above. |
-| **Settings** | Show or hide the guide window, the Target button and the minimap button; level-up messages; the waypoint arrow (a dropdown: Automatic, Shortest Path, TomTom, Map pin, Off); bring back skipped quests and reset window positions. Quest automation: accept, hand in, only quests your guide wants, skip grey or repeatable quests, and the pause key (a dropdown). The two columns stack when the window is narrow. |
+| **Settings** | Show or hide the guide window, the Target button and the minimap button; level-up messages; the waypoint arrow (a dropdown: Automatic, Shortest Path, TomTom, Map pin, Off); bring back skipped quests, **abandon unrelated quests** and reset window positions. Quest automation: accept, hand in, only quests your guide wants, skip grey or repeatable quests, and the pause key (a dropdown). The two columns stack when the window is narrow. |
 
 The minimap's addon compartment also opens the main window, even if you hide the minimap button.
 

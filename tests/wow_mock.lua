@@ -51,6 +51,7 @@ function mock.reset()
     mock.bindLocation = "Razor Hill"   -- where the hearthstone is set
     mock.zone, mock.subzone = "Durotar", "Valley of Trials"
     mock.skills = {}                   -- learned professions: { name, skill, max }
+    mock.abandoned, mock.selectedQuest, mock.abandonQueued = nil, nil, nil
     mock.inCombat = false
     mock.areaNames = nil
     mock.keys = { shift = false, ctrl = false, alt = false }
@@ -309,6 +310,15 @@ function mock.install()
 
     _G.C_QuestLog = {
         GetNumQuestLogEntries = function() return #mock.questLog end,
+        SetSelectedQuest = function(id) mock.selectedQuest = id end,
+        SetAbandonQuest = function() mock.abandonQueued = mock.selectedQuest end,
+        AbandonQuest = function()
+            mock.abandoned = mock.abandoned or {}
+            table.insert(mock.abandoned, mock.abandonQueued)
+            for i, q in ipairs(mock.questLog) do
+                if q.id == mock.abandonQueued then table.remove(mock.questLog, i); break end
+            end
+        end,
         GetInfo = function(i)
             local q = mock.questLog[i]
             return q and { questID = q.id, title = q.title, isHeader = false }
