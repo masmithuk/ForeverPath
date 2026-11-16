@@ -1,4 +1,6 @@
-# Release: push a tag like v0.8.0 and this
+# Release: push a tag like v0.8.0 (or publish a release on GitHub, which
+# creates the tag), or run it by hand from the Actions tab with a tag name.
+# It
 #   1. checks the tag matches "## Version" in Questwalker.toc,
 #   2. lints and tests,
 #   3. builds Questwalker-<version>.zip (a Questwalker/ folder, without
@@ -14,12 +16,19 @@
 #                                       the automatic lookup picks the wrong one
 # Without them, steps 1-4 still run and the CurseForge step is skipped.
 # A tag with a hyphen (v0.9.0-beta1) is uploaded as a beta.
+# If the GitHub release already exists, the zip is attached to it (and its
+# notes filled in if they're empty) instead of creating a new one.
 
 name: Release
 
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release, e.g. v0.8.0"
+        required: true
 
 permissions:
   contents: write
@@ -29,13 +38,16 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ADDON: Questwalker
+      TAG: ${{ inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - name: Check the tag matches the TOC version
         run: |
           toc=$(sed -n 's/^## Version: *//p' "$ADDON.toc" | tr -d '\r')
-          tag="${GITHUB_REF_NAME#v}"
+          tag="${TAG#v}"
           if [ "$toc" != "$tag" ]; then
             echo "::error::Tag is v$tag but $ADDON.toc says $toc - update the TOC or the tag."
             exit 1
@@ -68,9 +80,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          flags=""
-          case "$VERSION" in *-*) flags="--prerelease" ;; esac
-          gh release create "$GITHUB_REF_NAME" "$ZIP" --title "$ADDON $VERSION" --notes-file notes.md $flags
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Release $TAG already exists - attaching the zip."
+            gh release upload "$TAG" "$ZIP" --clobber
+            body=$(gh release view "$TAG" --json body --jq .body)
+            if [ -z "$body" ]; then gh release edit "$TAG" --notes-file notes.md; fi
+          else
+            flags=""
+            case "$VERSION" in *-*) flags="--prerelease" ;; esac
+            gh release create "$TAG" "$ZIP" --title "$ADDON $VERSION" --notes-file notes.md $flags
+          fi
 
       - name: Upload to CurseForge
         env:
