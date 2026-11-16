@@ -33,16 +33,18 @@ fi
 release_type="release"
 case "${VERSION:-}" in *-*) release_type="beta" ;; esac
 
-metadata=$(jq -n \
+# Sent from a file: curl -F would split an inline value at ";" (and the
+# changelog has plenty), which CurseForge then rejects as invalid JSON.
+jq -n \
     --arg changelog "$(cat "$notes")" \
     --arg name "${ADDON:-Questwalker} ${VERSION:-}" \
     --arg type "$release_type" \
     --argjson gv "$game_version" \
     '{changelog: $changelog, changelogType: "markdown", displayName: $name,
-      gameVersions: [$gv], releaseType: $type}')
+      gameVersions: [$gv], releaseType: $type}' > metadata.json
 
 response=$(curl -s -w '\n%{http_code}' -H "X-Api-Token: $CF_API_KEY" \
-    -F "metadata=$metadata" -F "file=@$zip" \
+    -F "metadata=<metadata.json" -F "file=@$zip" \
     "$api/projects/$CF_PROJECT_ID/upload-file")
 code=$(echo "$response" | tail -n 1)
 body=$(echo "$response" | sed '$d')

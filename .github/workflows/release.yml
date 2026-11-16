@@ -40,11 +40,19 @@ jobs:
       ADDON: Questwalker
       TAG: ${{ inputs.tag || github.ref_name }}
     steps:
+      # The tools (scripts) come from this workflow's commit, so a manual
+      # re-run of an older tag uses the current scripts; the addon itself
+      # is built from the tag.
+      - uses: actions/checkout@v4
+        with:
+          path: tools
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.tag || github.ref }}
+          path: addon
 
       - name: Check the tag matches the TOC version
+        working-directory: addon
         run: |
           toc=$(sed -n 's/^## Version: *//p' "$ADDON.toc" | tr -d '\r')
           tag="${TAG#v}"
@@ -60,25 +68,29 @@ jobs:
           sudo apt-get install -y lua5.1 lua-check jq
 
       - name: Lint
+        working-directory: addon
         run: luacheck .
 
       - name: Test
+        working-directory: addon
         run: lua5.1 tests/run.lua
 
       - name: Build the zip
+        working-directory: addon
         run: |
-          git archive --format=zip --prefix="$ADDON/" -o "$ADDON-$VERSION.zip" HEAD
-          unzip -l "$ADDON-$VERSION.zip" | tail -n 3
+          git archive --format=zip --prefix="$ADDON/" -o "../$ADDON-$VERSION.zip" HEAD
+          unzip -l "../$ADDON-$VERSION.zip" | tail -n 3
           echo "ZIP=$ADDON-$VERSION.zip" >> "$GITHUB_ENV"
 
       - name: Release notes from CHANGELOG.md
         run: |
-          .github/scripts/changelog-section.sh "$VERSION" CHANGELOG.md > notes.md
+          tools/.github/scripts/changelog-section.sh "$VERSION" addon/CHANGELOG.md > notes.md
           cat notes.md
 
       - name: GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           if gh release view "$TAG" > /dev/null 2>&1; then
             echo "Release $TAG already exists - attaching the zip."
@@ -101,4 +113,4 @@ jobs:
             echo "::warning::CF_API_KEY or CURSEFORGE_PROJECT_ID isn't set - skipping CurseForge."
             exit 0
           fi
-          .github/scripts/curseforge-upload.sh "$ZIP" notes.md
+          tools/.github/scripts/curseforge-upload.sh "$ZIP" notes.md
