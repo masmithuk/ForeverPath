@@ -1,9 +1,9 @@
 --[[
-    ForeverPath - UI/HomeTab.lua
+    Questwalker - UI/HomeTab.lua
 
     "Home" tab: the first thing you see. Your character, the guide you're
     following and where you are in it, rested XP, class tips, dungeons for
-    your level, and a short explanation of every other part of ForeverPath.
+    your level, and a short explanation of every other part of Questwalker.
 
       [Guide window]  show or hide the step guide window
       [Steps]         open the Steps tab

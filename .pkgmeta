@@ -1,5 +1,5 @@
 # BigWigs packager config: keeps dev-only files out of release zips.
-package-as: ForeverPath
+package-as: Questwalker
 ignore:
   - tests
   - .github

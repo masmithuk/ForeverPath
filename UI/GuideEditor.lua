@@ -1,5 +1,5 @@
 --[[
-    ForeverPath - UI/GuideEditor.lua
+    Questwalker - UI/GuideEditor.lua
 
     The guide editor. It works on a draft copy of a guide and has three
     tabs:
@@ -34,7 +34,7 @@ ns.GuideEditor = GuideEditor
 local L = ns.L
 local C = ns.Util.Color
 
-local FRAME_NAME = "ForeverPathGuideEditor"
+local FRAME_NAME = "QuestwalkerGuideEditor"
 local WIDTH, HEIGHT = 780, 580 -- default size; resizable from MIN to MAX
 local MIN_WIDTH, MIN_HEIGHT, MAX_WIDTH, MAX_HEIGHT = 700, 500, 1400, 1000
 local PADDING = 12

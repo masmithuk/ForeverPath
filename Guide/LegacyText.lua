@@ -1,7 +1,7 @@
 --[[
-    ForeverPath - Guide/LegacyText.lua
+    Questwalker - Guide/LegacyText.lua
 
-    Reads the plain-text guide format used by ForeverPath 0.6, so guides
+    Reads the plain-text guide format used by Questwalker 0.6, so guides
     saved or shared with that version still load. New guides are JSON
     (see Guide/GuideFormat.lua); nothing writes this format any more.
 

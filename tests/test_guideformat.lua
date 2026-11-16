@@ -2,7 +2,7 @@
 
 local VALID = [[
 {
-  "format": "ForeverPath guide",
+  "format": "Questwalker guide",
   "version": 2,
   "name": "Hillsbrad Rush",
   "author": "Mike",
@@ -53,7 +53,7 @@ return {
         local json = ns.GuideFormat.ToJson(g)
         local again = ns.GuideFormat.FromJson(json)
         T.eq(ns.GuideFormat.ToJson(again), json)
-        T.contains(json, '"format": "ForeverPath guide"')
+        T.contains(json, '"format": "Questwalker guide"')
         T.contains(json, '"levels": [1, 10]')
         T.truthy(not json:find('"levelsAbove"'), "rules equal to the base are left out")
     end },

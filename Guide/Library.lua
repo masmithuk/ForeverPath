@@ -1,8 +1,8 @@
 --[[
-    ForeverPath - Guide/Library.lua
+    Questwalker - Guide/Library.lua
 
     Every guide a player can choose: the built-in ones (Data/Routes.lua,
-    read-only) and their own, saved account-wide in ForeverPathDB.guides[id]
+    read-only) and their own, saved account-wide in QuestwalkerDB.guides[id]
     so every character can use them.
 
     Saved guides are stored as plain tables in the JSON shape
@@ -48,8 +48,8 @@ local function finish(guide, id, builtin)
 end
 
 local function storage()
-    ForeverPathDB.guides = ForeverPathDB.guides or {}
-    return ForeverPathDB.guides
+    QuestwalkerDB.guides = QuestwalkerDB.guides or {}
+    return QuestwalkerDB.guides
 end
 
 local function slug(name)

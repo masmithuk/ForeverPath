@@ -1,5 +1,5 @@
 --[[
-    ForeverPath - UI/LibraryTab.lua
+    Questwalker - UI/LibraryTab.lua
 
     "Guides" tab: the guides you can follow on this character.
 

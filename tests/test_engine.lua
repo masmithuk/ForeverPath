@@ -87,7 +87,7 @@ return {
         local skipped = ns.Engine.SkipCurrent()
         T.eq(skipped.title, "Talk to Foreman Thazz'ril")
         T.truthy(not hasKey(ns.Engine.state, "accept:npc:1002"), "gone")
-        T.eq(ForeverPathCharDB.guide.skipped[102], true, "saved per character")
+        T.eq(QuestwalkerCharDB.guide.skipped[102], true, "saved per character")
         ns.Engine.UnskipAll()
         T.truthy(hasKey(ns.Engine.state, "accept:npc:1002"), "back")
         T.truthy(state, "state")
@@ -103,7 +103,7 @@ return {
         mock.tradeskillTrainer = false
         ns:FireEvent("TRAINER_SHOW")
         T.truthy(not hasKey(ns.Engine.state, "train:8"), "trained")
-        T.eq(ForeverPathCharDB.guide.trainedLevel, 8)
+        T.eq(QuestwalkerCharDB.guide.trainedLevel, 8)
     end },
 
     { "training is due again two levels later", function(T)
@@ -169,7 +169,7 @@ return {
     { "skipping an inn keeps it skipped, and Back brings it back", function(T)
         local ns, mock = T.fresh()
         local db = fixtures.durotar(mock)
-        ForeverPathCharDB.guide.trainedLevel = 60
+        QuestwalkerCharDB.guide.trainedLevel = 60
         db.Npc[3002] = { name = "Innkeeper Grosk", subName = "Innkeeper", friendlyToFaction = "H",
                          spawns = { [14] = { { 50, 50 } } } }
         local state = fixtures.login(ns)
@@ -235,7 +235,7 @@ return {
         local ns, mock = T.fresh()
         fixtures.durotar(mock)
         fixtures.login(ns)
-        SlashCmdList.FOREVERPATH("guide off")
+        SlashCmdList.QUESTWALKER("guide off")
         T.eq(mock.userWaypoint, nil)
         T.eq(#ns.Engine.state.steps, 0)
     end },
@@ -245,10 +245,10 @@ return {
         mock.installTomTom()
         fixtures.durotar(mock)
         fixtures.login(ns)
-        SlashCmdList.FOREVERPATH("waypoints builtin")
-        T.eq(ForeverPathDB.guide.waypoints, "builtin")
+        SlashCmdList.QUESTWALKER("waypoints builtin")
+        T.eq(QuestwalkerDB.guide.waypoints, "builtin")
         T.eq(mock.userWaypoint.uiMapID, 1411)
-        SlashCmdList.FOREVERPATH("waypoints sideways")
+        SlashCmdList.QUESTWALKER("waypoints sideways")
         T.contains(mock.printed[#mock.printed], "auto, shortestpath, tomtom, builtin, off")
     end },
 
@@ -256,7 +256,7 @@ return {
         local ns, mock = T.fresh()
         fixtures.durotar(mock)
         local state = fixtures.login(ns)
-        T.contains(ForeverPathGuideFrame.current:GetText(), "Talk to Foreman Thazz'ril")
+        T.contains(QuestwalkerGuideFrame.current:GetText(), "Talk to Foreman Thazz'ril")
         T.eq(ns.GuideFrame.FormatDistance(state.origin, state.steps[1]), "20 yd")
         T.contains(ns.GuideFrame.UpcomingText(state.steps), "2. Train at Mai'ah")
     end },
@@ -274,18 +274,18 @@ return {
         T.truthy(calls > 0, "recomputed after a real change")
     end },
 
-    { "/fp done explains when nothing is manual", function(T)
+    { "/qw done explains when nothing is manual", function(T)
         local ns, mock = T.fresh()
         fixtures.durotar(mock, { level = 3 })
         fixtures.login(ns)
-        SlashCmdList.FOREVERPATH("done")
+        SlashCmdList.QUESTWALKER("done")
         T.contains(mock.printed[#mock.printed], "complete on their own")
     end },
 
     { "quests in the same area show up as one step in the guide", function(T)
         local ns, mock = T.fresh()
         local db = fixtures.durotar(mock)
-        ForeverPathCharDB.guide.trainedLevel = 60
+        QuestwalkerCharDB.guide.trainedLevel = 60
         db.Npc[2003] = { name = "Mottled Boar", spawns = { [14] = { { 61, 61 } } } }
         db.Quest[113] = { name = "Cutting Teeth", startedBy = { { 1002 } }, objectives = { { { 2003 } } } }
         fixtures.addToLog(mock, 101, "Vile Familiars", false, { "Vile Familiar slain: 2/8" })
@@ -308,7 +308,7 @@ return {
         local ns, mock = T.fresh()
         mock.player.race = { "Orc", "Orc", 2 }
         fixtures.durotar(mock, { level = 11, mode = "efficient" })
-        ForeverPathCharDB.guide.trainedLevel = 60
+        QuestwalkerCharDB.guide.trainedLevel = 60
         local state = fixtures.login(ns)
         local step = state.steps[1]
         T.eq(step.title, "Talk to Barrens Scout", "Durotar's quests are grey now")

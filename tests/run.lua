@@ -41,8 +41,8 @@ end
 
 --- Reload the addon but keep saved variables, like a /reload or relog.
 function T.reload()
-    local ns = mock.loadAddon(".", "ForeverPath")
-    ns:FireEvent("ADDON_LOADED", "ForeverPath")
+    local ns = mock.loadAddon(".", "Questwalker")
+    ns:FireEvent("ADDON_LOADED", "Questwalker")
     return ns, mock
 end
 

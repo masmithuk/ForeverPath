@@ -1,10 +1,10 @@
 --[[
-    ForeverPath - Core/Settings.lua
+    Questwalker - Core/Settings.lua
 
     SavedVariables handling.
 
-      ForeverPathDB         account-wide: window position, UI preferences
-      ForeverPathCharDB     per character: chosen route
+      QuestwalkerDB         account-wide: window position, UI preferences
+      QuestwalkerCharDB     per character: chosen route
 
     SavedVariables are only available after ADDON_LOADED for this addon, so
     Settings.Init() is called from Core/Bootstrap.lua at that point - never
@@ -58,7 +58,7 @@ local CHAR_DEFAULTS = {
     schema = Settings.SCHEMA_VERSION,
     routeId = nil, -- nil = use the class's default route
     guide = {
-        skipped = {},      -- [questID] = true, hidden until /fp unskip
+        skipped = {},      -- [questID] = true, hidden until /qw unskip
         done = {},         -- [guide note step id] = true
         skippedSteps = {}, -- [service step key] = true (an inn or profession trainer you skipped)
         notOffered = {},   -- [questID] = level: its giver didn't offer it (cleared on level up)
@@ -106,16 +106,16 @@ end
 
 --- Create or upgrade the saved tables. Safe to call more than once.
 function Settings.Init()
-    ForeverPathDB = ForeverPathDB or {}
-    ForeverPathCharDB = ForeverPathCharDB or {}
+    QuestwalkerDB = QuestwalkerDB or {}
+    QuestwalkerCharDB = QuestwalkerCharDB or {}
 
-    ns.Util.ApplyDefaults(ForeverPathDB, ACCOUNT_DEFAULTS)
-    ns.Util.ApplyDefaults(ForeverPathCharDB, CHAR_DEFAULTS)
-    migrate(ForeverPathDB)
-    migrate(ForeverPathCharDB)
+    ns.Util.ApplyDefaults(QuestwalkerDB, ACCOUNT_DEFAULTS)
+    ns.Util.ApplyDefaults(QuestwalkerCharDB, CHAR_DEFAULTS)
+    migrate(QuestwalkerDB)
+    migrate(QuestwalkerCharDB)
 
-    Settings.account = ForeverPathDB
-    Settings.char = ForeverPathCharDB
+    Settings.account = QuestwalkerDB
+    Settings.char = QuestwalkerCharDB
 end
 
 local function resetPosition(saved, defaults)

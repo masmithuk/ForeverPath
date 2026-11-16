@@ -171,8 +171,8 @@ return {
         local ns, mock = T.fresh()
         _G.UnitRace = function() return "Troll", "Troll", 8 end
         local db = fixtures.durotar(mock, { level = 1 })
-        ForeverPathCharDB.routeId = nil -- a brand-new character: default guide
-        ForeverPathCharDB.guide.trainedLevel = 60
+        QuestwalkerCharDB.routeId = nil -- a brand-new character: default guide
+        QuestwalkerCharDB.guide.trainedLevel = 60
         db.Quest[4641] = { name = "Your Place In The World", startedBy = { { 10176 } }, finishedBy = { { 3143 } },
                            requiredLevel = 1, questLevel = 2 }
         db.Npc[10176] = { name = "Kaltunk", friendlyToFaction = "H", spawns = { [6451] = { { 43.3, 68.5 } } } }
@@ -183,7 +183,7 @@ return {
             if name == "ZoneDB" then return { GetUiMapIdByAreaId = function() return nil end } end
         end }
         local state = fixtures.login(ns)
-        T.eq(ns.Advisor.ResolveRouteId(ns.Character.Detect(), ForeverPathCharDB.routeId), "speedrun-orc-troll",
+        T.eq(ns.Advisor.ResolveRouteId(ns.Character.Detect(), QuestwalkerCharDB.routeId), "speedrun-orc-troll",
             "the troll's Speedrun guide by default")
         local titles = {}
         for i, s in ipairs(state.steps) do titles[i] = s.title end
@@ -201,11 +201,11 @@ return {
         T.eq(ns.Engine.state.steps[1].title, "Talk to Kaltunk", "still there once Questie is ready")
     end },
 
-    { "/fp debug reports what the guide sees", function(T)
+    { "/qw debug reports what the guide sees", function(T)
         local ns, mock = T.fresh()
         fixtures.durotar(mock)
         fixtures.login(ns)
-        SlashCmdList.FOREVERPATH("debug")
+        SlashCmdList.QUESTWALKER("debug")
         local out = table.concat(mock.printed, "\n")
         T.contains(out, "QuestieDB ready")
         T.contains(out, "Questie started: false")

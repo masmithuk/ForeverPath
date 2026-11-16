@@ -1,5 +1,5 @@
 --[[
-    ForeverPath - Guide/Catalog.lua
+    Questwalker - Guide/Catalog.lua
 
     Quest overviews per zone (used to build a guide's quest list when it
     has none of its own) and quest statuses.

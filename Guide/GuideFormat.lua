@@ -1,5 +1,5 @@
 --[[
-    ForeverPath - Guide/GuideFormat.lua
+    Questwalker - Guide/GuideFormat.lua
 
     The guide schema: what a guide contains, how it's checked, and how it
     becomes JSON for export/import.
@@ -7,7 +7,7 @@
     JSON (version 2), as exported:
 
         {
-          "format": "ForeverPath guide",
+          "format": "Questwalker guide",
           "version": 2,
           "name": "Hillsbrad Rush",
           "author": "Mike",
@@ -57,7 +57,7 @@ local _, ns = ...
 local GuideFormat = {}
 ns.GuideFormat = GuideFormat
 
-GuideFormat.FORMAT_NAME = "ForeverPath guide"
+GuideFormat.FORMAT_NAME = "Questwalker guide"
 GuideFormat.VERSION = 2
 GuideFormat.MAX_BANDS = 60
 GuideFormat.MAX_ZONES = 20
@@ -393,7 +393,7 @@ function GuideFormat.FromData(raw)
         if not KNOWN_KEYS[key] then r:warn(tostring(key), "isn't a guide setting and was ignored") end
     end
     if type(raw.version) == "number" and raw.version > GuideFormat.VERSION then
-        r:warn("version", "is newer than this ForeverPath understands - update the addon")
+        r:warn("version", "is newer than this Questwalker understands - update the addon")
     end
 
     local guide = {

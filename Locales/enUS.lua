@@ -1,5 +1,5 @@
 --[[
-    ForeverPath - Locales/enUS.lua
+    Questwalker - Locales/enUS.lua
 
     User-interface strings. Data strings (zone, dungeon and spec names) live
     with their data files. Missing keys fall back to the key itself, so a
@@ -14,7 +14,7 @@ local L = setmetatable({}, {
 ns.L = L
 
 -- Frame
-L.TITLE                 = "ForeverPath"
+L.TITLE                 = "Questwalker"
 L.TAB_HOME              = "Home"
 L.TAB_STEPS             = "Steps"
 
@@ -200,10 +200,10 @@ L.SETTING_AUTO_FOLLOW    = "Only accept quests my guide uses"
 L.SETTING_AUTO_TRIVIAL   = "Skip grey (low-level) quests"
 L.SETTING_AUTO_REPEAT    = "Skip repeatable quests"
 L.AUTO_NOTES             = "Reward choices and quests that cost gold are always left to you."
-L.AUTO_QUESTIE_ON        = "Questie's own auto-accept/turn-in is on, so ForeverPath stays out of the way. "
+L.AUTO_QUESTIE_ON        = "Questie's own auto-accept/turn-in is on, so Questwalker stays out of the way. "
     .. "Turn it off in Questie (/questie) to use these settings."
-L.AUTO_CHOOSE_REWARD     = "Pick your reward - ForeverPath never chooses between rewards for you."
-L.AUTO_COSTS_GOLD        = "This quest costs gold to complete, so ForeverPath left it to you."
+L.AUTO_CHOOSE_REWARD     = "Pick your reward - Questwalker never chooses between rewards for you."
+L.AUTO_COSTS_GOLD        = "This quest costs gold to complete, so Questwalker left it to you."
 
 -- Target button
 L.TARGET_FMT            = "Target: %s"
@@ -211,15 +211,15 @@ L.TARGET_CYCLE_FMT      = "Target: %s (%d/%d)"
 L.TARGET_TOOLTIP_TITLE  = "Target nearest quest mob"
 L.TARGET_TOOLTIP_BODY   = "Each press targets the next creature you still need for a quest, "
     .. "nearest first, then starts again. Works in combat; the list refreshes when combat ends. "
-    .. "Bind a key under Key Bindings > AddOns > ForeverPath (without Shift). "
+    .. "Bind a key under Key Bindings > AddOns > Questwalker (without Shift). "
     .. "Shift + left-drag to move."
 L.SETTING_TARGET        = "Show the Target button (nearest quest mob)"
 
 -- Key bindings menu (globals the game reads)
-_G.BINDING_HEADER_FOREVERPATH = "ForeverPath"
-_G["BINDING_NAME_CLICK ForeverPathTargetButton:LeftButton"] = "Target nearest quest mob"
+_G.BINDING_HEADER_QUESTWALKER = "Questwalker"
+_G["BINDING_NAME_CLICK QuestwalkerTargetButton:LeftButton"] = "Target nearest quest mob"
 for i = 2, 6 do
-    _G["BINDING_NAME_CLICK ForeverPathTargetButton" .. i .. ":LeftButton"] = "Target quest mob " .. i
+    _G["BINDING_NAME_CLICK QuestwalkerTargetButton" .. i .. ":LeftButton"] = "Target quest mob " .. i
 end
 
 -- Minimap button
@@ -231,7 +231,7 @@ L.MINIMAP_DRAG          = "Drag to move"
 L.HEADER_FMT            = "%s %s - Level %d (%s)"   -- race, class, level, faction
 L.NEUTRAL               = "No faction yet"
 L.NEW_COMBO             = "New in Forever: this race/class combination did not exist in Classic."
-L.UNKNOWN_RACE          = "ForeverPath doesn't recognise your race (%s). Showing faction-wide routes."
+L.UNKNOWN_RACE          = "Questwalker doesn't recognise your race (%s). Showing faction-wide routes."
 
 -- Rested XP
 L.RESTED_HEADER         = "Rested XP"
@@ -268,24 +268,24 @@ L.ROUTE_SET_FMT         = "Now following the guide %s."
 L.ROUTE_UNKNOWN         = "Unknown guide. Choose one of: %s"
 L.POSITION_RESET        = "Window position reset."
 L.HELP = {
-    "/fp - toggle the leveling plan window",
-    "/fp guide - toggle the step-by-step guide window",
-    "/fp guide on|off - turn the step guide (and its waypoints) on or off",
-    "/fp skip - skip the current step",
-    "/fp back - undo the last skip (repeat to go further back)",
-    "/fp done - mark the current step done",
-    "/fp debug - what the guide sees (handy for bug reports)",
-    "/fp best (or /fp lost) - go to the best step from where you are",
-    "/fp unskip - bring back every skipped quest",
-    "/fp waypoints auto|shortestpath|tomtom|builtin|off - choose the arrow",
-    "/fp route <guide id or name> - follow a guide (story, efficient or your own)",
-    "/fp next - print your current and next zones to chat",
-    "/fp reset - reset window positions",
-    "/fp help - show this help",
+    "/qw - open or close the main window",
+    "/qw guide - toggle the step-by-step guide window",
+    "/qw guide on|off - turn the step guide (and its waypoints) on or off",
+    "/qw skip - skip the current step",
+    "/qw back - undo the last skip (repeat to go further back)",
+    "/qw done - mark the current step done",
+    "/qw debug - what the guide sees (handy for bug reports)",
+    "/qw best (or /qw lost) - go to the best step from where you are",
+    "/qw unskip - bring back every skipped quest",
+    "/qw waypoints auto|shortestpath|tomtom|builtin|off - choose the arrow",
+    "/qw route speedrun|story|<your guide> - follow a guide",
+    "/qw next - print your current and next zones to chat",
+    "/qw reset - reset window positions",
+    "/qw help - show this help",
 }
 
 -- Step guide
-L.GUIDE_TITLE                = "ForeverPath Guide"
+L.GUIDE_TITLE                = "Questwalker Guide"
 L.GUIDE_BEST                 = "Best step"
 L.GUIDE_BEST_FMT             = "Best step from here: %s"
 L.GUIDE_SKIP                 = "Skip"
@@ -295,10 +295,10 @@ L.GUIDE_BACK_TOOLTIP_FMT     = "Undo skipping: %s"
 L.GUIDE_BACK_NONE            = "Nothing to go back to."
 L.GUIDE_RESTORED_FMT         = "Back to: %s"
 L.GUIDE_DONE                 = "Done"
-L.GUIDE_NOTHING              = "No steps right now. Check the leveling plan (/fp) for where to head next."
+L.GUIDE_NOTHING              = "No steps right now. Check the leveling plan (/qw) for where to head next."
 L.GUIDE_NO_LOCATION          = "No map location known for this step."
 L.GUIDE_NEEDS_QUESTIE        = "Install Questie (with QuestieDB) to be guided to new quest givers. Showing your quest log only."
-L.GUIDE_QUESTIE_INCOMPATIBLE = "This QuestieDB version isn't supported - update ForeverPath or Questie. Showing your quest log only."
+L.GUIDE_QUESTIE_INCOMPATIBLE = "This QuestieDB version isn't supported - update Questwalker or Questie. Showing your quest log only."
 L.GUIDE_INDEXING             = "Reading QuestieDB..."
 L.GUIDE_NO_WAYPOINTS         = "No waypoint addon available - install Shortest Path Forever or TomTom."
 L.ZONE_CHANGE_FMT            = "You've out-levelled %s - head to %s."

@@ -2,14 +2,18 @@
 
 All notable changes are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/) and the project uses [Semantic Versioning](https://semver.org/).
 
-## [0.8.0] - 2026-11-15
+## [0.8.0] - 2026-11-16
+
+### Renamed
+- **ForeverPath is now Questwalker** (the old name is taken on CurseForge). The addon folder is `Questwalker`, the slash commands are `/qw` and `/questwalker`, and the windows, key bindings and saved settings use the new name. Settings and your own guides saved under ForeverPath don't carry over automatically: export your guides from ForeverPath first, then import them into Questwalker. Guides exported from ForeverPath import fine.
+- Releases are built and uploaded to CurseForge from GitHub when a version tag is pushed.
 
 ### Fixed
 - **Hearthstone:** the guide suggested setting it at whatever inn you were near, even far from your quests. It now picks the inn nearest the middle of your current quest steps, and only suggests it while you're there.
 - **Quests the NPC doesn't actually offer** (e.g. "Friend of the Library", which needs books first): when you talk to the quest giver and a quest the guide expected isn't in its list, the guide says so in chat, marks it "Not offered" in the Steps tab and moves on. It's checked again when you level up, or when you pick it with Go to this step.
 - **Auto accept** could silently turn quests down: "only quests my guide would pick" was on by default and Speedrun's filters rejected many quests. It's now off by default (and turned off once on upgrade), so every offered quest is taken unless it's grey, repeatable or skipped.
 - Auto accept no longer relies on Blizzard's gossip and quest windows to tell when a conversation ends, so dialog replacements such as DialogueUI don't stop it.
-- `/fp debug` reports the auto accept settings and whether Questie's own automation is in charge.
+- `/qw debug` reports the auto accept settings and whether Questie's own automation is in charge.
 
 ### Removed
 - **Hold to pause** for quest automation.
@@ -25,7 +29,7 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 - The Steps tab for the built-in guides lists the quests of your zones for this level and the next, so it stays short and quick.
 
 ### Changed (interface overhaul)
-- **Home tab**, the new first tab: your character and guide, where you're levelling now and next, your current step, rested XP, class tips, dungeons for your level, and what every part of ForeverPath does.
+- **Home tab**, the new first tab: your character and guide, where you're levelling now and next, your current step, rested XP, class tips, dungeons for your level, and what every part of Questwalker does.
 - **Guides per race:** a Speedrun and a Story guide, levels 1-60, for each starting area (Orc & Troll, Tauren, Undead, Human, Dwarf & Gnome, Night Elf, Skyborne). The Guides tab shows yours plus your own guides. Choices saved as "Efficient" or "Story" now mean your race's version.
 - **Speedrun** is the quickest quest path to 60 for your race. **Story** now covers the important quests of each zone: quest chains first, no grey quests, and stand-alone side quests only when they're on the way (new `sidePenalty` rule).
 - Main window tabs are now Home · Steps · Guides · Settings. The **Zones** and **Plan** tabs, following a single zone, and the **Change guide** button are gone.
@@ -34,13 +38,13 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 - **Resizable windows:** the main window, guide window and guide editor can be resized from the corner, everything inside adjusts, and the sizes are remembered.
 
 ### Fixed
-- A brand-new character could see "No steps right now" instead of its first quest. Questie finishes starting up a few seconds after login, and until then its quest-availability and zone answers are empty. ForeverPath used those answers and remembered them. Now it uses its own checks until Questie has started, doesn't remember failed zone lookups made in the meantime, and plans again the moment Questie is ready.
+- A brand-new character could see "No steps right now" instead of its first quest. Questie finishes starting up a few seconds after login, and until then its quest-availability and zone answers are empty. Questwalker used those answers and remembered them. Now it uses its own checks until Questie has started, doesn't remember failed zone lookups made in the meantime, and plans again the moment Questie is ready.
 - Quest givers listed under a starting sub-zone (Valley of Trials, Echo Isles, Northshire, ...) are placed on their zone's map.
-- `/fp debug` prints what the guide sees (guide, QuestieDB state, your map, quests available) for bug reports.
+- `/qw debug` prints what the guide sees (guide, QuestieDB state, your map, quests available) for bug reports.
 
 ### Added
 - **Steps that aren't quests in your own guides**: note, buy, train, set hearth and go to a spot, placed anywhere in the quest list. Add them in the editor's Quests tab (with **Use my location**) or in JSON as `{ "step": "goto", "text": "...", "zone": "Durotar", "x": 52.0, "y": 41.5 }`. They come up in order once the quests before them are dealt with. Train and hearth clear themselves at the trainer or innkeeper, go to clears when you arrive, and the rest are ticked off with Done. They're listed in the Steps tab too.
-- **Best step** button in the guide window and the Steps tab (and `/fp best` or `/fp lost`): if you're lost, it drops any chosen or held step and picks the best one from where you're standing.
+- **Best step** button in the guide window and the Steps tab (and `/qw best` or `/qw lost`): if you're lost, it drops any chosen or held step and picks the best one from where you're standing.
 - **Steps tab**, the first tab of the main window: every quest in your guide in order, with where you are, what's done, skipped and missed (available quests you've moved past). Filter by All, To do, Skipped & missed or Done.
 - **Go to this step** (or double-click) makes any quest in the list the current step until it's done, and says why if you can't do it yet. Skip, Unskip and Undo last skip work from the list.
 - **Service steps** in the route, only when they're due and you're within about 400 yards:
@@ -60,7 +64,7 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 ## [0.7.0] - 2026-11-15
 
 ### Added
-- **Back** button in the step guide window, plus `/fp back`. It undoes the most recent skip, or a hand-ticked reminder, and makes that step current again. Press it repeatedly to keep going back. Undoing a skipped training step restores your training level. The last 50 actions are kept per character.
+- **Back** button in the step guide window, plus `/qw back`. It undoes the most recent skip, or a hand-ticked reminder, and makes that step current again. Press it repeatedly to keep going back. Undoing a skipped training step restores your training level. The last 50 actions are kept per character.
 
 ### Added
 - Guides can have their own **quest list**. The step guide follows it in order: the next three listed quests get a strong head start, and hand-ins and objectives still fit in by distance. When nothing on the list is available, the guide's zones take over.
@@ -89,7 +93,7 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 
 ### Changed
 - The old zone browser is now the **Zones** tab, with "Follow this zone". The main window shows the current guide with a "Change guide" button.
-- `/fp route` accepts any guide's id or name.
+- `/qw route` accepts any guide's id or name.
 
 ### Removed
 - Dungeon mode. Characters using it move to Efficient. The "Run (dungeon)" step for dungeon quests already in your log is kept.
@@ -148,8 +152,8 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 - New quests are limited to your current route band's zones plus the zone you're in.
 - Class training steps every two levels, pointing to your nearest class trainer. Opening the trainer completes the step.
 - Reminders for hearthstone, bags, talents, First Aid, Riding, dual spec and some class-specific steps.
-- Waypoints through TomTom (which also drives TomTom-based path addons) or the built-in map pin: `/fp waypoints`.
-- `/fp guide`, `/fp skip`, `/fp done` and `/fp unskip` commands.
+- Waypoints through TomTom (which also drives TomTom-based path addons) or the built-in map pin: `/qw waypoints`.
+- `/qw guide`, `/qw skip`, `/qw done` and `/qw unskip` commands.
 - Tests for the planner, the QuestieDB adapter and the engine, using fake QuestieDB and TomTom.
 
 ### Changed
@@ -165,5 +169,5 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 - Dungeon suggestions for your level, with the new Forever dungeons tagged.
 - Rested XP and XP-to-level display.
 - Chat announcements when you enter a new band or reach a milestone.
-- `/fp` slash commands and an addon compartment entry.
+- `/qw` slash commands and an addon compartment entry.
 - Unit tests with a mocked WoW API, luacheck configuration and GitHub Actions CI.

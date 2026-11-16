@@ -1,11 +1,11 @@
 --[[
-    ForeverPath - Integrations/Waypoints.lua
+    Questwalker - Integrations/Waypoints.lua
 
     Points an arrow at the current guide step.
 
     Providers
       shortestpath  Shortest Path Forever: real walking/flight/boat routes.
-                    ForeverPath hands it the next few steps as one journey
+                    Questwalker hands it the next few steps as one journey
                     (ShortestPathForever.API.NavigateRoute). The first stop
                     is held until the step is actually done, so arriving
                     doesn't skip ahead; later stops are drawn as numbered
@@ -16,7 +16,7 @@
       off           No waypoints.
 
     "auto" (the default) uses the first one available in that order. Only
-    one ForeverPath waypoint or journey exists at a time, and nothing is
+    one Questwalker waypoint or journey exists at a time, and nothing is
     saved into TomTom's persistent waypoint list.
 ]]
 
@@ -27,7 +27,7 @@ ns.Waypoints = Waypoints
 
 Waypoints.PROVIDERS = { "auto", "shortestpath", "tomtom", "builtin", "off" }
 
-local OWNER = "ForeverPath"
+local OWNER = "Questwalker"
 local MAX_ROUTE_STOPS = 6
 
 -- Our step kinds -> Shortest Path Forever stop kinds (for map badges).
@@ -104,7 +104,7 @@ function Waypoints.BuildStops(steps)
                 if step.kind == "TURNIN" then stop.handins = step.questIDs end
             end
             if #stops == 0 then
-                -- Wait at the current step until ForeverPath moves on.
+                -- Wait at the current step until Questwalker moves on.
                 stop.hold = true
             end
             stops[#stops + 1] = stop
@@ -131,7 +131,7 @@ providers.tomtom = {
         local t, title = stops[1], stops[1].title
         current.uid = _G.TomTom:AddWaypoint(t.map, t.x, t.y, {
             title = title,
-            from = "ForeverPath",
+            from = "Questwalker",
             persistent = false,
             minimap = true,
             world = true,
@@ -161,7 +161,7 @@ providers.builtin = {
     end,
 }
 
---- Remove ForeverPath's waypoint, if any.
+--- Remove Questwalker's waypoint, if any.
 function Waypoints.Clear()
     local p = current.provider and providers[current.provider]
     if p then pcall(p.clear) end

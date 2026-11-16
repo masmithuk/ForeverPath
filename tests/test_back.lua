@@ -5,7 +5,7 @@ local fixtures = require("fixtures")
 local function setup(T)
     local ns, mock = T.fresh()
     fixtures.durotar(mock)
-    ForeverPathCharDB.guide.trainedLevel = 60 -- keep training out of the way
+    QuestwalkerCharDB.guide.trainedLevel = 60 -- keep training out of the way
     fixtures.login(ns)
     return ns, mock
 end
@@ -21,7 +21,7 @@ return {
         local entry = ns.Engine.Back()
         T.eq(entry.title, "Talk to Foreman Thazz'ril")
         T.eq(first(ns), "Talk to Foreman Thazz'ril", "restored as the current step")
-        T.eq(ForeverPathCharDB.guide.skipped[102], nil)
+        T.eq(QuestwalkerCharDB.guide.skipped[102], nil)
     end },
 
     { "pressing Back repeatedly walks back through several skips", function(T)
@@ -37,24 +37,24 @@ return {
 
     { "undoing a skipped training step restores the training level", function(T)
         local ns = setup(T)
-        ForeverPathCharDB.guide.trainedLevel = 6
+        QuestwalkerCharDB.guide.trainedLevel = 6
         ns.Engine.Replan()
         T.truthy(fixtures.findStep(ns.Engine.state, "train:8"), "training due")
         -- Skip until the training step is current, then skip it.
         while first(ns) ~= "Train at Mai'ah" do ns.Engine.SkipCurrent() end
         ns.Engine.SkipCurrent()
-        T.eq(ForeverPathCharDB.guide.trainedLevel, 8)
+        T.eq(QuestwalkerCharDB.guide.trainedLevel, 8)
         ns.Engine.Back()
-        T.eq(ForeverPathCharDB.guide.trainedLevel, 6)
+        T.eq(QuestwalkerCharDB.guide.trainedLevel, 6)
         T.eq(first(ns), "Train at Mai'ah")
     end },
 
     { "a quest that was already skipped isn't un-skipped by an unrelated Back", function(T)
         local ns = setup(T)
-        ForeverPathCharDB.guide.skipped[107] = true -- skipped long ago
+        QuestwalkerCharDB.guide.skipped[107] = true -- skipped long ago
         ns.Engine.SkipCurrent()                     -- the Foreman (102)
         ns.Engine.Back()
-        T.eq(ForeverPathCharDB.guide.skipped[107], true)
+        T.eq(QuestwalkerCharDB.guide.skipped[107], true)
     end },
 
     { "history survives a reload and is capped", function(T)
@@ -63,18 +63,18 @@ return {
         local reloaded = T.reload()
         T.eq(reloaded.Engine.LastSkipped().title, "Talk to Foreman Thazz'ril")
         for i = 1, 60 do
-            ForeverPathCharDB.guide.history[#ForeverPathCharDB.guide.history + 1] =
+            QuestwalkerCharDB.guide.history[#QuestwalkerCharDB.guide.history + 1] =
                 { action = "skip", key = "x" .. i, title = "x", questIDs = {} }
         end
         fixtures.login(reloaded)
         reloaded.Engine.SkipCurrent()
-        T.eq(#ForeverPathCharDB.guide.history, 50)
+        T.eq(#QuestwalkerCharDB.guide.history, 50)
     end },
 
-    { "/fp back works too", function(T)
+    { "/qw back works too", function(T)
         local ns, mock = setup(T)
         ns.Engine.SkipCurrent()
-        SlashCmdList.FOREVERPATH("back")
+        SlashCmdList.QUESTWALKER("back")
         T.contains(mock.printed[#mock.printed], "Back to: Talk to Foreman Thazz'ril")
     end },
 }

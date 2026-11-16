@@ -1,13 +1,13 @@
 ## Interface: 16001
-## Title: ForeverPath
-## Notes: Step-by-step leveling guide for World of Warcraft: Forever - quest giver to quest giver, with TomTom arrows and race/class-aware routes.
+## Title: Questwalker
+## Notes: Step-by-step 1-60 leveling guide for WoW Forever: quest giver to quest giver, Speedrun and Story guides for every race, with Shortest Path or TomTom arrows.
 ## Author: masmithuk
 ## Version: 0.8.0
 ## IconTexture: Interface\Icons\INV_Misc_Map_01
-## SavedVariables: ForeverPathDB
-## SavedVariablesPerCharacter: ForeverPathCharDB
-## AddonCompartmentFunc: ForeverPath_OnAddonCompartmentClick
-## OptionalDeps: QuestieDB, Questie, TomTom
+## SavedVariables: QuestwalkerDB
+## SavedVariablesPerCharacter: QuestwalkerCharDB
+## AddonCompartmentFunc: Questwalker_OnAddonCompartmentClick
+## OptionalDeps: QuestieDB, Questie, ShortestPathForever, TomTom
 
 # Load order matters: namespace -> locale -> data -> logic -> UI -> bootstrap.
 Core\Init.lua

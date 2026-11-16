@@ -1,5 +1,5 @@
 --[[
-    ForeverPath - UI/StepsTab.lua
+    Questwalker - UI/StepsTab.lua
 
     "Steps" tab: every quest in the guide you're following, in order.
 

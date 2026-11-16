@@ -1,0 +1,7 @@
+# Files left out of release zips (git archive). Keep in step with .pkgmeta.
+tests/          export-ignore
+.github/        export-ignore
+.luacheckrc     export-ignore
+.pkgmeta        export-ignore
+.gitattributes  export-ignore
+.editorconfig   export-ignore

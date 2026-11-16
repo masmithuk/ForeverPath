@@ -1,7 +1,7 @@
 --[[
-    ForeverPath - Core/Commands.lua
+    Questwalker - Core/Commands.lua
 
-    Slash commands (/fp, /foreverpath) and the Addon Compartment callback.
+    Slash commands (/qw, /questwalker) and the Addon Compartment callback.
 ]]
 
 local _, ns = ...
@@ -159,14 +159,14 @@ function Commands.Handle(msg)
 end
 
 function Commands.Register()
-    SLASH_FOREVERPATH1 = "/fp"
-    SLASH_FOREVERPATH2 = "/foreverpath"
-    SlashCmdList.FOREVERPATH = Commands.Handle
+    SLASH_QUESTWALKER1 = "/qw"
+    SLASH_QUESTWALKER2 = "/questwalker"
+    SlashCmdList.QUESTWALKER = Commands.Handle
 end
 
 -- Called by the minimap Addon Compartment (declared in the .toc).
 -- Must be a global because the TOC references it by name.
-function ForeverPath_OnAddonCompartmentClick()
+function Questwalker_OnAddonCompartmentClick()
     ns.MainFrame.Toggle()
 end
 

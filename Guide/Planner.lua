@@ -1,5 +1,5 @@
 --[[
-    ForeverPath - Guide/Planner.lua
+    Questwalker - Guide/Planner.lua
 
     Pure route planning: takes candidate steps that already know where they
     are, merges steps at the same NPC, groups quest objectives in the same

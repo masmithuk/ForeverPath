@@ -1,5 +1,5 @@
 --[[
-    ForeverPath - Data/Dungeons.lua
+    Questwalker - Data/Dungeons.lua
 
     Five-player dungeons available while leveling.
 

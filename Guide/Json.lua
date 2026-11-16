@@ -1,5 +1,5 @@
 --[[
-    ForeverPath - Guide/Json.lua
+    Questwalker - Guide/Json.lua
 
     A small, safe JSON encoder/decoder for guide import and export.
 

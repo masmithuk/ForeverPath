@@ -1,5 +1,5 @@
 --[[
-    ForeverPath - UI/GuideFrame.lua
+    Questwalker - UI/GuideFrame.lua
 
     The compact step-by-step window:
 
@@ -83,7 +83,7 @@ function GuideFrame.UpcomingText(steps)
     return table.concat(lines, "\n")
 end
 
---- "ForeverPath - Orc & Troll Speedrun (1-60)"
+--- "Questwalker - Orc & Troll Speedrun (1-60)"
 function GuideFrame.HeaderText()
     local guide = ns.Engine.CurrentGuide()
     return L.GUIDE_TITLE .. (guide and (" - " .. guide.name) or "")
@@ -141,7 +141,7 @@ local function newButton(parent, label, onClick)
 end
 
 local function create()
-    local f = CreateFrame("Frame", "ForeverPathGuideFrame", UIParent, "BackdropTemplate")
+    local f = CreateFrame("Frame", "QuestwalkerGuideFrame", UIParent, "BackdropTemplate")
     f:SetSize(savedWidth(), 120)
     f:SetFrameStrata("MEDIUM")
     f:SetClampedToScreen(true)

@@ -1,5 +1,5 @@
 --[[
-    ForeverPath - Core/Bootstrap.lua
+    Questwalker - Core/Bootstrap.lua
 
     Wires game events to the modules. Loaded last so every module exists.
 ]]

@@ -1,5 +1,5 @@
 --[[
-    ForeverPath - Core/Init.lua
+    Questwalker - Core/Init.lua
 
     Creates the shared addon namespace (`ns`) and a tiny event dispatcher.
     Every other file receives the same `ns` table via `...`, so nothing is

@@ -1,5 +1,5 @@
 --[[
-    ForeverPath - UI/SettingsTab.lua
+    Questwalker - UI/SettingsTab.lua
 
     "Settings" tab: every option as a checkbox, dropdown or button, so
     nothing needs a slash command.

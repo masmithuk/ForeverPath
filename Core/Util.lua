@@ -1,5 +1,5 @@
 --[[
-    ForeverPath - Core/Util.lua
+    Questwalker - Core/Util.lua
 
     Small, dependency-free helpers shared by the logic and UI layers.
 ]]
@@ -126,6 +126,6 @@ end
 
 --- Print a prefixed message to the default chat frame.
 function Util.Print(...)
-    local prefix = Util.Color("accent", ns.name or "ForeverPath") .. ":"
+    local prefix = Util.Color("accent", ns.name or "Questwalker") .. ":"
     print(prefix, ...)
 end

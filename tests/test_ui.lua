@@ -4,30 +4,30 @@ return {
     { "minimap button opens the main window on Home", function(T)
         local ns = T.fresh()
         ns:FireEvent("PLAYER_LOGIN")
-        T.truthy(ForeverPathMinimapButton, "minimap button created")
+        T.truthy(QuestwalkerMinimapButton, "minimap button created")
         ns.MinimapButton.Click("RightButton")
-        T.truthy(ForeverPathMainFrame:IsShown(), "shown")
-        T.eq(ForeverPathDB.tab, "home")
+        T.truthy(QuestwalkerMainFrame:IsShown(), "shown")
+        T.eq(QuestwalkerDB.tab, "home")
         T.contains(ns.HomeTab.GetText(), "Undead Speedrun (1-60)")
 
         ns.MainFrame.SetRoute("story")
-        T.eq(ForeverPathCharDB.routeId, "story")
+        T.eq(QuestwalkerCharDB.routeId, "story")
         T.contains(ns.HomeTab.GetText(), "Undead Story (1-60)")
 
         ns.MinimapButton.Click("RightButton")
-        T.truthy(not ForeverPathMainFrame:IsShown(), "hidden")
-        T.eq(ForeverPathDB.frame.shown, false)
+        T.truthy(not QuestwalkerMainFrame:IsShown(), "hidden")
+        T.eq(QuestwalkerDB.frame.shown, false)
     end },
 
     { "left-click on the minimap button toggles the guide window", function(T)
         local ns = T.fresh()
         ns:FireEvent("PLAYER_LOGIN")
-        T.eq(ForeverPathDB.guide.shown, true)
+        T.eq(QuestwalkerDB.guide.shown, true)
         ns.MinimapButton.Click("LeftButton")
-        T.eq(ForeverPathDB.guide.shown, false)
-        T.truthy(not ForeverPathGuideFrame:IsShown(), "hidden")
+        T.eq(QuestwalkerDB.guide.shown, false)
+        T.truthy(not QuestwalkerGuideFrame:IsShown(), "hidden")
         ns.MinimapButton.Click("LeftButton")
-        T.truthy(ForeverPathGuideFrame:IsShown(), "shown again")
+        T.truthy(QuestwalkerGuideFrame:IsShown(), "shown again")
     end },
 
     { "minimap button position follows the saved angle", function(T)
@@ -42,7 +42,7 @@ return {
 
     { "unknown route prints the valid choices", function(T)
         local _, mock = T.fresh()
-        SlashCmdList.FOREVERPATH("route nowhere")
+        SlashCmdList.QUESTWALKER("route nowhere")
         T.contains(mock.printed[#mock.printed], "speedrun, story")
     end },
 
@@ -66,49 +66,49 @@ return {
     { "saved variables survive a relog and gain new defaults", function(T)
         T.fresh()
         -- Pretend an older install saved only one field.
-        ForeverPathDB = { schema = 6, announceLevelUp = false }
+        QuestwalkerDB = { schema = 6, announceLevelUp = false }
         T.reload()
-        T.eq(ForeverPathDB.announceLevelUp, false, "kept")
-        T.eq(ForeverPathDB.frame.point, "CENTER", "defaults filled")
-        T.eq(ForeverPathDB.schema, 6, "schema stamped")
+        T.eq(QuestwalkerDB.announceLevelUp, false, "kept")
+        T.eq(QuestwalkerDB.frame.point, "CENTER", "defaults filled")
+        T.eq(QuestwalkerDB.schema, 6, "schema stamped")
     end },
 
     { "a 0.3 route choice carries over to the new modes", function(T)
         T.fresh()
-        ForeverPathCharDB = { schema = 2, routeId = "frontier" }
+        QuestwalkerCharDB = { schema = 2, routeId = "frontier" }
         T.reload()
-        T.eq(ForeverPathCharDB.routeId, "efficient")
+        T.eq(QuestwalkerCharDB.routeId, "efficient")
     end },
 
     { "a 0.4 Dungeon mode choice becomes Efficient", function(T)
         T.fresh()
-        ForeverPathCharDB = { schema = 3, routeId = "dungeon", guideId = "Wailing Caverns" }
-        ForeverPathDB = { schema = 3, tab = "guides" }
+        QuestwalkerCharDB = { schema = 3, routeId = "dungeon", guideId = "Wailing Caverns" }
+        QuestwalkerDB = { schema = 3, tab = "guides" }
         T.reload()
-        T.eq(ForeverPathCharDB.routeId, "efficient")
-        T.eq(ForeverPathCharDB.guideId, nil, "dungeon guide choice dropped")
-        T.eq(ForeverPathDB.tab, "home", "old tabs open Home")
+        T.eq(QuestwalkerCharDB.routeId, "efficient")
+        T.eq(QuestwalkerCharDB.guideId, nil, "dungeon guide choice dropped")
+        T.eq(QuestwalkerDB.tab, "home", "old tabs open Home")
     end },
 
     { "0.8 upgrade: old tabs, zone choice and the guide switch are cleared", function(T)
         T.fresh()
-        ForeverPathCharDB = { schema = 4, routeId = "efficient", guideId = "Durotar" }
-        ForeverPathDB = { schema = 4, tab = "plan", showAllBands = true,
+        QuestwalkerCharDB = { schema = 4, routeId = "efficient", guideId = "Durotar" }
+        QuestwalkerDB = { schema = 4, tab = "plan", showAllBands = true,
                           guide = { enabled = false, waypoints = "auto" } }
         local ns = T.reload()
-        T.eq(ForeverPathCharDB.guideId, nil)
-        T.eq(ForeverPathDB.tab, "home")
-        T.eq(ForeverPathDB.showAllBands, nil)
-        T.eq(ForeverPathDB.guide.enabled, true, "guide back on (there's no switch for it now)")
+        T.eq(QuestwalkerCharDB.guideId, nil)
+        T.eq(QuestwalkerDB.tab, "home")
+        T.eq(QuestwalkerDB.showAllBands, nil)
+        T.eq(QuestwalkerDB.guide.enabled, true, "guide back on (there's no switch for it now)")
         T.eq(ns.Engine.CurrentGuide().id, "speedrun-undead", "efficient -> your race's Speedrun")
     end },
 
     { "0.8 upgrade: hold-to-pause removed, auto accept takes every quest", function(T)
         T.fresh()
-        ForeverPathDB = { schema = 5, auto = { accept = true, followMode = true, pauseKey = "SHIFT" } }
+        QuestwalkerDB = { schema = 5, auto = { accept = true, followMode = true, pauseKey = "SHIFT" } }
         T.reload()
-        T.eq(ForeverPathDB.auto.pauseKey, nil)
-        T.eq(ForeverPathDB.auto.followMode, false)
-        T.eq(ForeverPathDB.auto.accept, true, "kept")
+        T.eq(QuestwalkerDB.auto.pauseKey, nil)
+        T.eq(QuestwalkerDB.auto.followMode, false)
+        T.eq(QuestwalkerDB.auto.accept, true, "kept")
     end },
 }

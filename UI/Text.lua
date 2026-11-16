@@ -1,5 +1,5 @@
 --[[
-    ForeverPath - UI/Text.lua
+    Questwalker - UI/Text.lua
 
     Turns a plan (from Core/Advisor.lua) into the coloured text shown on the
     main window's Home tab. Kept separate from frame code so it can be tested and so
@@ -110,7 +110,7 @@ end
 
 --- The Home tab: who you are, the guide you follow and where you are in
 --- it, rested XP, class tips, dungeons for your level, and what each part
---- of ForeverPath does.
+--- of Questwalker does.
 -- @param profile from Character.Detect
 -- @param plan    from Advisor.BuildPlan
 -- @param xp      from Advisor.GetXpInfo (optional)

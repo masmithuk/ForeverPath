@@ -1,5 +1,5 @@
 --[[
-    ForeverPath - Data/Milestones.lua
+    Questwalker - Data/Milestones.lua
 
     Level milestones worth announcing. `classes` restricts a milestone to
     specific classes; omit it for milestones that apply to everyone.

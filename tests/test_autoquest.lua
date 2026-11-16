@@ -39,7 +39,7 @@ return {
 
     { "skips grey, repeatable and skipped-in-the-guide quests", function(T)
         local ns, mock = setup(T)
-        ForeverPathCharDB.guide.skipped[103] = true
+        QuestwalkerCharDB.guide.skipped[103] = true
         mock.dialog.gossipAvailable = {
             { questID = 108, isTrivial = true },
             { questID = 107, repeatable = true },
@@ -52,7 +52,7 @@ return {
 
     { "accepts every quest by default, even ones the guide wouldn't pick", function(T)
         local ns, mock = setup(T, "efficient", 6)
-        T.eq(ForeverPathDB.auto.followMode, false, "off by default")
+        T.eq(QuestwalkerDB.auto.followMode, false, "off by default")
         mock.dialog.gossipAvailable = { { questID = 108 }, { questID = 101 } }
         ns:FireEvent("GOSSIP_SHOW")
         T.eq(calls(mock), "SelectAvailableQuest:108")
@@ -60,7 +60,7 @@ return {
 
     { "with 'only quests my guide uses', Speedrun won't accept quests it would skip", function(T)
         local ns, mock = setup(T, "efficient", 6)
-        ForeverPathDB.auto.followMode = true
+        QuestwalkerDB.auto.followMode = true
         -- 108 is level 1: outside Efficient's 2-levels-below window, even if
         -- the client doesn't flag it grey.
         mock.dialog.gossipAvailable = { { questID = 108 }, { questID = 101 } }
@@ -110,7 +110,7 @@ return {
 
     { "an NPC with one quest opening its text directly is still filtered", function(T)
         local ns, mock = setup(T)
-        ForeverPathCharDB.guide.skipped[102] = true
+        QuestwalkerCharDB.guide.skipped[102] = true
         mock.dialog.questID = 102
         ns:FireEvent("QUEST_DETAIL")
         T.eq(calls(mock), "", "skipped in the guide")
@@ -189,12 +189,12 @@ return {
         mock.dialog.questID = 102
         ns:FireEvent("QUEST_DETAIL")
         T.eq(calls(mock), "AcceptQuest")
-        T.eq(ForeverPathDB.auto.pauseKey, nil)
+        T.eq(QuestwalkerDB.auto.pauseKey, nil)
     end },
 
-    { "/fp debug explains auto accept", function(T)
+    { "/qw debug explains auto accept", function(T)
         local _, mock = setup(T)
-        SlashCmdList.FOREVERPATH("debug")
+        SlashCmdList.QUESTWALKER("debug")
         T.contains(table.concat(mock.printed, "\n"), "auto accept on, hand in on, only guide quests off")
     end },
 
@@ -203,7 +203,7 @@ return {
         ns.MainFrame.ShowTab("settings")
         ns.SettingsTab.Click("SETTING_AUTO_ACCEPT", false)
         ns.SettingsTab.Click("SETTING_AUTO_TURNIN", false)
-        T.eq(ForeverPathDB.auto.accept, false)
+        T.eq(QuestwalkerDB.auto.accept, false)
         mock.dialog.questID = 102
         ns:FireEvent("QUEST_DETAIL")
         ns:FireEvent("QUEST_PROGRESS")
@@ -227,7 +227,7 @@ return {
     ---------------------------------------------------------------------
     { "a quest the NPC doesn't offer is noted and the guide moves on", function(T)
         local ns, mock = setup(T)
-        ForeverPathDB.auto.accept = false -- just talking
+        QuestwalkerDB.auto.accept = false -- just talking
         local state = ns.Engine.state
         T.eq(state.steps[1].title, "Talk to Foreman Thazz'ril")
         T.contains(state.steps[1].questIDs, 102)
@@ -237,25 +237,25 @@ return {
         ns:FireEvent("GOSSIP_SHOW")
         T.contains(mock.printed[#mock.printed], "Not offered to you yet: ")
         T.contains(mock.printed[#mock.printed], "Lazy Peons")
-        T.eq(ForeverPathCharDB.guide.notOffered[102], 8)
+        T.eq(QuestwalkerCharDB.guide.notOffered[102], 8)
         for _, step in ipairs(ns.Engine.state.steps) do
             T.truthy(not (step.kind == "ACCEPT" and step.questIDs[1] == 102), "102 no longer suggested")
         end
         ns.MainFrame.ShowTab("steps")
         T.eq(ns.Engine.FocusQuest(102), true, "picking it in the Steps list tries again")
-        T.eq(ForeverPathCharDB.guide.notOffered[102], nil)
+        T.eq(QuestwalkerCharDB.guide.notOffered[102], nil)
     end },
 
     { "another NPC's quests aren't affected, and levelling up checks again", function(T)
         local ns, mock = setup(T)
         mock.dialog.npcID = 9999 -- some other NPC with nothing to offer
         ns:FireEvent("GOSSIP_SHOW")
-        T.eq(next(ForeverPathCharDB.guide.notOffered), nil)
+        T.eq(next(QuestwalkerCharDB.guide.notOffered), nil)
         mock.dialog.npcID = 1002
         mock.dialog.gossipAvailable = {}
         ns:FireEvent("GOSSIP_SHOW")
-        T.truthy(next(ForeverPathCharDB.guide.notOffered), "Foreman's quests noted")
+        T.truthy(next(QuestwalkerCharDB.guide.notOffered), "Foreman's quests noted")
         ns:FireEvent("PLAYER_LEVEL_UP", 9)
-        T.eq(next(ForeverPathCharDB.guide.notOffered), nil, "cleared on level up")
+        T.eq(next(QuestwalkerCharDB.guide.notOffered), nil, "cleared on level up")
     end },
 }

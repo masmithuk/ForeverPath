@@ -1,6 +1,6 @@
 --[[
     Minimal stand-in for the WoW client (plus QuestieDB and TomTom) so the
-    addon can run under plain Lua 5.1. Only what ForeverPath touches is
+    addon can run under plain Lua 5.1. Only what Questwalker touches is
     mocked.
 
     Usage (see tests/run.lua):
@@ -249,12 +249,12 @@ end
 
 function mock.install()
     mock.reset()
-    _G.ForeverPathDB = nil
-    _G.ForeverPathCharDB = nil
-    _G.ForeverPathMainFrame = nil
-    _G.ForeverPathGuideFrame = nil
-    _G.ForeverPathMinimapButton = nil
-    _G.ForeverPathTargetButton = nil
+    _G.QuestwalkerDB = nil
+    _G.QuestwalkerCharDB = nil
+    _G.QuestwalkerMainFrame = nil
+    _G.QuestwalkerGuideFrame = nil
+    _G.QuestwalkerMinimapButton = nil
+    _G.QuestwalkerTargetButton = nil
     _G.ShortestPathForever = nil
     _G.TomTom = nil
     _G.LibQuestieDB = nil

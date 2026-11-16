@@ -1,5 +1,5 @@
 --[[
-    ForeverPath - Guide/Engine.lua
+    Questwalker - Guide/Engine.lua
 
     Keeps the step list current. It replans when something relevant
     happens (a quest is accepted, progressed, turned in or abandoned, you

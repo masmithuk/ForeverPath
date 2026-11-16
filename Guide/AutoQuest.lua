@@ -1,5 +1,5 @@
 --[[
-    ForeverPath - Guide/AutoQuest.lua
+    Questwalker - Guide/AutoQuest.lua
 
     Accepts and hands in quests for you when you talk to quest givers.
 
@@ -17,7 +17,7 @@
         are left to you.
       * Each quest is tried at most once per conversation, so a full quest
         log can't cause a loop.
-      * If Questie's own auto-accept or auto-complete is on, ForeverPath
+      * If Questie's own auto-accept or auto-complete is on, Questwalker
         stands aside so the two don't fight over the same dialog.
 
     What gets accepted (Settings tab):
@@ -67,12 +67,12 @@ local function active(kind)
     return true
 end
 
---- Why auto accept is or isn't working, for /fp debug.
+--- Why auto accept is or isn't working, for /qw debug.
 function AutoQuest.Describe()
     local s = settings()
     return ("auto accept %s, hand in %s, only guide quests %s, Questie's own automation %s"):format(
         s.accept and "on" or "off", s.turnIn and "on" or "off", s.followMode and "on" or "off",
-        AutoQuest.QuestieAutomationOn() and "ON (ForeverPath stands aside)" or "off")
+        AutoQuest.QuestieAutomationOn() and "ON (Questwalker stands aside)" or "off")
 end
 
 ---------------------------------------------------------------------------

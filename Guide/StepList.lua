@@ -1,5 +1,5 @@
 --[[
-    ForeverPath - Guide/StepList.lua
+    Questwalker - Guide/StepList.lua
 
     The Steps tab's data: every quest in the guide you follow, in order,
     with where you are and how each quest stands.

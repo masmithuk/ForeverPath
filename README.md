@@ -1,4 +1,4 @@
-# ForeverPath
+# Questwalker
 
 A step-by-step leveling guide for **World of Warcraft: Forever**, in the style of RestedXP. It takes you from quest giver to quest giver with a waypoint arrow, and it updates as you accept, progress and hand in quests. It also tells you when to visit your trainer and when to buy things.
 
@@ -6,7 +6,7 @@ It reads your race, class, faction and level. From those it picks a leveling rou
 
 ## Guides
 
-A guide decides which zones you level in and how the step guide picks quests. ForeverPath comes with a **Speedrun** and a **Story** guide, levels 1-60, for each starting area: **Orc & Troll**, **Tauren**, **Undead**, **Human**, **Dwarf & Gnome**, **Night Elf** and **Skyborne**. The Guides tab shows the two for your race, plus your own guides.
+A guide decides which zones you level in and how the step guide picks quests. Questwalker comes with a **Speedrun** and a **Story** guide, levels 1-60, for each starting area: **Orc & Troll**, **Tauren**, **Undead**, **Human**, **Dwarf & Gnome**, **Night Elf** and **Skyborne**. The Guides tab shows the two for your race, plus your own guides.
 
 | | **Speedrun** | **Story** |
 | --- | --- | --- |
@@ -56,7 +56,7 @@ JSON is easier to share than XML: it's shorter to paste, any text editor or onli
 
 ```json
 {
-  "format": "ForeverPath guide",
+  "format": "Questwalker guide",
   "version": 2,
   "name": "Hillsbrad Rush",
   "author": "Mike",
@@ -128,7 +128,7 @@ Steps advance on their own:
 - Accepting, progressing, handing in or abandoning a quest updates the guide immediately.
 - Opening your class trainer completes the training step.
 - Binding your hearthstone or training a profession removes that step.
-- A guide's own `note` and `buy` steps are ticked off with **Done** or `/fp done`.
+- A guide's own `note` and `buy` steps are ticked off with **Done** or `/qw done`.
 
 **Route order.** Steps are ordered as a walking route. From where you're standing, the guide always picks the nearest next step, and hand-ins get a small head start. The current step stays first until you finish or skip it, so the arrow doesn't jump around as you walk. Once you've walked about 150 yards, the rest of the list is re-sorted.
 
@@ -136,9 +136,9 @@ Steps advance on their own:
 
 ### What it needs
 
-- **[Questie](https://www.curseforge.com/wow/addons/questie) with QuestieDB (Forever bundle): strongly recommended.** QuestieDB is where quest-giver locations come from. ForeverPath reads it through its documented `LibQuestieDB` API (contract 4). If Questie itself is also loaded, ForeverPath uses Questie's own availability check, which knows about hidden and event quests. Without QuestieDB, the guide only covers quests already in your log.
-- **[Shortest Path Forever](https://www.curseforge.com/wow/addons/shortest-path-forever): recommended, and used first when installed.** It plans real routes on foot, by flight path and by boat. ForeverPath hands it the next several steps through its public API (`ShortestPathForever.API.NavigateRoute`, versions 1 and 2) as one journey with numbered, quest-badged stops. The current stop is held until the step really completes, so walking up to a quest giver doesn't skip ahead. Routes refused during combat are sent again when combat ends.
-- **[TomTom](https://www.curseforge.com/wow/addons/tomtom): the alternative.** It provides the on-screen arrow. Addons that work from TomTom waypoints, such as Well Trodden (walking trails) and Map Shortcuts, then follow ForeverPath's steps too. With neither addon installed, ForeverPath tells you to install one (in the guide window, on Home, in Settings and once at login) and places the game's own map pin meanwhile.
+- **[Questie](https://www.curseforge.com/wow/addons/questie) with QuestieDB (Forever bundle): strongly recommended.** QuestieDB is where quest-giver locations come from. Questwalker reads it through its documented `LibQuestieDB` API (contract 4). If Questie itself is also loaded, Questwalker uses Questie's own availability check, which knows about hidden and event quests. Without QuestieDB, the guide only covers quests already in your log.
+- **[Shortest Path Forever](https://www.curseforge.com/wow/addons/shortest-path-forever): recommended, and used first when installed.** It plans real routes on foot, by flight path and by boat. Questwalker hands it the next several steps through its public API (`ShortestPathForever.API.NavigateRoute`, versions 1 and 2) as one journey with numbered, quest-badged stops. The current stop is held until the step really completes, so walking up to a quest giver doesn't skip ahead. Routes refused during combat are sent again when combat ends.
+- **[TomTom](https://www.curseforge.com/wow/addons/tomtom): the alternative.** It provides the on-screen arrow. Addons that work from TomTom waypoints, such as Well Trodden (walking trails) and Map Shortcuts, then follow Questwalker's steps too. With neither addon installed, Questwalker tells you to install one (in the guide window, on Home, in Settings and once at login) and places the game's own map pin meanwhile.
 
 ## Features
 
@@ -152,12 +152,16 @@ Steps advance on their own:
 
 ## Install
 
-1. Download or clone this repository.
-2. Copy the `ForeverPath` folder (the one that contains `ForeverPath.toc`) into:
+**From CurseForge:** search for **Questwalker** in the CurseForge app with your WoW Forever installation selected, or download the zip from the project page and extract it into your AddOns folder.
+
+**From GitHub:**
+
+1. Download the latest release zip, or clone this repository into a folder named `Questwalker`.
+2. Copy the `Questwalker` folder (the one that contains `Questwalker.toc`) into:
    - **Windows:** `World of Warcraft\_forever_\Interface\AddOns\`
    - **macOS:** `/Applications/World of Warcraft/_forever_/Interface/AddOns/`
-3. Check that the path ends in `AddOns/ForeverPath/ForeverPath.toc`.
-4. Enable ForeverPath in the AddOns list on the character select screen.
+3. Check that the path ends in `AddOns/Questwalker/Questwalker.toc`.
+4. Enable Questwalker in the AddOns list on the character select screen.
 
 ## Using it in game
 
@@ -186,14 +190,14 @@ Everything runs from the game's own UI.
 - **Filters:** All, To do, Skipped & missed, Done.
 - **Go to this step** (or double-click) makes the selected quest the current step until it's done. If you can't do it yet, it says why.
 - **Skip / Unskip** the selected quest, and **Undo last skip** to step back through your last 50 skips (kept per character, even after a `/reload`).
-- **Best step** is for when you're lost. It forgets the step you picked and the step the guide was holding on to, then picks the best step from where you're standing. Skipped quests stay skipped. Also `/fp best` or `/fp lost`.
+- **Best step** is for when you're lost. It forgets the step you picked and the step the guide was holding on to, then picks the best step from where you're standing. Skipped quests stay skipped. Also `/qw best` or `/qw lost`.
 
 **Target button:** a small button labelled with a creature's name, such as "Target: Near Scorpid (1/3)". **Each press targets the next creature you still need for a quest, from nearest to furthest, then starts again at the nearest.** The label shows which creature the next press targets.
 
 - **Which creatures:** only those for the **current step**, including creatures that drop its quest items. The button hides on steps without creatures to kill, such as picking up or handing in quests. It skips kill objectives you've already finished. Each creature appears once, sorted by its nearest spawn, up to 8.
 - **Several creatures:** when the current step needs more than one (for example a group of quests in the same area), a button for each extra creature appears under the main one, each targeting just that creature. The main button still cycles through all of them. The extra buttons move with the main one and can have their own key bindings ("Target quest mob 2" to "6").
 - **In combat:** cycling works in combat because a secure snippet inside the button steps through the list. The list itself only refreshes out of combat, because the game forbids changing it during a fight. A new list starts again at the nearest creature.
-- **Keybinding:** bind a key under *Key Bindings > AddOns > ForeverPath*. Don't include Shift in that key, because Shift-clicks are ignored so you can drag the button. One press is one step, whether or not you use "cast on key down".
+- **Keybinding:** bind a key under *Key Bindings > AddOns > Questwalker*. Don't include Shift in that key, because Shift-clicks are ignored so you can drag the button. One press is one step, whether or not you use "cast on key down".
 - **Moving it:** Shift + left-drag, out of combat. Its position is saved.
 - **Turning it off:** use the checkbox in Settings.
 
@@ -203,13 +207,13 @@ Everything runs from the game's own UI.
 
 - **Never automated:** choosing between several rewards, quests that cost gold to complete, quests shared by other players, and escort confirmations are always left to you.
 - **Accept filters**, all set in Settings: quests you skipped in the guide, grey quests and repeatable quests are skipped. A guide's `skip quests` list is respected. Turn on "Only accept quests my guide uses" if you want Speedrun's level and detour filters applied too (off by default, so every quest you're offered is taken). Dialog replacements such as DialogueUI work too. Quests QuestieDB doesn't know yet are accepted.
-- **Questie:** if Questie's own auto-accept or auto-complete is on, ForeverPath stands aside and Settings tells you, so the two don't fight over the same window.
+- **Questie:** if Questie's own auto-accept or auto-complete is on, Questwalker stands aside and Settings tells you, so the two don't fight over the same window.
 
 **Main window**, with four tabs. Drag its bottom-right corner to resize it; every tab adjusts to the new size, and the size is remembered.
 
 | Tab | What's in it |
 | --- | --- |
-| **Home** | Your character, the guide you're following, where you're levelling now and next, your current step, rested XP, class tips, dungeons for your level, and a short explanation of every part of ForeverPath. Buttons show or hide the guide window and open Steps or Guides. |
+| **Home** | Your character, the guide you're following, where you're levelling now and next, your current step, rested XP, class tips, dungeons for your level, and a short explanation of every part of Questwalker. Buttons show or hide the guide window and open Steps or Guides. |
 | **Steps** | Every quest in your guide, as described above. |
 | **Guides** | The Speedrun and Story guides for your race, then yours. Select one to see its details, then **Use this guide**, **Edit** (or **View** for built-ins), **Copy**, **New guide**, **Delete**, **Export** or **Import**. Edit and View open the guide editor described above. |
 | **Settings** | Show or hide the guide window, the Target button and the minimap button; level-up messages; the waypoint arrow (a dropdown: Automatic, Shortest Path, TomTom, Map pin, Off); bring back skipped quests, **abandon unrelated quests** and reset window positions. Quest automation: accept, hand in, skip grey or repeatable quests, and (off by default) only quests your guide uses. The two columns stack when the window is narrow. |
@@ -218,12 +222,12 @@ The minimap's addon compartment also opens the main window, even if you hide the
 
 ### Slash commands (optional)
 
-Everything above can also be done with commands, which is handy for macros: `/fp`, `/fp guide [on|off]`, `/fp skip`, `/fp back`, `/fp done`, `/fp best`, `/fp unskip`, `/fp waypoints auto|shortestpath|tomtom|builtin|off`, `/fp route speedrun|story|<your guide>`, `/fp next`, `/fp debug`, `/fp reset` and `/fp help`.
+Everything above can also be done with commands, which is handy for macros: `/qw`, `/qw guide [on|off]`, `/qw skip`, `/qw back`, `/qw done`, `/qw best`, `/qw unskip`, `/qw waypoints auto|shortestpath|tomtom|builtin|off`, `/qw route speedrun|story|<your guide>`, `/qw next`, `/qw debug`, `/qw reset` and `/qw help`.
 
 ## Project layout
 
 ```
-ForeverPath.toc      Load order and metadata (Interface 16001 = Forever 1.60.1)
+Questwalker.toc      Load order and metadata (Interface 16001 = Forever 1.60.1)
 Core/Init.lua        Namespace and event dispatcher
 Locales/enUS.lua     UI strings
 Data/                Races, classes, dungeons, built-in guides, milestones, suggestions (plain tables)
@@ -254,7 +258,7 @@ Core/Bootstrap.lua   Event wiring
 tests/               Lua 5.1 tests with a mocked WoW API, QuestieDB and TomTom
 ```
 
-The code is layered so that most of it runs without the game. **Data** is plain tables, and **Advisor** and **Planner** are pure functions. **Sources** and **Engine** only reach the game through `GameApi` and the integrations, which the tests replace with fakes. The UI is a thin shell. Optional addons are only ever reached through `_G` with type checks and `pcall`, so a missing or broken Questie or TomTom can't break ForeverPath.
+The code is layered so that most of it runs without the game. **Data** is plain tables, and **Advisor** and **Planner** are pure functions. **Sources** and **Engine** only reach the game through `GameApi` and the integrations, which the tests replace with fakes. The UI is a thin shell. Optional addons are only ever reached through `_G` with type checks and `pcall`, so a missing or broken Questie or TomTom can't break Questwalker.
 
 ## Development
 
@@ -266,6 +270,20 @@ luacheck .             # lint
 ```
 
 GitHub Actions runs both on every push and pull request.
+
+### Releasing
+
+1. Update `## Version` in `Questwalker.toc` and add a `## [x.y.z]` section to `CHANGELOG.md`.
+2. Tag and push: `git tag v0.8.0 && git push origin v0.8.0`.
+3. The **Release** workflow checks the tag against the TOC, lints and tests, builds `Questwalker-x.y.z.zip` (without tests and dev files), publishes a GitHub release with that version's changelog, and uploads the zip to CurseForge for WoW Forever. Tags with a hyphen (`v0.9.0-beta1`) go up as betas.
+
+CurseForge needs two settings under the repository's **Settings > Secrets and variables > Actions**:
+
+- **Secret `CF_API_KEY`:** an API token from your CurseForge account (<https://legacy.curseforge.com/account/api-tokens>).
+- **Variable `CURSEFORGE_PROJECT_ID`:** the project ID shown on the project's CurseForge page.
+- Optional **variable `CURSEFORGE_GAME_VERSION_ID`:** if the automatic WoW Forever game version lookup picks the wrong one.
+
+Without them the GitHub release still happens and the CurseForge step is skipped with a warning.
 
 ### Updating the advice
 
@@ -279,7 +297,7 @@ Leveling data is opinion-based and goes out of date with balance patches. All of
 ### Notes on the Forever client
 
 - The interface number is **16001**. You can confirm it in game with `/dump select(4, GetBuildInfo())`.
-- Forever uses the modern (Midnight-era) addon API. Old globals such as `GetSpellInfo` and `GetTalentInfo` don't exist, and some unit values can be "secret". ForeverPath only reads basic character info and XP, and it checks every value with `issecretvalue`.
+- Forever uses the modern (Midnight-era) addon API. Old globals such as `GetSpellInfo` and `GetTalentInfo` don't exist, and some unit values can be "secret". Questwalker only reads basic character info and XP, and it checks every value with `issecretvalue`.
 - The Skyborne `raceFile` token wasn't documented at launch, so race detection falls back to matching names ("Skyborne", "High Order" and "Windshaper").
 - Skyborne race masks in QuestieDB go up to 2^33. That's beyond WoW's 32-bit `bit.band`, so flags are checked with plain arithmetic in `Util.HasFlag`.
 - The guide never calls `C_SuperTrack.SetSuperTrackedUserWaypoint`, because Forever addon guidance warns against it. The built-in provider only places a map pin, so use TomTom for an on-screen arrow.

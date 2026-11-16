@@ -1,5 +1,5 @@
 --[[
-    ForeverPath - UI/MainFrame.lua
+    Questwalker - UI/MainFrame.lua
 
     The main window: a movable, resizable frame with four tabs.
 
@@ -27,7 +27,7 @@ ns.MainFrame = MainFrame
 
 local L = ns.L
 
-local FRAME_NAME = "ForeverPathMainFrame" -- needed for UISpecialFrames (Esc)
+local FRAME_NAME = "QuestwalkerMainFrame" -- needed for UISpecialFrames (Esc)
 MainFrame.WIDTH, MainFrame.HEIGHT = 720, 540 -- default size
 MainFrame.MIN_WIDTH, MainFrame.MIN_HEIGHT = 560, 400
 MainFrame.MAX_WIDTH, MainFrame.MAX_HEIGHT = 1400, 1000

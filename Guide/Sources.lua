@@ -1,5 +1,5 @@
 --[[
-    ForeverPath - Guide/Sources.lua
+    Questwalker - Guide/Sources.lua
 
     Turns the live game state into candidate steps for the Planner:
 

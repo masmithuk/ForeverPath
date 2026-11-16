@@ -1,5 +1,5 @@
 --[[
-    ForeverPath - Data/Routes.lua
+    Questwalker - Data/Routes.lua
 
     The built-in guides: a Speedrun and a Story guide, levels 1-60, for
     each starting area (Orc & Troll, Tauren, Undead, Human, Dwarf & Gnome,
@@ -182,7 +182,7 @@ for _, group in ipairs(GROUPS) do
         ns.Data.BuiltinGuides[#ns.Data.BuiltinGuides + 1] = {
             id = kind .. "-" .. group.key,
             name = ("%s %s (1-60)"):format(group.label, kind == "speedrun" and "Speedrun" or "Story"),
-            author = "ForeverPath",
+            author = "Questwalker",
             description = DESCRIPTIONS[kind]:format(group.label),
             base = kind == "speedrun" and "efficient" or "story",
             races = copy(group.races),

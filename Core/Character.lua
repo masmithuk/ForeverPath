@@ -1,5 +1,5 @@
 --[[
-    ForeverPath - Core/Character.lua
+    Questwalker - Core/Character.lua
 
     Reads the player's race, class, faction and level and normalises them
     into a "profile" table the Advisor understands.

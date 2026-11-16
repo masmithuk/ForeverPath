@@ -22,7 +22,7 @@ local GUIDE = [[
 local function setup(T, json, before)
     local ns, mock = T.fresh()
     fixtures.durotar(mock)
-    ForeverPathCharDB.guide.trainedLevel = 60
+    QuestwalkerCharDB.guide.trainedLevel = 60
     if before then before(mock) end
     fixtures.login(ns)
     local guide = assert(ns.GuideFormat.FromJson(json or GUIDE))
@@ -90,7 +90,7 @@ return {
     { "Done ticks a step off and Back brings it back", function(T)
         local ns = setup(T, nil, function(mock) mock.completed[102] = true end)
         T.eq(current(ns).listKind, "BUY")
-        ForeverPathGuideFrame.done:GetScript("OnClick")()
+        QuestwalkerGuideFrame.done:GetScript("OnClick")()
         T.truthy(not hasStep(ns, "BUY"))
         T.eq(current(ns).listKind, "GOTO", "the next step comes up")
         ns.Engine.Back()

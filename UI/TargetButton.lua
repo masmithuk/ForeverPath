@@ -1,5 +1,5 @@
 --[[
-    ForeverPath - UI/TargetButton.lua
+    Questwalker - UI/TargetButton.lua
 
     "Target" button: each press targets the next quest creature, from the
     nearest to the furthest, then starts again at the nearest.
@@ -10,7 +10,7 @@
         SecureActionButton running the macro "/targetexact <name>".
       * Addon code can't change a secure button during combat, but a
         secure snippet running inside the button can. So, out of combat,
-        ForeverPath stores the sorted creature list on the button as
+        Questwalker stores the sorted creature list on the button as
         attributes (fp-name1..N, fp-count), and a secure pre-click snippet
         steps to the next name and rewrites the macro on every press -
         which keeps working mid-fight.
@@ -26,7 +26,7 @@
 
     Several creatures (e.g. a group of quests in the same area): the main
     button still cycles through all of them, and one extra button per
-    creature appears underneath it (ForeverPathTargetButton2..6), each
+    creature appears underneath it (QuestwalkerTargetButton2..6), each
     targeting just that creature. They follow the main button when it's
     moved, and can have their own key bindings.
 
@@ -47,7 +47,7 @@ ns.TargetButton = TargetButton
 
 local L = ns.L
 
-local FRAME_NAME = "ForeverPathTargetButton" -- referenced by Bindings.xml
+local FRAME_NAME = "QuestwalkerTargetButton" -- referenced by Bindings.xml
 local MAX_TARGETS = 8
 local MAX_EXTRA = 5 -- extra per-creature buttons (2nd to 6th creature)
 

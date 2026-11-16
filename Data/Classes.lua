@@ -1,5 +1,5 @@
 --[[
-    ForeverPath - Data/Classes.lua
+    Questwalker - Data/Classes.lua
 
     Leveling advice per class, keyed by the `classFile` token returned by
     UnitClass("player").

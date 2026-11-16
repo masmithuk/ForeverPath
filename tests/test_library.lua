@@ -17,7 +17,7 @@ local MINE = [[
 local function setup(T)
     local ns, mock = T.fresh()
     fixtures.durotar(mock)
-    ForeverPathCharDB.guide.trainedLevel = 60
+    QuestwalkerCharDB.guide.trainedLevel = 60
     fixtures.login(ns)
     ns.MainFrame.ShowTab("library")
     return ns, mock
@@ -62,20 +62,20 @@ return {
     { "saved guides are stored as data and survive a reload", function(T)
         local ns = setup(T)
         local id = save(ns)
-        T.eq(ForeverPathDB.guides[id].name, "My Durotar Run")
-        T.eq(ForeverPathDB.guides[id].quests[1].id, 101)
+        T.eq(QuestwalkerDB.guides[id].name, "My Durotar Run")
+        T.eq(QuestwalkerDB.guides[id].quests[1].id, 101)
         local reloaded = T.reload()
         T.eq(ids(reloaded.Library.Get(id).quests), "101,102")
     end },
 
     { "0.6 text guides in saved data are converted on load", function(T)
         T.fresh()
-        ForeverPathDB = { schema = 4, guides = {
+        QuestwalkerDB = { schema = 4, guides = {
             ["custom-old"] = "guide: Old\n[1-60]\nboth: Durotar\npriority quests: 101\n",
         } }
         local ns = T.reload()
         T.eq(ns.Library.Get("custom-old").quests[1].id, 101)
-        T.eq(type(ForeverPathDB.guides["custom-old"]), "table", "saved back as data")
+        T.eq(type(QuestwalkerDB.guides["custom-old"]), "table", "saved back as data")
     end },
 
     { "built-in guides can't be overwritten", function(T)

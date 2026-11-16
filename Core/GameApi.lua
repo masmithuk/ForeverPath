@@ -1,5 +1,5 @@
 --[[
-    ForeverPath - Core/GameApi.lua
+    Questwalker - Core/GameApi.lua
 
     Every quest-log, map and position call the guide makes goes through this
     table. That keeps three concerns in one place:

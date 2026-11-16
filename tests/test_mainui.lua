@@ -7,7 +7,7 @@ local function login(T, opts)
     local ns, mock = T.fresh()
     if opts and opts.orc then mock.player.race = { "Orc", "Orc", 2 } end
     fixtures.durotar(mock, opts)
-    ForeverPathCharDB.guide.trainedLevel = 60
+    QuestwalkerCharDB.guide.trainedLevel = 60
     fixtures.login(ns)
     return ns, mock
 end
@@ -33,7 +33,7 @@ return {
         local ns = login(T)
         T.eq(tabIds(ns), "home,steps,library,settings")
         ns.MainFrame.Show()
-        T.eq(ForeverPathDB.tab, "home", "opens on Home")
+        T.eq(QuestwalkerDB.tab, "home", "opens on Home")
         T.truthy(ns.HomeTab.GetPanel():IsShown())
     end },
 
@@ -58,20 +58,20 @@ return {
         ns.MainFrame.ShowTab("home")
         local p = ns.HomeTab.GetPanel()
         p.window:GetScript("OnClick")()
-        T.eq(ForeverPathDB.guide.shown, false, "guide window toggled off")
+        T.eq(QuestwalkerDB.guide.shown, false, "guide window toggled off")
         T.eq(p.window:GetText(), "Show guide window")
         p.steps:GetScript("OnClick")()
-        T.eq(ForeverPathDB.tab, "steps")
+        T.eq(QuestwalkerDB.tab, "steps")
         ns.MainFrame.ShowTab("home")
         p.guides:GetScript("OnClick")()
-        T.eq(ForeverPathDB.tab, "library")
+        T.eq(QuestwalkerDB.tab, "library")
     end },
 
     { "a saved tab from an older version opens Home", function(T)
         local ns = login(T)
-        ForeverPathDB.tab = "zones"
+        QuestwalkerDB.tab = "zones"
         ns.MainFrame.Show()
-        T.eq(ForeverPathDB.tab, "home")
+        T.eq(QuestwalkerDB.tab, "home")
     end },
 
     ---------------------------------------------------------------------
@@ -80,46 +80,46 @@ return {
     { "the main window is resizable and remembers its size", function(T)
         local ns = login(T)
         ns.MainFrame.Show()
-        local f = ForeverPathMainFrame
+        local f = QuestwalkerMainFrame
         T.truthy(f.resizeGrip, "has a resize grip")
         f:SetSize(900, 600)
         f.resizeGrip:GetScript("OnMouseUp")()
-        T.eq(ForeverPathDB.frame.width, 900)
-        T.eq(ForeverPathDB.frame.height, 600)
+        T.eq(QuestwalkerDB.frame.width, 900)
+        T.eq(QuestwalkerDB.frame.height, 600)
         T.eq(ns.MainFrame.ContentWidth(), 900 - 24)
     end },
 
     { "tabs follow the window width", function(T)
         local ns = login(T, { orc = true })
         ns.MainFrame.ShowTab("steps")
-        ForeverPathMainFrame:SetSize(1000, 600)
+        QuestwalkerMainFrame:SetSize(1000, 600)
         local rows = ns.StepsTab.GetVisibleRows()
         T.eq(rows[1]:GetWidth(), 1000 - 24 - 28, "Steps rows are as wide as the window")
-        ForeverPathMainFrame:SetSize(600, 600)
+        QuestwalkerMainFrame:SetSize(600, 600)
         T.eq(rows[1]:GetWidth(), 600 - 24 - 28)
         T.truthy(not ns.StepsTab.GetPanel().hint:IsShown(), "hint hidden when narrow")
 
         ns.MainFrame.ShowTab("settings")
-        ForeverPathMainFrame:SetSize(1000, 600)
+        QuestwalkerMainFrame:SetSize(1000, 600)
         T.eq(ns.SettingsTab.GetPanel().twoColumns, true, "two columns when wide")
-        ForeverPathMainFrame:SetSize(600, 600)
+        QuestwalkerMainFrame:SetSize(600, 600)
         T.eq(ns.SettingsTab.GetPanel().twoColumns, false, "stacked when narrow")
     end },
 
     { "a saved size outside the limits is clamped", function(T)
         local ns = login(T)
-        ForeverPathDB.frame.width, ForeverPathDB.frame.height = 100, 5000
+        QuestwalkerDB.frame.width, QuestwalkerDB.frame.height = 100, 5000
         ns.MainFrame.Show()
-        T.eq(ForeverPathMainFrame:GetWidth(), ns.MainFrame.MIN_WIDTH)
-        T.eq(ForeverPathMainFrame:GetHeight(), ns.MainFrame.MAX_HEIGHT)
+        T.eq(QuestwalkerMainFrame:GetWidth(), ns.MainFrame.MIN_WIDTH)
+        T.eq(QuestwalkerMainFrame:GetHeight(), ns.MainFrame.MAX_HEIGHT)
     end },
 
     { "the guide window's width can be changed and is remembered", function(T)
         login(T)
-        local f = ForeverPathGuideFrame
+        local f = QuestwalkerGuideFrame
         f:SetSize(480, 200)
         f.resizeGrip:GetScript("OnMouseUp")()
-        T.eq(ForeverPathDB.guide.width, 480)
+        T.eq(QuestwalkerDB.guide.width, 480)
         T.eq(f.current:GetWidth(), 480 - 20 - 26, "text wraps to the new width")
     end },
 
@@ -128,7 +128,7 @@ return {
     ---------------------------------------------------------------------
     { "the guide window has Steps, Skip and Done only", function(T)
         login(T)
-        local f = ForeverPathGuideFrame
+        local f = QuestwalkerGuideFrame
         T.truthy(f.list and f.skip and f.done)
         T.eq(rawget(f, "guides"), nil, "no Zones button")
         T.eq(rawget(f, "best"), nil, "Best step lives on the Steps tab")
@@ -148,7 +148,7 @@ return {
         T.truthy(dd.menu:IsShown(), "opens")
         ns.SettingsTab.ChooseWaypoints("tomtom")
         T.truthy(not dd.menu:IsShown(), "closes after a choice")
-        T.eq(ForeverPathDB.guide.waypoints, "tomtom")
+        T.eq(QuestwalkerDB.guide.waypoints, "tomtom")
         T.contains(dd:GetText(), "TomTom")
         T.truthy(#mock.tomtom.waypoints > 0, "TomTom arrow set")
         ns.SettingsTab.ChooseWaypoints("off")
@@ -165,10 +165,10 @@ return {
         local ns = login(T)
         ns.MainFrame.ShowTab("settings")
         ns.SettingsTab.Click("SETTING_GUIDE_SHOWN", false)
-        T.truthy(not ForeverPathGuideFrame:IsShown())
+        T.truthy(not QuestwalkerGuideFrame:IsShown())
         ns.SettingsTab.Click("SETTING_MINIMAP", false)
-        T.eq(ForeverPathDB.minimap.hide, true)
-        T.truthy(not ForeverPathMinimapButton:IsShown(), "button hidden")
+        T.eq(QuestwalkerDB.minimap.hide, true)
+        T.truthy(not QuestwalkerMinimapButton:IsShown(), "button hidden")
         for _, cb in ipairs(ns.SettingsTab.GetPanel().checkboxes) do
             T.truthy(cb.def.label ~= "SETTING_GUIDE_ENABLED", "no separate on/off switch")
         end
@@ -203,10 +203,10 @@ return {
         local ns = login(T)
         ns.MainFrame.ShowTab("library")
         ns.LibraryTab.Press("new")
-        local f = ForeverPathGuideEditor
+        local f = QuestwalkerGuideEditor
         f:SetSize(1100, 700)
         f.resizeGrip:GetScript("OnMouseUp")()
-        T.eq(ForeverPathDB.editor.width, 1100)
+        T.eq(QuestwalkerDB.editor.width, 1100)
         T.eq(f.columnWidth, math.floor((1100 - 24 - 20) / 2))
         T.eq(f.questsTab.search:GetWidth(), f.columnWidth - 10)
     end },

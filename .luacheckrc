@@ -1,4 +1,4 @@
--- luacheck configuration for ForeverPath (run: luacheck .)
+-- luacheck configuration for Questwalker (run: luacheck .)
 std = "lua51"
 max_line_length = 140
 codes = true
@@ -10,11 +10,11 @@ exclude_files = { ".release/", "libs/" }
 
 -- Globals the addon defines on purpose.
 globals = {
-    "ForeverPathDB",
-    "ForeverPathCharDB",
-    "ForeverPath_OnAddonCompartmentClick",
-    "SLASH_FOREVERPATH1",
-    "SLASH_FOREVERPATH2",
+    "QuestwalkerDB",
+    "QuestwalkerCharDB",
+    "Questwalker_OnAddonCompartmentClick",
+    "SLASH_QUESTWALKER1",
+    "SLASH_QUESTWALKER2",
     "SlashCmdList",
     "UISpecialFrames",
 }
@@ -67,5 +67,5 @@ read_globals = {
 
 files["tests/"] = {
     std = "+lua51",
-    globals = { "_G", "print", "issecretvalue", "ForeverPathMainFrame", "ForeverPathGuideFrame", "ForeverPathGuideEditor", "ForeverPathMinimapButton", "ForeverPathTargetButton", "ShortestPathForever" },
+    globals = { "_G", "print", "issecretvalue", "QuestwalkerMainFrame", "QuestwalkerGuideFrame", "QuestwalkerGuideEditor", "QuestwalkerMinimapButton", "QuestwalkerTargetButton", "ShortestPathForever" },
 }

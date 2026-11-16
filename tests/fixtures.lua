@@ -20,15 +20,15 @@ function fixtures.durotar(mock, opts)
     -- By default, follow a test guide that keeps every quest in range, so
     -- tests aren't about Speedrun/Story filtering. Mode tests set opts.mode.
     if opts.mode then
-        ForeverPathCharDB.routeId = opts.mode
+        QuestwalkerCharDB.routeId = opts.mode
     else
-        ForeverPathDB.guides["custom-test-all"] = {
-            format = "ForeverPath guide", version = 2, name = "Test Everything", basedOn = "story",
+        QuestwalkerDB.guides["custom-test-all"] = {
+            format = "Questwalker guide", version = 2, name = "Test Everything", basedOn = "story",
             rules = { greyGap = 10, sidePenalty = 0, chainBonus = 150 },
             bands = { { levels = { 1, 60 }, zones = { "START" } } },
         }
         if mock.ns and mock.ns.Library then mock.ns.Library.Init() end
-        ForeverPathCharDB.routeId = "custom-test-all"
+        QuestwalkerCharDB.routeId = "custom-test-all"
     end
     mock.player.position = { mapID = 1411, x = 0.5, y = 0.5 }
 

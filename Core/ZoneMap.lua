@@ -1,5 +1,5 @@
 --[[
-    ForeverPath - Core/ZoneMap.lua
+    Questwalker - Core/ZoneMap.lua
 
     QuestieDB stores locations per *area ID* with 0-100 coordinates, while
     waypoints and the player position use *uiMapIDs* with 0-1 coordinates.

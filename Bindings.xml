@@ -1,20 +1,20 @@
 <!--
     Key bindings for the Target button (cycles through every creature) and
     the extra per-creature buttons (2nd to 6th creature). It appears under
-    Options > Keybindings > AddOns > ForeverPath. The binding "clicks" the
+    Options > Keybindings > AddOns > Questwalker. The binding "clicks" the
     secure button, which is what lets it change your target.
 -->
 <Bindings>
-    <Binding name="CLICK ForeverPathTargetButton:LeftButton" header="FOREVERPATH" category="ADDONS">
+    <Binding name="CLICK QuestwalkerTargetButton:LeftButton" header="QUESTWALKER" category="ADDONS">
     </Binding>
-    <Binding name="CLICK ForeverPathTargetButton2:LeftButton" category="ADDONS">
+    <Binding name="CLICK QuestwalkerTargetButton2:LeftButton" category="ADDONS">
     </Binding>
-    <Binding name="CLICK ForeverPathTargetButton3:LeftButton" category="ADDONS">
+    <Binding name="CLICK QuestwalkerTargetButton3:LeftButton" category="ADDONS">
     </Binding>
-    <Binding name="CLICK ForeverPathTargetButton4:LeftButton" category="ADDONS">
+    <Binding name="CLICK QuestwalkerTargetButton4:LeftButton" category="ADDONS">
     </Binding>
-    <Binding name="CLICK ForeverPathTargetButton5:LeftButton" category="ADDONS">
+    <Binding name="CLICK QuestwalkerTargetButton5:LeftButton" category="ADDONS">
     </Binding>
-    <Binding name="CLICK ForeverPathTargetButton6:LeftButton" category="ADDONS">
+    <Binding name="CLICK QuestwalkerTargetButton6:LeftButton" category="ADDONS">
     </Binding>
 </Bindings>

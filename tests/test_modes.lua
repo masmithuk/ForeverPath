@@ -35,7 +35,7 @@ local function setup(T, mode, level)
     local db = fixtures.durotar(mock, { level = level or 8, mode = mode })
     extend(mock, db)
     -- Keep training out of the way of these tests.
-    ForeverPathCharDB.guide.trainedLevel = 60
+    QuestwalkerCharDB.guide.trainedLevel = 60
     return ns, mock
 end
 
@@ -127,7 +127,7 @@ return {
         fixtures.login(ns)
         T.eq(#spf.routes, 1, "one journey")
         local route = spf.routes[1]
-        T.eq(route.owner, "ForeverPath")
+        T.eq(route.owner, "Questwalker")
         T.truthy(#route.stops >= 2, "several stops")
         T.eq(route.stops[1].hold, true, "waits at the current step")
         T.eq(route.stops[2].hold, nil)
@@ -185,8 +185,8 @@ return {
         fixtures.login(ns)
         ns.Engine.FocusQuest(101)
         T.eq(ns.TargetButton.GetMacro(), "/targetexact Vile Familiar")
-        T.truthy(ForeverPathTargetButton:IsShown())
-        T.contains(ForeverPathTargetButton:GetText(), "Vile Familiar")
+        T.truthy(QuestwalkerTargetButton:IsShown())
+        T.contains(QuestwalkerTargetButton:GetText(), "Vile Familiar")
     end },
 
     { "finished kill objectives and hand-ins aren't targeted", function(T)
@@ -201,7 +201,7 @@ return {
         end
         fixtures.login(ns)
         T.eq(ns.TargetButton.GetMacro(), "")
-        T.truthy(not ForeverPathTargetButton:IsShown(), "hidden with nothing to target")
+        T.truthy(not QuestwalkerTargetButton:IsShown(), "hidden with nothing to target")
     end },
 
     { "creatures that drop quest items are targeted", function(T)
@@ -235,7 +235,7 @@ return {
         fixtures.login(ns)
         ns.MainFrame.ShowTab("settings")
         ns.SettingsTab.Click("SETTING_TARGET", false)
-        T.eq(ForeverPathDB.targetButton, false)
-        T.truthy(not ForeverPathTargetButton:IsShown())
+        T.eq(QuestwalkerDB.targetButton, false)
+        T.truthy(not QuestwalkerTargetButton:IsShown())
     end },
 }

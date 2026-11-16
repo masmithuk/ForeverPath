@@ -1,5 +1,5 @@
 --[[
-    ForeverPath - UI/MinimapButton.lua
+    Questwalker - UI/MinimapButton.lua
 
     A round button on the edge of the minimap, written without libraries.
 
@@ -64,7 +64,7 @@ local function showTooltip(self)
 end
 
 local function create()
-    local b = CreateFrame("Button", "ForeverPathMinimapButton", Minimap)
+    local b = CreateFrame("Button", "QuestwalkerMinimapButton", Minimap)
     b:SetSize(31, 31)
     b:SetFrameStrata("MEDIUM")
     b:SetFrameLevel(8)

@@ -17,11 +17,11 @@ local function setup(T)
     fixtures.addToLog(mock, 101, "Vile Familiars", false,
         { "Vile Familiar slain: 2/8", "Distant Boar slain: 0/5", "Near Scorpid slain: 1/6" })
     fixtures.addToLog(mock, 112, "Boars", false, { "Other Quest Raptor slain: 0/5" })
-    ForeverPathCharDB = ForeverPathCharDB or {}
+    QuestwalkerCharDB = QuestwalkerCharDB or {}
     fixtures.login(ns)
-    ForeverPathCharDB.guide.trainedLevel = 60
+    QuestwalkerCharDB.guide.trainedLevel = 60
     T.truthy(ns.Engine.FocusQuest(101), "focus the Vile Familiars step")
-    return ns, mock, ForeverPathTargetButton
+    return ns, mock, QuestwalkerTargetButton
 end
 
 local function target(name) return "/targetexact " .. name end
@@ -84,7 +84,7 @@ return {
         T.eq(moved, 1, "secure frames can't move in combat")
         mock.inCombat = false
         button:GetScript("OnDragStop")(button)
-        T.eq(ForeverPathDB.target.x, 10, "position saved")
+        T.eq(QuestwalkerDB.target.x, 10, "position saved")
     end },
 
     { "cycling keeps working in combat", function(T)

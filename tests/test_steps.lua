@@ -17,7 +17,7 @@ local GUIDE = [[
 local function setup(T, before)
     local ns, mock = T.fresh()
     fixtures.durotar(mock)
-    ForeverPathCharDB.guide.trainedLevel = 60
+    QuestwalkerCharDB.guide.trainedLevel = 60
     if before then before(mock) end
     fixtures.login(ns)
     local id = ns.Library.Save(assert(ns.GuideFormat.FromJson(GUIDE)))
@@ -41,7 +41,7 @@ end
 return {
     { "Steps is the first tab", function(T)
         local ns = setup(T)
-        T.eq(ForeverPathDB.tab, "steps")
+        T.eq(QuestwalkerDB.tab, "steps")
         T.truthy(ns.StepsTab.GetPanel():IsShown())
     end },
 
@@ -145,8 +145,8 @@ return {
     { "the guide window's Steps button opens the list", function(T)
         local ns = setup(T)
         ns.MainFrame.ShowTab("library")
-        ForeverPathGuideFrame.list:GetScript("OnClick")()
-        T.eq(ForeverPathDB.tab, "steps")
+        QuestwalkerGuideFrame.list:GetScript("OnClick")()
+        T.eq(QuestwalkerDB.tab, "steps")
     end },
 
     { "Undo still works when every step has been skipped", function(T)
@@ -175,7 +175,7 @@ return {
     { "Best step keeps skipped quests skipped", function(T)
         local ns = setup(T)
         ns.Engine.SkipCurrent()
-        local skipped = ForeverPathCharDB.guide.skipped
+        local skipped = QuestwalkerCharDB.guide.skipped
         local n = 0
         for _ in pairs(skipped) do n = n + 1 end
         ns.Engine.BestStep()
@@ -184,7 +184,7 @@ return {
         T.eq(m, n)
     end },
 
-    { "Best step is on the Steps tab and as /fp best", function(T)
+    { "Best step is on the Steps tab and as /qw best", function(T)
         local ns, mock = setup(T)
         ns.StepsTab.Select(101)
         ns.StepsTab.GoTo()
@@ -192,7 +192,7 @@ return {
         T.eq(ns.Engine.FocusedQuest(), nil)
         ns.StepsTab.Select(101)
         ns.StepsTab.GoTo()
-        SlashCmdList.FOREVERPATH("lost")
+        SlashCmdList.QUESTWALKER("lost")
         T.eq(ns.Engine.FocusedQuest(), nil)
         T.contains(mock.printed[#mock.printed], "Best step from here")
     end },

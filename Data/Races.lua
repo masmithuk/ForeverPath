@@ -1,5 +1,5 @@
 --[[
-    ForeverPath - Data/Races.lua
+    Questwalker - Data/Races.lua
 
     Playable races in World of Warcraft: Forever (client 1.60.1).
 

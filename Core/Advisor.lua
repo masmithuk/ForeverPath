@@ -1,5 +1,5 @@
 --[[
-    ForeverPath - Core/Advisor.lua
+    Questwalker - Core/Advisor.lua
 
     Pure planning logic. Takes a profile from Core/Character.lua and returns
     plain tables describing what the player should do next. No frames, no

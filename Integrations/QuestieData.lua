@@ -1,5 +1,5 @@
 --[[
-    ForeverPath - Integrations/QuestieData.lua
+    Questwalker - Integrations/QuestieData.lua
 
     Read-only adapter over QuestieDB's public library, `LibQuestieDB`.
 
@@ -61,9 +61,9 @@ end
 --- Questie's own availability check, if the full addon is loaded.
 --- Has the full Questie addon finished starting up? Questie fills its
 --- availability and zone tables during startup, which can finish a few
---- seconds after login - after ForeverPath's first plan. Until then its
+--- seconds after login - after Questwalker's first plan. Until then its
 --- answers aren't reliable, so they're not used.
---- How many quests suit this character (for /fp debug).
+--- How many quests suit this character (for /qw debug).
 function QuestieData.CandidateCount() return #state.candidates end
 
 function QuestieData.QuestieStarted()

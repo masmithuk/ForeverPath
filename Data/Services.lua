@@ -1,5 +1,5 @@
 --[[
-    ForeverPath - Data/Services.lua
+    Questwalker - Data/Services.lua
 
     Settings for the "service" steps the guide adds to your route when they
     matter and you're close by - no reminders, just steps:

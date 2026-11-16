@@ -1,0 +1,85 @@
+# Release: push a tag like v0.8.0 and this
+#   1. checks the tag matches "## Version" in Questwalker.toc,
+#   2. lints and tests,
+#   3. builds Questwalker-<version>.zip (a Questwalker/ folder, without
+#      tests and dev files - see .gitattributes),
+#   4. publishes a GitHub release with that zip and the CHANGELOG section,
+#   5. uploads the zip to CurseForge for WoW Forever.
+#
+# CurseForge needs (repository Settings > Secrets and variables > Actions):
+#   secret   CF_API_KEY                 an API token from
+#                                       https://legacy.curseforge.com/account/api-tokens
+#   variable CURSEFORGE_PROJECT_ID      the number on the project's page ("Project ID")
+#   variable CURSEFORGE_GAME_VERSION_ID optional: the WoW Forever game version id, if
+#                                       the automatic lookup picks the wrong one
+# Without them, steps 1-4 still run and the CurseForge step is skipped.
+# A tag with a hyphen (v0.9.0-beta1) is uploaded as a beta.
+
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      ADDON: Questwalker
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the tag matches the TOC version
+        run: |
+          toc=$(sed -n 's/^## Version: *//p' "$ADDON.toc" | tr -d '\r')
+          tag="${GITHUB_REF_NAME#v}"
+          if [ "$toc" != "$tag" ]; then
+            echo "::error::Tag is v$tag but $ADDON.toc says $toc - update the TOC or the tag."
+            exit 1
+          fi
+          echo "VERSION=$tag" >> "$GITHUB_ENV"
+
+      - name: Install Lua 5.1 and luacheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lua5.1 lua-check jq
+
+      - name: Lint
+        run: luacheck .
+
+      - name: Test
+        run: lua5.1 tests/run.lua
+
+      - name: Build the zip
+        run: |
+          git archive --format=zip --prefix="$ADDON/" -o "$ADDON-$VERSION.zip" HEAD
+          unzip -l "$ADDON-$VERSION.zip" | tail -n 3
+          echo "ZIP=$ADDON-$VERSION.zip" >> "$GITHUB_ENV"
+
+      - name: Release notes from CHANGELOG.md
+        run: |
+          .github/scripts/changelog-section.sh "$VERSION" CHANGELOG.md > notes.md
+          cat notes.md
+
+      - name: GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          flags=""
+          case "$VERSION" in *-*) flags="--prerelease" ;; esac
+          gh release create "$GITHUB_REF_NAME" "$ZIP" --title "$ADDON $VERSION" --notes-file notes.md $flags
+
+      - name: Upload to CurseForge
+        env:
+          CF_API_KEY: ${{ secrets.CF_API_KEY }}
+          CF_PROJECT_ID: ${{ vars.CURSEFORGE_PROJECT_ID }}
+          CF_GAME_VERSION_ID: ${{ vars.CURSEFORGE_GAME_VERSION_ID }}
+        run: |
+          if [ -z "$CF_API_KEY" ] || [ -z "$CF_PROJECT_ID" ]; then
+            echo "::warning::CF_API_KEY or CURSEFORGE_PROJECT_ID isn't set - skipping CurseForge."
+            exit 0
+          fi
+          .github/scripts/curseforge-upload.sh "$ZIP" notes.md
