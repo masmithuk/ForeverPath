@@ -6,9 +6,10 @@
       Header   guide name, where you are (quest n of N), and how many quests
                are done, skipped and missed
       Filters  All · To do · Skipped & missed · Done
-      List     one row per quest: number, level, name, quest giver, status.
-               The step the guide is showing now is marked with an arrow.
-               Click a row to select it.
+      List     one row per quest, 1 to 60: number, level, name, quest
+               giver, status. The step the guide is showing now is marked
+               with an arrow, and opening the tab scrolls to it. Click a
+               row to select it. Only the rows in view are drawn.
       Buttons  Go to this step   make the selected quest the current step
                Skip / Unskip     skip it, or bring a skipped quest back
                Undo last skip    undo your most recent skip or tick
@@ -84,11 +85,10 @@ end
 
 function StepsTab.HeaderText(guideName, list)
     if list.total == 0 then return C("accent", guideName) .. "  " .. C("muted", L.STEPS_EMPTY) end
-    return ("%s   %s   %s%s"):format(
+    return ("%s   %s   %s"):format(
         C("accent", guideName),
         L.STEPS_POSITION_FMT:format(list.position, list.total),
-        C("muted", L.STEPS_COUNTS_FMT:format(list.done, list.skipped, list.missed)),
-        list.byZone and C("muted", "  " .. L.STEPS_BY_ZONE) or "")
+        C("muted", L.STEPS_COUNTS_FMT:format(list.done, list.skipped, list.missed)))
 end
 
 ---------------------------------------------------------------------------
@@ -151,10 +151,15 @@ end
 -- Construction
 ---------------------------------------------------------------------------
 
-local function createRow(parent, index, width)
+-- Only the rows in view exist: a small pool of row frames is moved and
+-- refilled as you scroll, so a 1-60 guide with thousands of quests costs
+-- no more than a short one.
+local shownRows = {}  -- the filtered rows currently listed
+local scrollToCurrent = false
+
+local function createRow(parent, width)
     local row = CreateFrame("Button", nil, parent)
     row:SetSize(width, ROW_HEIGHT)
-    row:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, -(index - 1) * ROW_HEIGHT)
     row:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
 
     row.selected = row:CreateTexture(nil, "BACKGROUND")
@@ -225,12 +230,50 @@ function StepsTab.Create(parent)
     panel.scroll:SetScrollChild(panel.child)
     panel.rowWidth = width - 28
     panel.rows = {}
+    panel.scroll:HookScript("OnVerticalScroll", function() StepsTab.Draw() end)
+    panel:SetScript("OnShow", function() scrollToCurrent = true end)
+    scrollToCurrent = true
     return panel
 end
 
 ---------------------------------------------------------------------------
 -- Refresh
 ---------------------------------------------------------------------------
+
+--- How many rows fit in the list at the window's current size.
+local function visibleCount()
+    local h = panel.scroll:GetHeight()
+    if not h or h <= 0 then h = ns.MainFrame.ContentHeight() - 90 end
+    return math.max(1, math.ceil(h / ROW_HEIGHT)) + 1
+end
+
+--- Fill the row frames with the rows scrolled into view.
+function StepsTab.Draw()
+    if not panel then return end
+    local first = math.floor((panel.scroll:GetVerticalScroll() or 0) / ROW_HEIGHT) + 1
+    local count = visibleCount()
+    for i = 1, count do
+        local r = shownRows[first + i - 1]
+        local widget = panel.rows[i]
+        if r and not widget then
+            widget = createRow(panel.child, panel.rowWidth)
+            panel.rows[i] = widget
+        end
+        if widget then
+            if r then
+                widget:ClearAllPoints()
+                widget:SetPoint("TOPLEFT", panel.child, "TOPLEFT", 0, -(first + i - 2) * ROW_HEIGHT)
+                widget.questID = rowId(r)
+                widget.text:SetText(StepsTab.RowText(r))
+                if rowId(r) == selectedId then widget.selected:Show() else widget.selected:Hide() end
+                widget:Show()
+            else
+                widget:Hide()
+            end
+        end
+    end
+    for i = count + 1, #panel.rows do panel.rows[i]:Hide() end
+end
 
 --- Fit the header, rows and hint to the window's current width.
 local function layout()
@@ -262,16 +305,24 @@ function StepsTab.Refresh()
         end
     end
 
-    for i, r in ipairs(rows) do
-        local widget = panel.rows[i] or createRow(panel.child, i, panel.rowWidth)
-        panel.rows[i] = widget
-        widget.questID = rowId(r)
-        widget.text:SetText(StepsTab.RowText(r))
-        if r.id == selectedId then widget.selected:Show() else widget.selected:Hide() end
-        widget:Show()
-    end
-    for i = #rows + 1, #panel.rows do panel.rows[i]:Hide() end
+    shownRows = rows
     panel.child:SetHeight(math.max(1, #rows * ROW_HEIGHT))
+    if scrollToCurrent then
+        -- Scroll to the current step, or - when that isn't a quest in the
+        -- list (a trainer visit, say) - to the first quest not yet done.
+        scrollToCurrent = false
+        local target
+        for i, r in ipairs(rows) do
+            if r.isCurrent then target = i; break end
+        end
+        if not target then
+            for i, r in ipairs(rows) do
+                if r.status ~= "done" and r.status ~= "skipped" then target = i; break end
+            end
+        end
+        if target then panel.scroll:SetVerticalScroll(math.max(0, (target - 4) * ROW_HEIGHT)) end
+    end
+    StepsTab.Draw()
 
     local sel = selectedRow()
     local canGo = sel and (sel.status ~= "done" or sel.isStep)

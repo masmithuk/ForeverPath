@@ -672,6 +672,7 @@ function QuestieData.ResetSpawns()
 end
 
 function QuestieData.Reset()
+    if ns.StepList then ns.StepList.ResetCache() end
     state.status = "unknown"
     state.candidates, state.byTitle, state.classTitle, state.leadsOn = {}, {}, nil, {}
     spawnCache = {}

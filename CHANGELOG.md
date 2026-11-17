@@ -2,6 +2,11 @@
 
 All notable changes are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.8.3] - 2026-11-17
+
+### Fixed
+- **The Steps tab looked like the guide stopped in the 20s.** For the built-in guides it only listed your zones for this level band and the next. It now lists the whole guide, 1 to 60. The full list is worked out once per guide and character, only the rows in view are drawn, and opening the tab scrolls to where you are (or to the first quest you haven't done).
+
 ## [0.8.2] - 2026-11-17
 
 ### Fixed

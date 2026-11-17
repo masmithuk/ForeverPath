@@ -40,6 +40,46 @@ StepList.FILTERS = {
     done = function(r) return r.status == "done" end,
 }
 
+-- Guides that go by zones (the built-in ones) cover 1-60, which can be a
+-- couple of thousand quests. Working that list out walks every zone, so it
+-- is done once per guide and character and kept; so are each quest's
+-- fixed details (name, level, quest giver). Only statuses are fresh on
+-- every Build.
+local listCache = { key = nil, list = nil }
+local infoCache = {}
+
+--- Forget cached lists and quest details (QuestieDB was re-indexed).
+function StepList.ResetCache()
+    listCache.key, listCache.list = nil, nil
+    infoCache = {}
+end
+
+local function questInfo(ctx, q)
+    local info = infoCache[q.id]
+    if not info then
+        local d = ns.QuestieData.Describe(q.id, q.name)
+        local givers = ns.QuestieData.GetStarters(q.id, ctx.profile.faction)
+        info = { name = d.name, level = d.level, requiredLevel = d.requiredLevel, zone = d.zone,
+                 giver = givers[1] and givers[1].name or nil }
+        infoCache[q.id] = info
+    end
+    return info
+end
+
+--- The quests to list: the guide's own list, or every quest in the
+--- guide's zones from level 1 to 60, in level-band order.
+function StepList.Quests(ctx)
+    local guide = ctx.guide
+    if #guide.quests > 0 then return guide.quests end
+    local p = ctx.profile
+    local key = table.concat({ tostring(guide.id), tostring(p.faction), tostring(p.raceKey), tostring(p.classFile),
+                               tostring(ns.QuestieData.CandidateCount()) }, ":")
+    if listCache.key ~= key then
+        listCache.key, listCache.list = key, ns.Library.QuestList(guide, ctx)
+    end
+    return listCache.list
+end
+
 local function stepRow(ctx, i, entry, item, currentStep)
     local step = item and ns.Sources.ListStepToStep(ctx, item)
     local row = {
@@ -55,14 +95,12 @@ local function stepRow(ctx, i, entry, item, currentStep)
 end
 
 local function questRow(ctx, i, q, inCurrent)
-    local info = ns.QuestieData.Describe(q.id, q.name)
+    local info = questInfo(ctx, q)
     local row = {
         index = i, id = q.id, name = info.name, level = info.level,
-        requiredLevel = info.requiredLevel, zone = info.zone,
+        requiredLevel = info.requiredLevel, zone = info.zone, giver = info.giver,
         isCurrent = inCurrent[q.id] == true, isFocus = ctx.focusQuest == q.id,
     }
-    local givers = ns.QuestieData.GetStarters(q.id, ctx.profile.faction)
-    row.giver = givers[1] and givers[1].name or nil
 
     local logEntry = ctx.log[q.id]
     if ctx.isCompleted(q.id) then
@@ -95,35 +133,15 @@ local REACHED = { done = true, ready = true, active = true }
 --   quest rows: { index, id, name, level, requiredLevel, zone, giver,
 --                 status, isCurrent, isFocus }
 --   step rows:  { index, isStep, key, kind, name, where, status, isCurrent }
---- The quests to list: the guide's own list, or - for guides that go by
---- zones (the built-in ones) - the quests of the zones for your level and
---- the next band, so the list stays short and quick to build.
-function StepList.Quests(ctx)
-    local guide = ctx.guide
-    if #guide.quests > 0 then return guide.quests, false end
-    local list, seen = {}, {}
-    for _, entry in ipairs({ ctx.route and ctx.route.current, ctx.route and ctx.route.next }) do
-        for _, zone in ipairs(entry and entry.zones or {}) do
-            for _, q in ipairs(ns.Catalog.Overview(zone, ctx).quests) do
-                if not seen[q.id] and not guide.skipSet[q.id] then
-                    seen[q.id] = true
-                    list[#list + 1] = { id = q.id, name = q.name }
-                end
-            end
-        end
-    end
-    return list, true
-end
 
 function StepList.Build(ctx, currentStep)
-    local quests, byZone = StepList.Quests(ctx)
+    local quests = StepList.Quests(ctx)
     local inCurrent = {}
     for _, id in ipairs(currentStep and currentStep.questIDs or {}) do inCurrent[id] = true end
     local listSteps = {}
     for _, item in ipairs(ns.Sources.ListSteps(ctx)) do listSteps[item.index] = item end
 
-    local result = { rows = {}, done = 0, skipped = 0, missed = 0, total = #quests, position = 0,
-                     byZone = byZone }
+    local result = { rows = {}, done = 0, skipped = 0, missed = 0, total = #quests, position = 0 }
     for i, q in ipairs(quests) do
         local row
         if q.step then

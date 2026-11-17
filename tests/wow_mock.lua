@@ -112,6 +112,14 @@ function Frame:Disable() rawset(self, "disabled", true) end
 function Frame:IsEnabled() return not rawget(self, "disabled") end
 function Frame:CreateTexture() return mock.newFrame() end
 function Frame:SetTexture(t) self.texture = t end
+-- Scroll frames remember their offset and run OnVerticalScroll hooks.
+function Frame:SetVerticalScroll(v)
+    rawset(self, "vscroll", v)
+    local hooks = rawget(self, "hooks")
+    if hooks and hooks.OnVerticalScroll then hooks.OnVerticalScroll(self, v) end
+end
+function Frame:GetVerticalScroll() return rawget(self, "vscroll") or 0 end
+
 function Frame:HookScript(name, fn)
     local hooks = rawget(self, "hooks") or {}
     hooks[name] = fn

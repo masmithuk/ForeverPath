@@ -236,6 +236,7 @@ local function checkQuestieStarted()
         questieStarted = true
         ns.ZoneMap.Reset()
         ns.QuestieData.ResetSpawns()
+        ns.StepList.ResetCache()
         invalidateDoable()
         Engine.state.currentKey = nil
         Engine.Replan()

@@ -181,7 +181,7 @@ Everything runs from the game's own UI.
 - **Header:** names the guide you're following.
 - **Resizing:** drag the bottom-right corner to make it wider or narrower. The text wraps to fit and the width is remembered.
 
-**Steps tab:** every quest in your guide, in order.
+**Steps tab:** every quest in your guide, 1 to 60, in order. Opening it scrolls to where you are.
 
 - **Header:** where you are ("You're at quest 12 of 40") and how many are done, skipped and missed.
 - **List:** number, level, quest, quest giver and status (Done, Ready, In log, Skipped, Missed, Available, Level n, Locked). The step the guide is showing now is marked with `>`.

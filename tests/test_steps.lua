@@ -197,18 +197,55 @@ return {
         T.contains(mock.printed[#mock.printed], "Best step from here")
     end },
 
-    { "built-in guides list the zones for your level and the next", function(T)
+    { "built-in guides list every zone from 1 to 60", function(T)
         local ns, mock = T.fresh()
         mock.player.race = { "Orc", "Orc", 2 }
-        fixtures.durotar(mock, { mode = "efficient" })
+        local db = fixtures.durotar(mock, { mode = "efficient" })
+        mock.maps[1424] = { name = "Hillsbrad Foothills", areaID = 267, continent = 0, offset = 7000 }
+        db.Npc[1007] = { name = "Hillsbrad Giver", friendlyToFaction = "H", spawns = { [267] = { { 50, 50 } } } }
+        db.Quest[121] = { name = "Hillsbrad Job", startedBy = { { 1007 } }, requiredLevel = 20, questLevel = 25 }
         fixtures.login(ns)
         ns.MainFrame.ShowTab("steps")
-        local list = ns.StepsTab.GetList()
-        T.truthy(list.byZone)
         local ids = {}
-        for _, r in ipairs(list.rows) do ids[r.id] = true end
-        T.truthy(ids[101], "Durotar (this band)")
-        T.truthy(ids[104], "The Barrens (next band)")
-        T.contains(ns.StepsTab.GetPanel().header:GetText(), "this level and the next")
+        for _, r in ipairs(ns.StepsTab.GetList().rows) do ids[r.id] = true end
+        T.truthy(ids[101], "Durotar (now)")
+        T.truthy(ids[104], "The Barrens (next)")
+        T.truthy(ids[121], "Hillsbrad Foothills, levels 21-30")
+        T.truthy(not ns.StepsTab.GetPanel().header:GetText():find("this level and the next"))
     end },
+
+    { "a long list only draws the rows in view, and scrolling refills them", function(T)
+        local ns, mock = T.fresh()
+        mock.player.race = { "Orc", "Orc", 2 }
+        local db = fixtures.durotar(mock, { mode = "efficient" })
+        for id = 5000, 5599 do -- 600 extra Durotar quests
+            db.Quest[id] = { name = "Filler " .. id, startedBy = { { 1002 } }, requiredLevel = 1, questLevel = 8 }
+        end
+        fixtures.login(ns)
+        ns.MainFrame.ShowTab("steps")
+        local p = ns.StepsTab.GetPanel()
+        T.truthy(#ns.StepsTab.GetList().rows > 600)
+        T.truthy(#p.rows < 40, "a small pool of row frames, not one per quest")
+        p.scroll:SetVerticalScroll(300 * 18)
+        local first = ns.StepsTab.GetVisibleRows()[1]
+        T.contains(first.text:GetText(), "301. ", "row 301 is at the top after scrolling")
+    end },
+
+    { "opening the tab scrolls to where you are", function(T)
+        local ns, mock = T.fresh()
+        mock.player.race = { "Orc", "Orc", 2 }
+        local db = fixtures.durotar(mock, { mode = "efficient" })
+        for id = 5000, 5199 do
+            db.Quest[id] = { name = "Done " .. id, startedBy = { { 1002 } }, requiredLevel = 1, questLevel = 1 }
+            mock.completed[id] = true
+        end
+        fixtures.login(ns)
+        ns.MainFrame.ShowTab("steps")
+        local p = ns.StepsTab.GetPanel()
+        T.truthy(p.scroll:GetVerticalScroll() > 0, "scrolled down past the finished quests")
+        local texts = {}
+        for _, w in ipairs(ns.StepsTab.GetVisibleRows()) do texts[#texts + 1] = w.text:GetText() end
+        T.truthy(not table.concat(texts, "\n"):find("Done 5000", 1, true), "the finished ones are scrolled past")
+    end },
+
 }
