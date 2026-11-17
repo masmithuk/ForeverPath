@@ -277,17 +277,7 @@ GitHub Actions runs both on every push and pull request.
 
 ### Releasing
 
-1. Update `## Version` in `Questwalker.toc` and add a `## [x.y.z]` section to `CHANGELOG.md`.
-2. Tag and push: `git tag v0.8.0 && git push origin v0.8.0`.
-3. The **Release** workflow checks the tag against the TOC, lints and tests, builds `Questwalker-x.y.z.zip` (without tests and dev files), publishes a GitHub release with that version's changelog, and uploads the zip to CurseForge for WoW Forever. Tags with a hyphen (`v0.9.0-beta1`) go up as betas.
-
-CurseForge needs two settings under the repository's **Settings > Secrets and variables > Actions**:
-
-- **Secret `CF_API_KEY`:** an API token from your CurseForge account (<https://legacy.curseforge.com/account/api-tokens>).
-- **Variable `CURSEFORGE_PROJECT_ID`:** the project ID shown on the project's CurseForge page.
-- Optional **variable `CURSEFORGE_GAME_VERSION_ID`:** if the automatic WoW Forever game version lookup picks the wrong one.
-
-Without them the GitHub release still happens and the CurseForge step is skipped with a warning.
+Bump `## Version:` in `Questwalker.toc`, add the version's entry to `CHANGELOG.md`, push to `main`, then publish a GitHub release with that version as its tag. The **Release** workflow tests, packages and uploads it to CurseForge. Step-by-step instructions and the one-time CurseForge setup are in [docs/RELEASING.md](docs/RELEASING.md).
 
 ### Updating the advice
 

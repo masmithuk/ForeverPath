@@ -1,7 +1,9 @@
-# Files left out of release zips (git archive). Keep in step with .pkgmeta.
+# Files left out of GitHub's "Source code" archives. Release zips are built by scripts/package.sh.
 tests/          export-ignore
 .github/        export-ignore
 .luacheckrc     export-ignore
 .pkgmeta        export-ignore
 .gitattributes  export-ignore
 .editorconfig   export-ignore
+scripts/        export-ignore
+docs/           export-ignore

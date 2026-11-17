@@ -1,116 +1,80 @@
-# Release: push a tag like v0.8.0 (or publish a release on GitHub, which
-# creates the tag), or run it by hand from the Actions tab with a tag name.
-# It
-#   1. checks the tag matches "## Version" in Questwalker.toc,
-#   2. lints and tests,
-#   3. builds Questwalker-<version>.zip (a Questwalker/ folder, without
-#      tests and dev files - see .gitattributes),
-#   4. publishes a GitHub release with that zip and the CHANGELOG section,
-#   5. uploads the zip to CurseForge for WoW Forever.
-#
-# CurseForge needs (repository Settings > Secrets and variables > Actions):
-#   secret   CF_API_KEY                 an API token from
-#                                       https://legacy.curseforge.com/account/api-tokens
-#   variable CURSEFORGE_PROJECT_ID      the number on the project's page ("Project ID")
-#   variable CURSEFORGE_GAME_VERSION_ID optional: the WoW Forever game version id, if
-#                                       the automatic lookup picks the wrong one
-# Without them, steps 1-4 still run and the CurseForge step is skipped.
-# A tag with a hyphen (v0.9.0-beta1) is uploaded as a beta.
-# If the GitHub release already exists, the zip is attached to it (and its
-# notes filled in if they're empty) instead of creating a new one.
-
 name: Release
 
+# Publishing a release on GitHub (Releases > Draft a new release) packages it
+# and uploads it to CurseForge. Use a tag that matches "## Version:" in
+# Questwalker.toc, with or without a leading v (0.8.5 or v0.8.5). Tags with
+# "alpha" or "beta" in them become alpha/beta files.
+#
+# Also runnable by hand: Actions > Release > Run workflow, for an existing tag.
+# If a step fails (e.g. a missing secret), fix it and use "Re-run jobs" on the
+# run: every step is safe to repeat.
+#
+# Needs, under Settings > Secrets and variables > Actions:
+#   secret   CF_API_KEY      a CurseForge API token
+#   variable CF_PROJECT_ID   the numeric id of the Questwalker CurseForge project
+#                            (a secret of the same name, or the older
+#                            CURSEFORGE_PROJECT_ID variable, works too)
+#
+# Adapted from Coin Forge's release setup (scripts/ and docs/RELEASING.md).
+
 on:
-  push:
-    tags: ["v*"]
+  release:
+    types: [published]
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag to release, e.g. v0.8.0"
+        description: "Existing tag to release, e.g. v0.8.5"
         required: true
 
 permissions:
-  contents: write
+  contents: write # to create the GitHub release
 
 jobs:
   release:
     runs-on: ubuntu-latest
-    env:
-      ADDON: Questwalker
-      TAG: ${{ inputs.tag || github.ref_name }}
     steps:
-      # The tools (scripts) come from this workflow's commit, so a manual
-      # re-run of an older tag uses the current scripts; the addon itself
-      # is built from the tag.
       - uses: actions/checkout@v4
         with:
-          path: tools
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.tag || github.ref }}
-          path: addon
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
 
-      - name: Check the tag matches the TOC version
-        working-directory: addon
-        run: |
-          toc=$(sed -n 's/^## Version: *//p' "$ADDON.toc" | tr -d '\r')
-          tag="${TAG#v}"
-          if [ "$toc" != "$tag" ]; then
-            echo "::error::Tag is v$tag but $ADDON.toc says $toc - update the TOC or the tag."
-            exit 1
-          fi
-          echo "VERSION=$tag" >> "$GITHUB_ENV"
+      - name: Work out the tag
+        run: echo "TAG=${{ github.event.release.tag_name || inputs.tag }}" >> "$GITHUB_ENV"
 
       - name: Install Lua 5.1 and luacheck
         run: |
           sudo apt-get update
-          sudo apt-get install -y lua5.1 lua-check jq
+          sudo apt-get install -y lua5.1 lua-check jq zip
 
-      - name: Lint
-        working-directory: addon
-        run: luacheck .
-
-      - name: Test
-        working-directory: addon
-        run: lua5.1 tests/run.lua
-
-      - name: Build the zip
-        working-directory: addon
+      - name: Lint and test
         run: |
-          git archive --format=zip --prefix="$ADDON/" -o "../$ADDON-$VERSION.zip" HEAD
-          unzip -l "../$ADDON-$VERSION.zip" | tail -n 3
-          echo "ZIP=$ADDON-$VERSION.zip" >> "$GITHUB_ENV"
+          luacheck .
+          lua5.1 tests/run.lua
 
-      - name: Release notes from CHANGELOG.md
-        run: |
-          tools/.github/scripts/changelog-section.sh "$VERSION" addon/CHANGELOG.md > notes.md
-          cat notes.md
+      - name: Package
+        id: package
+        run: echo "zip=$(scripts/package.sh "$TAG")" >> "$GITHUB_OUTPUT"
 
-      - name: GitHub release
+      - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
         run: |
-          if gh release view "$TAG" > /dev/null 2>&1; then
-            echo "Release $TAG already exists - attaching the zip."
-            gh release upload "$TAG" "$ZIP" --clobber
-            body=$(gh release view "$TAG" --json body --jq .body)
-            if [ -z "$body" ]; then gh release edit "$TAG" --notes-file notes.md; fi
+          scripts/changelog.sh > release-notes.md
+          prerelease=""
+          case "$TAG" in *alpha*|*beta*) prerelease="--prerelease" ;; esac
+          # safe to re-run: reuse the release if an earlier run already created it
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "${{ steps.package.outputs.zip }}" --clobber
+            # a release made by hand may have no notes: use the changelog entry
+            if [ -z "$(gh release view "$TAG" --json body -q .body)" ]; then
+              gh release edit "$TAG" --notes-file release-notes.md
+            fi
           else
-            flags=""
-            case "$VERSION" in *-*) flags="--prerelease" ;; esac
-            gh release create "$TAG" "$ZIP" --title "$ADDON $VERSION" --notes-file notes.md $flags
+            gh release create "$TAG" "${{ steps.package.outputs.zip }}" \
+              --title "Questwalker ${TAG#v}" --notes-file release-notes.md $prerelease
           fi
 
       - name: Upload to CurseForge
         env:
           CF_API_KEY: ${{ secrets.CF_API_KEY }}
-          CF_PROJECT_ID: ${{ vars.CURSEFORGE_PROJECT_ID }}
-          CF_GAME_VERSION_ID: ${{ vars.CURSEFORGE_GAME_VERSION_ID }}
-        run: |
-          if [ -z "$CF_API_KEY" ] || [ -z "$CF_PROJECT_ID" ]; then
-            echo "::warning::CF_API_KEY or CURSEFORGE_PROJECT_ID isn't set - skipping CurseForge."
-            exit 0
-          fi
-          tools/.github/scripts/curseforge-upload.sh "$ZIP" notes.md
+          CF_PROJECT_ID: ${{ vars.CF_PROJECT_ID || secrets.CF_PROJECT_ID || vars.CURSEFORGE_PROJECT_ID }}
+        run: scripts/upload-curseforge.sh "${{ steps.package.outputs.zip }}" "$TAG"

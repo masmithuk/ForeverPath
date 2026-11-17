@@ -1,4 +1,7 @@
-.release/
 *.zip
 .DS_Store
+.release/
 Thumbs.db
+dist/
+release-notes.md
+upload-response.json
