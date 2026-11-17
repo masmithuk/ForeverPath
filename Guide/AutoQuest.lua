@@ -22,7 +22,8 @@
 
     What gets accepted (Settings tab):
       * not quests you skipped in the guide
-      * not grey (trivial) quests, not repeatable quests (both optional)
+      * not grey (trivial) quests, not repeatable quests, not quests that
+        are too hard yet (their level or their creatures' level; all optional)
       * optionally, only quests your guide would pick (off by default)
 
     A conversation ends when no quest dialog event has arrived for a
@@ -86,6 +87,7 @@ function AutoQuest.ShouldAccept(q, opts, wants)
     if not q.questID or tried[q.questID] then return false end
     if opts.skipTrivial and q.isTrivial then return false end
     if opts.skipRepeatable and q.repeatable then return false end
+    if opts.skipTooHard and opts.tooHard and opts.tooHard(q.questID) then return false end
     if ns.Settings.char.guide.skipped[q.questID] then return false end
     if opts.followMode and wants and not wants(q.questID) then return false end
     return true
@@ -162,6 +164,8 @@ local function decisionOptions()
         skipTrivial = s.skipTrivial,
         skipRepeatable = s.skipRepeatable,
         followMode = s.followMode,
+        skipTooHard = s.skipTooHard,
+        tooHard = ns.Engine.TooHard,
     }
 end
 
@@ -220,6 +224,7 @@ function AutoQuest.OnQuestDetail()
     if not tried[questID] then
         if ns.Settings.char.guide.skipped[questID] then return end
         if settings().followMode and not ns.Engine.WantsQuest(questID) then return end
+        if settings().skipTooHard and ns.Engine.TooHard(questID) then return end
         tried[questID] = true
     end
     AcceptQuest()

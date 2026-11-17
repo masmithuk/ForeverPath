@@ -63,6 +63,7 @@ for _, entry in ipairs({
     { "SETTING_AUTO_TURNIN", "turnIn" },
     { "SETTING_AUTO_FOLLOW", "followMode" },
     { "SETTING_AUTO_TRIVIAL", "skipTrivial" },
+    { "SETTING_AUTO_TOOHARD", "skipTooHard" },
     { "SETTING_AUTO_REPEAT", "skipRepeatable" },
 }) do
     local key = entry[2]

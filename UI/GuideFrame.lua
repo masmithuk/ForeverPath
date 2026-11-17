@@ -90,6 +90,18 @@ function GuideFrame.HeaderText()
 end
 
 --- Status line explaining missing data, or nil when all is well.
+--- "On hold until you're stronger: The Totem of Infliction (level 23)"
+function GuideFrame.OnHoldText(onHold)
+    if not onHold or #onHold == 0 then return nil end
+    table.sort(onHold, function(a, b) return a.level < b.level end)
+    local parts = {}
+    for i = 1, math.min(3, #onHold) do
+        parts[i] = L.ONHOLD_ITEM_FMT:format(onHold[i].title, onHold[i].level)
+    end
+    if #onHold > 3 then parts[#parts + 1] = L.ONHOLD_MORE_FMT:format(#onHold - 3) end
+    return Util.Color("muted", L.ONHOLD_FMT:format(table.concat(parts, ", ")))
+end
+
 function GuideFrame.StatusText(dataStatus, providerSetting)
     local parts = {}
     if dataStatus == "missing" then
@@ -290,6 +302,8 @@ function GuideFrame.Update(state)
     setShown(f.upcoming, #state.steps > 1)
 
     local status = GuideFrame.StatusText(state.dataStatus, ns.Settings.account.guide.waypoints)
+    local hold = GuideFrame.OnHoldText(state.onHold)
+    if hold then status = status and (hold .. "\n" .. status) or hold end
     f.status:SetText(status or "")
     setShown(f.status, status ~= nil)
 

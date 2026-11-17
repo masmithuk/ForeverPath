@@ -258,4 +258,19 @@ return {
         ns:FireEvent("PLAYER_LEVEL_UP", 9)
         T.eq(next(QuestwalkerCharDB.guide.notOffered), nil, "cleared on level up")
     end },
+
+    { "quests that are too hard aren't auto-accepted (unless you turn that off)", function(T)
+        local ns, mock = T.fresh()
+        local db = fixtures.durotar(mock, { level = 8 })
+        db.Quest[107].questLevel = 20
+        fixtures.login(ns)
+        mock.calls = {}
+        mock.dialog.questID = 107
+        ns:FireEvent("QUEST_DETAIL")
+        T.eq(calls(mock), "", "level 20 quest at level 8")
+        QuestwalkerDB.auto.skipTooHard = false
+        ns.AutoQuest._reset()
+        ns:FireEvent("QUEST_DETAIL")
+        T.eq(calls(mock), "AcceptQuest")
+    end },
 }

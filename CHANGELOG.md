@@ -2,6 +2,15 @@
 
 All notable changes are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.8.1] - 2026-11-17
+
+### Fixed
+- **Quests too hard for your level** were still sent your way once they were in your log (e.g. "The Totem of Infliction", level 25, at level 22). A quest whose level, or whose creatures' level, is too far above yours now waits "on hold" until you're close enough: the guide window lists what's on hold and from which level, and the Steps tab marks it. Picking one with Go to this step overrides the hold.
+- New quests are checked against their creatures' levels too, not just the quest's own level.
+
+### Added
+- Auto accept setting **Skip quests that are too hard for my level** (on by default).
+
 ## [0.8.0] - 2026-11-16
 
 ### Renamed

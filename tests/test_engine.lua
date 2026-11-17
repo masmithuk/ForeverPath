@@ -2,6 +2,10 @@
 
 local fixtures = require("fixtures")
 
+local function guideStatus()
+    return QuestwalkerGuideFrame.status:GetText() or ""
+end
+
 local function hasKey(state, key)
     return fixtures.findStep(state, key) ~= nil
 end
@@ -338,5 +342,49 @@ return {
         local state = fixtures.login(ns)
         T.eq(ns.Engine.CurrentGuide().id, "speedrun-orc-troll")
         T.eq(state.steps[1].title, "Talk to Kaltunk")
+    end },
+
+    ---------------------------------------------------------------------
+    -- Too hard for now
+    ---------------------------------------------------------------------
+    { "a quest in your log that's too high waits until you're close enough", function(T)
+        local ns, mock = T.fresh()
+        mock.player.race = { "Dwarf", "Dwarf", 3 }
+        local db = fixtures.durotar(mock, { level = 22, mode = "efficient" })
+        db.Quest[101].questLevel, db.Quest[101].requiredLevel = 25, 18 -- like The Totem of Infliction
+        fixtures.addToLog(mock, 101, "The Totem of Infliction", false, { "Ghoul Fang: 0/10" })
+        local state = fixtures.login(ns)
+        T.truthy(not hasKey(state, "complete:101"), "not suggested at 22")
+        T.eq(state.onHold[1].title, "The Totem of Infliction")
+        T.eq(state.onHold[1].level, 23, "Speedrun takes quests up to 2 levels above you")
+        T.contains(guideStatus(), "On hold until you're stronger: The Totem of Infliction (level 23)")
+        mock.player.level = 23
+        ns:FireEvent("PLAYER_LEVEL_UP", 23)
+        ns.Engine.Replan()
+        T.truthy(hasKey(ns.Engine.state, "complete:101"), "back at 23")
+    end },
+
+    { "creatures far above your level make a quest too hard too", function(T)
+        local ns, mock = T.fresh()
+        local db = fixtures.durotar(mock, { level = 8, mode = "efficient" })
+        db.Npc[2001].minLevel = 15 -- the quest says 5, its mobs say otherwise
+        local state = fixtures.login(ns)
+        T.truthy(not fixtures.findStep(state, "accept:npc:1001") or
+            not table.concat(fixtures.findStep(state, "accept:npc:1001").questIDs, ","):find("101"),
+            "not offered")
+        T.eq(ns.QuestieData.ObjectiveLevel(101), 15)
+        T.eq(select(2, ns.QuestieData.TooHard(101, 8, { levelsAbove = 2 })), 12)
+        T.eq(ns.QuestieData.TooHard(101, 12, { levelsAbove = 2 }), false)
+    end },
+
+    { "picking a held quest in the Steps list overrides the hold", function(T)
+        local ns, mock = T.fresh()
+        local db = fixtures.durotar(mock, { level = 8, mode = "efficient" })
+        db.Quest[101].questLevel = 15
+        fixtures.addToLog(mock, 101, "Vile Familiars", false)
+        local state = fixtures.login(ns)
+        T.truthy(not hasKey(state, "complete:101"))
+        ns.Engine.FocusQuest(101)
+        T.eq(ns.Engine.state.steps[1].key, "complete:101", "you asked for it")
     end },
 }

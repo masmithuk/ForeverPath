@@ -168,9 +168,22 @@ local function objectiveStep(ctx, questID, quest)
     }
 end
 
+--- A quest in your log that's still too hard waits until you're close
+--- enough in level (the quest picked in the Steps list is never held).
+-- @return the level to come back at, or nil
+function Sources.OnHoldUntil(ctx, questID)
+    if ctx.focusQuest == questID or not ns.QuestieData.IsReady() then return nil end
+    local tooHard, level = ns.QuestieData.TooHard(questID, ctx.profile.level, rulesOf(ctx))
+    return tooHard and level or nil
+end
+
 local function questLogSteps(ctx, out)
+    ctx.onHold = {}
     for questID, quest in pairs(ctx.log) do
-        if not ctx.skipped[questID] then -- quests already taken are always shown
+        local holdUntil = not quest.complete and Sources.OnHoldUntil(ctx, questID)
+        if holdUntil then
+            ctx.onHold[#ctx.onHold + 1] = { id = questID, title = quest.title, level = holdUntil }
+        elseif not ctx.skipped[questID] then -- quests already taken are always shown
             if quest.complete then
                 out[#out + 1] = turnInStep(ctx, questID, quest)
             else
@@ -223,8 +236,10 @@ function Sources.DoableQuests(ctx)
     if #listed > 0 then return listed, true end
 
     local doable = {}
-    for _, questID in ipairs(data.GetCandidates(ctx.profile.level, rulesOf(ctx))) do
-        if data.IsDoable(questID, ctx) then
+    local level, rules = ctx.profile.level, rulesOf(ctx)
+    for _, questID in ipairs(data.GetCandidates(level, rules)) do
+        -- Its own level is in range; its creatures must be too.
+        if not data.TooHard(questID, level, rules) and data.IsDoable(questID, ctx) then
             doable[#doable + 1] = questID
         end
     end
@@ -250,7 +265,7 @@ function Sources.WantsQuest(ctx, questID)
     local rules = rulesOf(ctx)
     local inWindow = data.InLevelWindow(questID, ctx.profile.level, rules)
     if inWindow == nil then return true end -- unknown to QuestieDB: allow
-    if not inWindow then return false end
+    if not inWindow or data.TooHard(questID, ctx.profile.level, rules) then return false end
 
     local limit = detourLimit(rules)
     if limit then

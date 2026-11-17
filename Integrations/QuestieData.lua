@@ -271,6 +271,40 @@ end
 
 --- Where to go for a quest's objectives: creatures to kill, objects to
 --- use, and creatures that drop the items it needs.
+--- How tough a quest's fights are: for each objective, the lowest
+--- minimum level among the creatures that give it, and then the highest
+--- of those. nil when no creature levels are known (e.g. only objects).
+function QuestieData.ObjectiveLevel(questID)
+    local objectives = get("Quest", questID, "objectives")
+    if type(objectives) ~= "table" then return nil end
+    local hardest
+    local function consider(npcIDs)
+        local easiest
+        for _, npcID in ipairs(npcIDs) do
+            local lvl = get("Npc", npcID, "minLevel")
+            if type(lvl) == "number" and lvl > 0 and (not easiest or lvl < easiest) then easiest = lvl end
+        end
+        if easiest and (not hardest or easiest > hardest) then hardest = easiest end
+    end
+    for _, creature in ipairs(objectives[1] or {}) do consider({ creature[1] }) end
+    for _, item in ipairs(objectives[3] or {}) do consider(get("Item", item[1], "npcDrops") or {}) end
+    return hardest
+end
+
+--- Is a quest too hard for you yet? Its level is more than `levelsAbove`
+--- over yours, or the creatures it needs are more than one level beyond
+--- that. Returns true and the level to come back at, or false.
+function QuestieData.TooHard(questID, level, rules)
+    local above = rules and rules.levelsAbove or LEVELS_ABOVE
+    local qLevel = get("Quest", questID, "questLevel")
+    local mobLevel = QuestieData.ObjectiveLevel(questID)
+    local needed = 0
+    if type(qLevel) == "number" and qLevel > level + above then needed = qLevel - above end
+    if mobLevel and mobLevel > level + above + 1 then needed = math.max(needed, mobLevel - above - 1) end
+    if needed > 0 then return true, needed end
+    return false
+end
+
 function QuestieData.GetObjectiveTargets(questID)
     local result = {}
     local objectives = get("Quest", questID, "objectives")

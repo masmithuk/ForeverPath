@@ -40,6 +40,7 @@ local ACCOUNT_DEFAULTS = {
         turnIn = true,          -- hand in finished quests and take the reward
         followMode = false,     -- only accept quests the guide would pick
         skipTrivial = true,     -- never auto-accept grey quests
+        skipTooHard = true,     -- never auto-accept quests too hard for your level
         skipRepeatable = true,  -- never auto-accept repeatable quests
     },
     target = { point = "RIGHT", relativePoint = "RIGHT", x = -80, y = 40 },

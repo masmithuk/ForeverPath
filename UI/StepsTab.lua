@@ -44,6 +44,7 @@ local STATUS = {
     locked   = { "muted",  "QUEST_LOCKED" },
     later    = { "muted",  "STEPS_LATER" },
     notoffered = { "muted", "STEPS_NOT_OFFERED" },
+    onhold   = { "warn",   "STEPS_ON_HOLD_FMT" },
 }
 local STEP_UPCOMING = { "accent", "STEPS_STEP_NEXT" }
 
@@ -60,7 +61,7 @@ function StepsTab.StatusLabel(row)
     local entry = STATUS[row.status] or STATUS.locked
     if row.isStep and row.status == "upcoming" then entry = STEP_UPCOMING end
     local label = L[entry[2]]
-    if row.status == "level" then label = label:format(row.requiredLevel or 0) end
+    if row.status == "level" or row.status == "onhold" then label = label:format(row.requiredLevel or 0) end
     return C(entry[1], label)
 end
 

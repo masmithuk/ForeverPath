@@ -161,6 +161,7 @@ function Engine.Replan()
     state.steps = ns.Planner.Order(origin, merged, pinned, guideSettings().maxSteps)
     state.origin = origin
     state.log = ctx.log
+    state.onHold = ctx.onHold or {}
     state.dataStatus = ns.QuestieData.Status()
 
     local first = state.steps[1]
@@ -579,6 +580,13 @@ local function buildIndex()
         invalidateDoable()
         Engine.RequestReplan()
     end)
+end
+
+--- Is a quest too hard for you yet (quest or creature level)? For auto accept.
+function Engine.TooHard(questID)
+    if not ns.QuestieData.IsReady() then return false end
+    local ctx = Engine.BuildContext()
+    return (ns.QuestieData.TooHard(questID, ctx.profile.level, ctx.rules))
 end
 
 --- You're talking to an NPC: if the guide sent you here for quests it
