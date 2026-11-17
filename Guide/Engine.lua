@@ -119,10 +119,12 @@ function Engine.Replan()
     local questsChanged = false
     if not doableCache and ns.QuestieData.IsReady() then
         local list, fromList = ns.Sources.DoableQuests(ctx)
-        doableCache = { list = list, fromList = fromList }
+        doableCache = { list = list, fromList = fromList, rates = ctx.rates, rateMedian = ctx.rateMedian }
         questsChanged = true
     end
     ctx.doable = doableCache and doableCache.list
+    ctx.rates = doableCache and doableCache.rates
+    ctx.rateMedian = doableCache and doableCache.rateMedian
     ctx.doableFromList = doableCache and doableCache.fromList
 
     -- So is a step chosen there, until it's ticked off.

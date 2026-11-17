@@ -365,6 +365,36 @@ function QuestieData.QuestMapID(questID)
     return areaID and ns.ZoneMap.ToUiMap(areaID) or nil
 end
 
+--- Read one field of a QuestieDB entity ("Quest", "Npc", "Item", "Object").
+function QuestieData.Field(entity, id, field)
+    return get(entity, id, field)
+end
+
+-- Guards are indexed under this pseudo-title (see BuildIndex).
+QuestieData.GUARD_TITLE = "@guard"
+local GUARD_WORDS = { "Guard", "Sentinel", "Grunt", "Deathguard", "Bluffwatcher", "Protector", "Footman" }
+
+--- Does an NPC name look like a town guard ("Stormwind City Guard",
+--- "Orgrimmar Grunt", "Darnassus Sentinel", "Deathguard Burgess")?
+function QuestieData.IsGuardName(name)
+    for _, word in ipairs(GUARD_WORDS) do
+        if name:find("%f[%a]" .. word .. "%f[%A]") then return true end
+    end
+    return false
+end
+
+--- XP this quest gives you now, from Questie's XP table (once Questie has
+--- started), or nil when it isn't known.
+function QuestieData.QuestXP(questID)
+    if not QuestieData.QuestieStarted() then return nil end
+    local loader = _G.QuestieLoader
+    local ok, xpModule = pcall(loader.ImportModule, loader, "QuestXP")
+    if not ok or type(xpModule) ~= "table" or type(xpModule.GetQuestLogRewardXP) ~= "function" then return nil end
+    local ok2, xp = pcall(xpModule.GetQuestLogRewardXP, xpModule, questID)
+    if ok2 and type(xp) == "number" and xp > 0 then return xp end
+    return nil
+end
+
 --- Is it a class quest (only some classes can take it)?
 function QuestieData.IsClassQuest(questID)
     local classes = get("Quest", questID, "requiredClasses")
@@ -566,6 +596,12 @@ function QuestieData.BuildIndex(profile, schedule, onDone)
             if title and titles[title] then
                 state.byTitle[title] = state.byTitle[title] or {}
                 table.insert(state.byTitle[title], id)
+            end
+            -- Town guards (for "pull the elite to the guards" tips).
+            local name = get("Npc", id, "name")
+            if type(name) == "string" and QuestieData.IsGuardName(name) then
+                state.byTitle[QuestieData.GUARD_TITLE] = state.byTitle[QuestieData.GUARD_TITLE] or {}
+                table.insert(state.byTitle[QuestieData.GUARD_TITLE], id)
             end
             count = count + 1
             if count % SCAN_BATCH == 0 then coroutine.yield() end

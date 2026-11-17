@@ -30,13 +30,19 @@ local function extend(mock, db)
     db.Npc[1005] = { name = "Apothecary Zamah", friendlyToFaction = "H", spawns = { [215] = { { 50, 50 } } } }
 end
 
-local function setup(T, mode, level)
+local function setup(T, mode, level, keepRates)
     local ns, mock = T.fresh()
     local db = fixtures.durotar(mock, { level = level or 8, mode = mode })
     extend(mock, db)
     -- Keep training out of the way of these tests.
     QuestwalkerCharDB.guide.trainedLevel = 60
-    return ns, mock
+    -- The XP-per-minute rules have tests of their own (below).
+    if not keepRates then
+        for _, g in ipairs(ns.Library.List()) do
+            if g.builtin then g.rules.minRate, g.rules.rateBonus = 0, 0 end
+        end
+    end
+    return ns, mock, db
 end
 
 local function fakeShortestPath(mock, version, accept)
@@ -237,5 +243,102 @@ return {
         ns.SettingsTab.Click("SETTING_TARGET", false)
         T.eq(QuestwalkerDB.targetButton, false)
         T.truthy(not QuestwalkerTargetButton:IsShown())
+    end },
+
+    ---------------------------------------------------------------------
+    -- Speedrun: XP for the time it takes
+    ---------------------------------------------------------------------
+    { "Speedrun skips quests that pay badly for the time they take", function(T)
+        local ns, _, db = setup(T, "efficient", 23, true)
+        -- Four quick level 23 errands at the Foreman, and one level 20 quest
+        -- that sends you far away to collect 20 drops for little XP.
+        for id = 140, 143 do
+            db.Quest[id] = { name = "Quick Errand " .. id, startedBy = { { 1002 } }, finishedBy = { { 1002 } },
+                             requiredLevel = 18, questLevel = 23 }
+        end
+        db.Npc[2010] = { name = "Far Stalker", minLevel = 20, spawns = { [14] = { { 95, 5 } } } }
+        db.Item[9001] = { name = "Stalker Hide", npcDrops = { 2010 } }
+        db.Quest[150] = { name = "Slow Hides", startedBy = { { 1002 } }, finishedBy = { { 1001 } },
+                          requiredLevel = 18, questLevel = 21, objectivesText = { "Bring me 20 Stalker Hides." },
+                          objectives = { nil, nil, { { 9001 } } } }
+        local state = fixtures.login(ns)
+        local offered = table.concat(acceptLines(state), "|")
+        T.contains(offered, "Quick Errand")
+        T.truthy(not offered:find("Slow Hides"), "not worth the time on Speedrun")
+    end },
+
+    { "Story still offers slow quests", function(T)
+        local ns, _, db = setup(T, "story", 23, true)
+        db.Quest[150] = { name = "Slow Hides", startedBy = { { 1002 } }, requiredLevel = 18, questLevel = 22,
+                          objectivesText = { "Bring me 20 Stalker Hides." } }
+        local state = fixtures.login(ns)
+        T.contains(table.concat(acceptLines(state), "|"), "Slow Hides")
+    end },
+
+    { "quest value: XP, counts, work and the game's level adjustment", function(T)
+        local ns, _, db = setup(T, "efficient", 23, true)
+        local V = ns.QuestValue
+        T.eq(table.concat(V.Counts("Bring 10 ghoul fangs, 10 skeleton fingers and 5 vials"), ","), "10,10,5")
+        T.eq(V.AdjustXP(1000, 20, 23), 1000, "full XP within 5 levels")
+        T.eq(V.AdjustXP(1000, 20, 28), 400, "less XP once the quest is well below you")
+        T.eq(V.AdjustXP(1000, 20, 40), 100, "never below a tenth")
+        T.eq(V.Median({ 5, 1, 3 }), 3)
+        T.eq(V.Median({ 1, 2, 3, 4 }), 2.5)
+        -- Elite kills cost more time than normal ones.
+        db.Npc[2001].rank = 1
+        local elite = V.WorkSeconds(101)
+        db.Npc[2001].rank = 0
+        T.truthy(elite > V.WorkSeconds(101))
+    end },
+
+    { "Questie's XP table is used once Questie has started", function(T)
+        local ns = setup(T, "efficient", 23, true)
+        _G.Questie = { started = true }
+        _G.QuestieLoader = { ImportModule = function(_, name)
+            if name == "QuestXP" then return { GetQuestLogRewardXP = function(_, id) return id == 101 and 1234 or 0 end } end
+        end }
+        T.eq(ns.QuestValue.XP(101, 23), 1234)
+        T.truthy(ns.QuestValue.XP(102, 23) ~= nil, "estimate when the table has nothing")
+    end },
+
+    ---------------------------------------------------------------------
+    -- Elites
+    ---------------------------------------------------------------------
+    { "an elite objective says how to solo it with nearby guards", function(T)
+        local ns, mock, db = setup(T, "efficient", 23)
+        db.Npc[2001].rank, db.Npc[2001].maxLevel = 1, 25
+        db.Quest[101].questLevel, db.Quest[101].requiredLevel = 23, 18
+        db.Npc[3010] = { name = "Razor Hill Grunt", friendlyToFaction = "H", spawns = { [14] = { { 58, 58 } } } }
+        fixtures.addToLog(mock, 101, "Vile Familiars", false, { "Vile Familiar slain: 0/8" })
+        local state = fixtures.login(ns)
+        local step = fixtures.findStep(state, "complete:101")
+        T.contains(table.concat(step.lines, "|"), "Vile Familiar (level 25 elite): to solo it, pull it to the Razor Hill Grunt")
+    end },
+
+    { "an elite with no guards nearby suggests a group", function(T)
+        local ns, mock, db = setup(T, "efficient", 23)
+        db.Npc[2001].rank = 1
+        db.Quest[101].questLevel, db.Quest[101].requiredLevel = 23, 18
+        fixtures.addToLog(mock, 101, "Vile Familiars", false, { "Vile Familiar slain: 0/8" })
+        local state = fixtures.login(ns)
+        T.contains(table.concat(fixtures.findStep(state, "complete:101").lines, "|"), "find a group")
+    end },
+
+    { "guard names are recognised", function(T)
+        local ns = T.fresh()
+        for _, n in ipairs({ "Stormwind City Guard", "Orgrimmar Grunt", "Darnassus Sentinel", "Deathguard Burgess" }) do
+            T.truthy(ns.QuestieData.IsGuardName(n), n)
+        end
+        T.truthy(not ns.QuestieData.IsGuardName("Guardian of Blizzard"), "not a word inside another")
+        T.truthy(not ns.QuestieData.IsGuardName("Kaltunk"))
+    end },
+
+    { "travel counts towards a quest's time", function(T)
+        local ns, _, db = setup(T, "efficient", 23, true)
+        db.Quest[160] = { name = "Next Door", startedBy = { { 1002 } }, finishedBy = { { 1002 } }, questLevel = 23 }
+        db.Quest[161] = { name = "Far Away", startedBy = { { 1002 } }, finishedBy = { { 1002 } }, questLevel = 23,
+                          objectives = { { { 2002 } } } } -- Distant Boar at the far edge
+        T.eq(ns.QuestValue.TravelSeconds(160, "Horde"), 0)
+        T.truthy(ns.QuestValue.TravelSeconds(161, "Horde") > 60, "there and back is a long walk")
     end },
 }

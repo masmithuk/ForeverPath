@@ -80,7 +80,7 @@ JSON is easier to share than XML: it's shorter to paste, any text editor or onli
 | --- | --- |
 | `name` | Required. `author` and `description` are optional. |
 | `basedOn` | `"story"` or `"efficient"`. Each one's rules are the defaults. |
-| `rules` | Optional overrides, all whole numbers:<br>• `greyGap`: skip quests this many levels below you<br>• `levelsAbove`: allow quests this many levels above you<br>• `maxAccept`: quest givers considered at once<br>• `turninBonus` and `chainBonus`: yards a hand-in or story follow-up counts as closer<br>• `maxDetour`: skip quests whose objectives are this far from the giver (0 = no limit) |
+| `rules` | Optional overrides, all whole numbers:<br>• `greyGap`: skip quests this many levels below you<br>• `levelsAbove`: allow quests this many levels above you<br>• `maxAccept`: quest givers considered at once<br>• `turninBonus` and `chainBonus`: yards a hand-in or story follow-up counts as closer<br>• `maxDetour`: skip quests whose objectives are this far from the giver (0 = no limit)<br>• `minRate`: skip quests paying less than this percentage of the typical XP per minute on offer (0 = off; Speedrun 50)<br>• `rateBonus`: yards a quest that pays well for its time counts as closer, or a poor one as further (0 = off; Speedrun 250) |
 | `quests` | Your quests, in order. Each is `{ "id": 788, "name": "..." }` or just `788`. Only the id matters; the name is there for people reading the file. The list can also hold **steps that aren't quests**, see below. |
 | `bands` | Zones per level range, covering 1-60 in order with no gaps or overlaps. `levels` is `[from, to]`. `zones` sets both factions; otherwise use `alliance` and `horde`. `"START"` means your race's starting zone. `notes` show on the Home tab. |
 | `skipQuests` | Quest IDs the guide never picks up or auto-accepts. |
@@ -110,12 +110,14 @@ Guides are read as data only, never run as code. Sizes are capped, and `|` is re
 
 ## The step guide
 
+**How Speedrun picks quests:** each quest's XP per minute is estimated. The XP is what the game gives you at your level (from Questie's XP table, or an estimate from the quest's level). The time is the walk from the quest giver to the objectives and on to the hand-in, plus the work: the number of kills or items the quest text asks for, with elites counting as several kills and items as about one and a half kills each. Speedrun skips quests that pay less than half the typical rate on offer at your level, and puts the best ones first. Story doesn't use this.
+
 The guide window shows your current step and the next few steps. Steps are built live from your quest log, QuestieDB and what's nearby:
 
 | Step | Where it comes from |
 | --- | --- |
 | **Talk to (NPC) - Accept: (quests)** | Quests you can pick up now in your guide's zones. QuestieDB supplies the quest givers and checks prerequisites, race, class, faction and level. |
-| **Complete: (quest)** | Quests in your log. The step shows live objective progress, and the arrow points to Blizzard's own quest waypoint or the nearest QuestieDB spawn. Quests whose objectives are in the same area (within about 150 yards of each other) are one step, such as "Complete: Cutting Teeth & Wayward Weapons", and the Target button cycles through all their creatures. |
+| **Complete: (quest)** | Quests in your log. The step shows live objective progress, and the arrow points to Blizzard's own quest waypoint or the nearest QuestieDB spawn. If an objective is an elite, the step says how to solo it: pull it to the nearest friendly guards, if any are within about 300 yards, or find a group. Quests whose objectives are in the same area (within about 150 yards of each other) are one step, such as "Complete: Cutting Teeth & Wayward Weapons", and the Target button cycles through all their creatures. |
 | **Turn in to (NPC)** | Finished quests in your log, pointing to the NPC who ends the quest. |
 | **Train at (trainer)** | When new class abilities are due (every two levels from 4) **and** your class trainer is within about 400 yards. |
 | **Set your hearthstone at (innkeeper)** | At the inn nearest to where you're questing (the middle of your current quest steps), when you're there and your hearthstone is bound somewhere else. Inns you pass while travelling aren't suggested. Skip it and that inn won't ask again. |

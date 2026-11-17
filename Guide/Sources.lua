@@ -157,6 +157,12 @@ local function objectiveStep(ctx, questID, quest)
     for _, objective in ipairs(ns.GameApi.GetOpenObjectives(questID)) do
         lines[#lines + 1] = "  " .. objective
     end
+    -- Elites: how to solo them (pull to nearby guards) or to group up.
+    if ns.QuestieData.IsReady() then
+        for _, elite in ipairs(ns.QuestValue.Elites(questID)) do
+            lines[#lines + 1] = "  " .. ns.QuestValue.EliteTip(elite, ctx.profile.faction, ctx.origin)
+        end
+    end
     return {
         key = "complete:" .. questID,
         kind = "COMPLETE",
@@ -263,7 +269,34 @@ function Sources.DoableQuests(ctx)
             doable[#doable + 1] = questID
         end
     end
-    return doable, false
+    return Sources.FilterByRate(doable, ctx), false
+end
+
+--- Speedrun: XP per minute for each quest (QuestValue), and drop quests
+--- paying less than `minRate` percent of the typical (median) rate on
+--- offer. Fills ctx.rates / ctx.rateMedian for the ordering bonus.
+-- @return the quests kept
+function Sources.FilterByRate(doable, ctx)
+    local rules = rulesOf(ctx)
+    ctx.rates, ctx.rateMedian = {}, nil
+    if (rules.minRate or 0) <= 0 and (rules.rateBonus or 0) <= 0 then return doable end
+    local values = {}
+    for _, id in ipairs(doable) do
+        local rate = ns.QuestValue.Rate(id, ctx.profile.level, ctx.profile.faction)
+        if rate then
+            ctx.rates[id] = rate
+            values[#values + 1] = rate
+        end
+    end
+    ctx.rateMedian = ns.QuestValue.Median(values)
+    if not ctx.rateMedian or (rules.minRate or 0) <= 0 or #values < 3 then return doable end
+    local floor = ctx.rateMedian * rules.minRate / 100
+    local kept = {}
+    for _, id in ipairs(doable) do
+        local rate = ctx.rates[id]
+        if not rate or rate >= floor then kept[#kept + 1] = id end
+    end
+    return kept
 end
 
 --- Is the quest's nearest objective too far from its giver (Efficient)?
@@ -300,6 +333,12 @@ local function acceptBonus(ctx, questID, listPosition)
     local bonus = listPosition and LIST_BONUSES[listPosition] or 0
     if (rules.chainBonus or 0) > 0 and ns.QuestieData.IsFollowUp(questID) then
         bonus = bonus + rules.chainBonus
+    end
+    -- Speedrun: quests that pay well for their time come first.
+    local rate = ctx.rates and ctx.rates[questID]
+    if (rules.rateBonus or 0) > 0 and rate and ctx.rateMedian and ctx.rateMedian > 0 then
+        local edge = (rate / ctx.rateMedian - 1) * rules.rateBonus
+        bonus = bonus + math.max(-rules.rateBonus, math.min(rules.rateBonus, edge))
     end
     -- Story: stand-alone side quests only when they're on the way.
     if (rules.sidePenalty or 0) > 0 and not listPosition and not ns.QuestieData.IsChainQuest(questID) then

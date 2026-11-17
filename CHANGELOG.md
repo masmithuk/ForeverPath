@@ -2,6 +2,14 @@
 
 All notable changes are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.8.4] - 2026-11-17
+
+### Changed
+- **Speedrun weighs XP against time.** Each quest's XP per minute is estimated from the XP it gives you now (Questie's XP table, adjusted for your level the way the game does) and the time it takes: walking from the quest giver to the objectives and on to the hand-in, plus kills or items the quest text asks for (elites count as several kills). Speedrun skips quests paying less than half the typical rate on offer (new `minRate` rule, 50) and prefers the best ones (new `rateBonus` rule, 250 yards). Story is unchanged.
+
+### Added
+- **Elite tips:** when an objective is an elite, its step names it with its level and says how to solo it: pull it to the nearest friendly guards if they're within about 300 yards, or find a group.
+
 ## [0.8.3] - 2026-11-17
 
 ### Fixed
