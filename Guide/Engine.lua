@@ -162,6 +162,7 @@ function Engine.Replan()
     state.origin = origin
     state.log = ctx.log
     state.onHold = ctx.onHold or {}
+    state.tooLow = ctx.tooLow or {}
     state.dataStatus = ns.QuestieData.Status()
 
     local first = state.steps[1]
@@ -496,7 +497,7 @@ end
 
 --- Quests in your log that aren't part of your guide. A quest is part of
 --- it when it's on the guide's quest list or in one of the guide's zones
---- for your level or the next band. Kept anyway: quests ready to hand
+--- for your level or the next band - and not too far below your level. Kept anyway: quests ready to hand
 --- in, class quests, and quests whose zone QuestieDB doesn't know.
 -- @return list of { id, title }, sorted by title
 function Engine.UnrelatedQuests()
@@ -514,8 +515,9 @@ function Engine.UnrelatedQuests()
     for id, quest in pairs(ctx.log) do
         local known = data.IsReady() and data.Describe(id).level > 0
         local mapID = known and data.QuestMapID(id)
+        local tooLow = not quest.complete and data.TooLow(id, ctx.profile.level, ctx.rules)
         local related = not known or not mapID or quest.complete or listed[id]
-            or data.IsClassQuest(id) or guideMaps[mapID]
+            or data.IsClassQuest(id) or (guideMaps[mapID] and not tooLow)
         if not related then
             out[#out + 1] = { id = id, title = quest.title }
         end

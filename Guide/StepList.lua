@@ -71,6 +71,10 @@ local function questRow(ctx, i, q, inCurrent)
         row.status = logEntry.complete and "ready" or "active"
         local holdUntil = not logEntry.complete and ns.Sources.OnHoldUntil(ctx, q.id)
         if holdUntil then row.status, row.requiredLevel = "onhold", holdUntil end
+        if not holdUntil and not logEntry.complete and ns.QuestieData.TooLow(q.id, ctx.profile.level, ctx.rules)
+            and ctx.focusQuest ~= q.id then
+            row.status = "toolow"
+        end
     elseif ctx.skipped[q.id] or (ctx.guide.skipSet and ctx.guide.skipSet[q.id]) then
         row.status = "skipped"
     elseif ctx.notOffered and ctx.notOffered[q.id] then

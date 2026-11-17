@@ -186,6 +186,7 @@ Everything runs from the game's own UI.
 - **Header:** where you are ("You're at quest 12 of 40") and how many are done, skipped and missed.
 - **List:** number, level, quest, quest giver and status (Done, Ready, In log, Skipped, Missed, Available, Level n, Locked). The step the guide is showing now is marked with `>`.
 - **Missed** means an available quest you've already moved past in the guide.
+- **In log - too low to bother** means an unfinished quest more than the guide's grey limit below you. It isn't suggested; Abandon unrelated quests clears it out, and Go to this step still works if you want it.
 - **In log - too hard until n** means a quest you've picked up that's still too far above your level, by its own level or its creatures'. It's on hold (the guide window lists it) until you reach level n; Go to this step overrides that.
 - **Not offered** means you talked to the quest giver and the quest wasn't on offer: it needs an item, reputation or an earlier quest that QuestieDB doesn't know about. The guide moves on, and checks again when you level up.
 - **Filters:** All, To do, Skipped & missed, Done.
@@ -202,7 +203,7 @@ Everything runs from the game's own UI.
 - **Moving it:** Shift + left-drag, out of combat. Its position is saved.
 - **Turning it off:** use the checkbox in Settings.
 
-**Abandon unrelated quests** (Settings > Tools): abandons quests in your log that aren't part of your guide, meaning not on its quest list and not in its zones for your level or the next band. Quests ready to hand in, class quests and quests QuestieDB doesn't know are always kept. The first click lists them in chat and the button asks "Abandon N quests? Click again"; leaving the tab cancels.
+**Abandon unrelated quests** (Settings > Tools): abandons quests in your log that aren't part of your guide, meaning not on its quest list and not in its zones for your level or the next band, plus unfinished quests too far below your level. Quests ready to hand in, class quests and quests QuestieDB doesn't know are always kept. The first click lists them in chat and the button asks "Abandon N quests? Click again"; leaving the tab cancels.
 
 **Quest automation:** talking to a quest giver accepts their quests and hands in finished ones, with the reward taken for you.
 

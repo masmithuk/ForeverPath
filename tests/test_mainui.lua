@@ -233,7 +233,7 @@ return {
     { "Abandon unrelated quests lists them first, then abandons on a second click", function(T)
         local ns, mock = T.fresh()
         mock.player.race = { "Orc", "Orc", 2 }
-        local db = fixtures.durotar(mock, { level = 8, mode = "efficient" })
+        local db = fixtures.durotar(mock, { level = 7, mode = "efficient" })
         db.Quest[106].requiredClasses = 128 -- a class quest
         mock.maps[1416] = { name = "Alterac Mountains", areaID = 36, continent = 0, offset = 5000 }
         db.Npc[1006] = { name = "Far Away Giver", friendlyToFaction = "H", spawns = { [36] = { { 50, 50 } } } }

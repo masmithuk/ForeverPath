@@ -387,4 +387,39 @@ return {
         ns.Engine.FocusQuest(101)
         T.eq(ns.Engine.state.steps[1].key, "complete:101", "you asked for it")
     end },
+
+    { "an unfinished quest far below your level isn't suggested", function(T)
+        local ns, mock = T.fresh()
+        mock.player.race = { "Dwarf", "Dwarf", 3 }
+        local db = fixtures.durotar(mock, { level = 22, mode = "efficient" })
+        db.Quest[101].questLevel = 8
+        fixtures.addToLog(mock, 101, "Old Errand", false, { "Vile Familiar slain: 2/8" })
+        local state = fixtures.login(ns)
+        T.truthy(not hasKey(state, "complete:101"), "level 8 quest at 22")
+        T.eq(state.tooLow[1].level, 8)
+        T.contains(guideStatus(), "Too low to be worth it: Old Errand (level 8)")
+        ns.Engine.FocusQuest(101)
+        T.eq(ns.Engine.state.steps[1].key, "complete:101", "unless you pick it in the Steps list")
+    end },
+
+    { "a finished low quest is handed in only when it's on your way", function(T)
+        local ns, mock = T.fresh()
+        local db = fixtures.durotar(mock, { level = 20, mode = "efficient" })
+        db.Quest[101].questLevel = 5
+        fixtures.addToLog(mock, 101, "Vile Familiars", true)
+        local state = fixtures.login(ns)
+        T.truthy(hasKey(state, "turnin:npc:1001") or fixtures.findStep(state, "turnin:npc:1001"),
+            "Zureetha is right here (your map)")
+        mock.player.position = { mapID = 1413, x = 0.5, y = 0.5 } -- in The Barrens now
+        ns.Engine.Replan()
+        T.truthy(not fixtures.findStep(ns.Engine.state, "turnin:npc:1001"), "not worth the trip back")
+    end },
+
+    { "quests in your level window aren't too low", function(T)
+        local ns, mock = T.fresh()
+        fixtures.durotar(mock)
+        fixtures.login(ns)
+        T.eq(ns.QuestieData.TooLow(101, 7, { greyGap = 2 }), false, "level 5 at 7")
+        T.eq(select(2, ns.QuestieData.TooLow(101, 8, { greyGap = 2 })), 5, "level 5 at 8")
+    end },
 }

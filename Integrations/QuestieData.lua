@@ -294,6 +294,15 @@ end
 --- Is a quest too hard for you yet? Its level is more than `levelsAbove`
 --- over yours, or the creatures it needs are more than one level beyond
 --- that. Returns true and the level to come back at, or false.
+--- Is a quest too far below you to be worth doing (more than the guide's
+--- greyGap levels under you)? Returns true and the quest's level, or false.
+function QuestieData.TooLow(questID, level, rules)
+    local gap = rules and rules.greyGap or GREY_LEVEL_GAP
+    local qLevel = get("Quest", questID, "questLevel")
+    if type(qLevel) == "number" and qLevel > 0 and qLevel < level - gap then return true, qLevel end
+    return false
+end
+
 function QuestieData.TooHard(questID, level, rules)
     local above = rules and rules.levelsAbove or LEVELS_ABOVE
     local qLevel = get("Quest", questID, "questLevel")

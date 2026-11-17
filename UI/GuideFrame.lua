@@ -102,6 +102,18 @@ function GuideFrame.OnHoldText(onHold)
     return Util.Color("muted", L.ONHOLD_FMT:format(table.concat(parts, ", ")))
 end
 
+--- "Too low to be worth it: Gnome Engineering (level 8) - abandon them ..."
+function GuideFrame.TooLowText(tooLow)
+    if not tooLow or #tooLow == 0 then return nil end
+    table.sort(tooLow, function(a, b) return a.level < b.level end)
+    local parts = {}
+    for i = 1, math.min(3, #tooLow) do
+        parts[i] = L.ONHOLD_ITEM_FMT:format(tooLow[i].title, tooLow[i].level)
+    end
+    if #tooLow > 3 then parts[#parts + 1] = L.ONHOLD_MORE_FMT:format(#tooLow - 3) end
+    return Util.Color("muted", L.TOOLOW_FMT:format(table.concat(parts, ", ")))
+end
+
 function GuideFrame.StatusText(dataStatus, providerSetting)
     local parts = {}
     if dataStatus == "missing" then
@@ -304,6 +316,8 @@ function GuideFrame.Update(state)
     local status = GuideFrame.StatusText(state.dataStatus, ns.Settings.account.guide.waypoints)
     local hold = GuideFrame.OnHoldText(state.onHold)
     if hold then status = status and (hold .. "\n" .. status) or hold end
+    local low = GuideFrame.TooLowText(state.tooLow)
+    if low then status = status and (low .. "\n" .. status) or low end
     f.status:SetText(status or "")
     setShown(f.status, status ~= nil)
 

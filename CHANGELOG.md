@@ -2,6 +2,11 @@
 
 All notable changes are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.8.2] - 2026-11-17
+
+### Fixed
+- **Old low-level quests in your log** were still suggested (e.g. a level 8 quest at level 22). Unfinished quests more than the guide's grey limit below you (2 levels on Speedrun, 3 on Story) are no longer steps, and finished ones are only handed in when the quest giver is on your way. The guide window lists them as "Too low to be worth it", the Steps tab marks them, and **Abandon unrelated quests** now clears them too. Picking one with Go to this step still works.
+
 ## [0.8.1] - 2026-11-17
 
 ### Fixed

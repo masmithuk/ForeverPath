@@ -177,15 +177,35 @@ function Sources.OnHoldUntil(ctx, questID)
     return tooHard and level or nil
 end
 
+--- A quest in your log that's too far below you to bother with: not
+--- finished, or finished but handed in somewhere off your route. (The
+--- quest picked in the Steps list always counts.)
+-- @param turnIn the hand-in step, for finished quests
+-- @return the quest's level, or nil
+function Sources.TooLowLevel(ctx, questID, quest, turnIn)
+    if ctx.focusQuest == questID or not ns.QuestieData.IsReady() then return nil end
+    local tooLow, qLevel = ns.QuestieData.TooLow(questID, ctx.profile.level, rulesOf(ctx))
+    if not tooLow then return nil end
+    if quest.complete then
+        local mapID = turnIn and turnIn.target and turnIn.target.mapID
+        if mapID and (not ctx.allowedMaps or ctx.allowedMaps[mapID]) then return nil end -- on the way
+    end
+    return qLevel
+end
+
 local function questLogSteps(ctx, out)
-    ctx.onHold = {}
+    ctx.onHold, ctx.tooLow = {}, {}
     for questID, quest in pairs(ctx.log) do
         local holdUntil = not quest.complete and Sources.OnHoldUntil(ctx, questID)
+        local turnIn = quest.complete and not ctx.skipped[questID] and turnInStep(ctx, questID, quest)
+        local lowLevel = not holdUntil and Sources.TooLowLevel(ctx, questID, quest, turnIn)
         if holdUntil then
             ctx.onHold[#ctx.onHold + 1] = { id = questID, title = quest.title, level = holdUntil }
+        elseif lowLevel then
+            ctx.tooLow[#ctx.tooLow + 1] = { id = questID, title = quest.title, level = lowLevel }
         elseif not ctx.skipped[questID] then -- quests already taken are always shown
             if quest.complete then
-                out[#out + 1] = turnInStep(ctx, questID, quest)
+                out[#out + 1] = turnIn
             else
                 local dungeon = ns.QuestieData.DungeonOf(questID)
                 if dungeon then
