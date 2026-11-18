@@ -54,6 +54,7 @@ UI\GuideFrame.lua
 UI\MinimapButton.lua
 UI\TargetButton.lua
 UI\MapPins.lua
+UI\Compass.lua
 
 Core\Commands.lua
 Core\Bootstrap.lua

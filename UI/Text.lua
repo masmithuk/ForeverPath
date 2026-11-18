@@ -103,7 +103,7 @@ end
 local function renderHelp(lines)
     heading(lines, L.HOME_HELP_HEADER)
     for _, key in ipairs({ "HOME_HELP_WINDOW", "HOME_HELP_STEPS", "HOME_HELP_GUIDES", "HOME_HELP_SETTINGS",
-                           "HOME_HELP_TARGET", "HOME_HELP_MINIMAP" }) do
+                           "HOME_HELP_TARGET", "HOME_HELP_COMPASS", "HOME_HELP_MINIMAP" }) do
         bullet(lines, L[key])
     end
 end

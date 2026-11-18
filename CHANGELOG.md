@@ -5,6 +5,10 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 ## [0.8.8] - 2026-11-18
 
 ### Added
+- **Compass bar** at the top of the screen, like ESO's. N, NE, E ... slide past as you turn, and it shows:
+  - your next steps, numbered as in the guide window. 1 (gold) is the step you're on, and when it's behind you it waits at the edge of the bar with an arrow showing which way to turn. Hover a number for what to do and how far away it is.
+  - your party members by name, in class colours. Hover for how far away they are.
+  - Shift-drag the bar's left end to move it, or turn it off with Settings > "Compass at the top of the screen". It's empty inside instances, where the game doesn't give positions.
 - **Step numbers on the world map.** Each of the guide's next steps gets a numbered marker where it happens: 1 (gold) is the step you're on, then 2, 3 and so on, matching the numbers in the guide window. Steps at the same spot share a marker ("1, 3"). Hover a marker to see its step. Steps in other zones show up when you look at the continent map. You can turn this off with Settings > "Number the steps on the world map".
 
 ### Changed

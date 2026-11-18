@@ -22,6 +22,8 @@ you're in. Pick up, do, hand in, repeat, all the way to 60.
   kills you need (it counts your rested XP).
 - **Handy stops along the way:** visit your class trainer when new spells are due and you're nearby, set your
   hearthstone at the inn closest to your quests, and train your professions when you're ready for the next rank.
+- **Compass at the top of the screen:** as you turn, it shows which way each of your next steps is, numbered in
+  order. Hover a number to see what to do and how far away it is. Your party members show up on it too.
 - **Numbered steps on the world map:** see where each of your next steps is, in order. Hover a number to see
   what it is.
 - **Target button.** One click targets the next creature you need for your current quest, nearest first. With

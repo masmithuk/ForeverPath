@@ -297,7 +297,18 @@ function mock.install()
     mock.installQuestDialog()
 
     _G.UnitRace = function() return unpack(mock.player.race) end
-    _G.UnitClass = function() return unpack(mock.player.class) end
+    _G.UnitClass = function(unit)
+        local member = unit and mock.party[unit]
+        if member then return member.class, member.class end
+        return unpack(mock.player.class)
+    end
+    mock.party = {}  -- [unit] = { name, class, position = { mapID, x, y } }
+    _G.UnitExists = function(unit) return unit == "player" or mock.party[unit] ~= nil end
+    _G.UnitName = function(unit)
+        local member = mock.party[unit]
+        return member and member.name or "Player"
+    end
+    _G.GetPlayerFacing = function() return mock.player.facing end
     _G.UnitLevel = function() return mock.player.level end
     _G.UnitFactionGroup = function() return mock.player.faction end
     _G.UnitXP = function() return mock.player.xp end
@@ -386,7 +397,9 @@ function mock.install()
         GetBestMapForUnit = function()
             return mock.player.position and mock.player.position.mapID
         end,
-        GetPlayerMapPosition = function()
+        GetPlayerMapPosition = function(_, unit)
+            local member = unit and mock.party[unit]
+            if member then return member.position and vector(member.position.x, member.position.y) end
             local p = mock.player.position
             return p and vector(p.x, p.y)
         end,

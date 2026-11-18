@@ -55,6 +55,7 @@ local ACCOUNT_DEFAULTS = {
         groupQuests = true,   -- include group (elite) quests in the steps
         suggestDungeons = true, -- list dungeons for your level in the guide window
         mapNumbers = true,    -- numbered markers on the world map for the next steps
+        compass = true,       -- compass bar at the top of the screen
     },
 }
 
