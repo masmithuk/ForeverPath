@@ -16,9 +16,9 @@ return {
         local ns, mock = T.fresh()
         fixtures.durotar(mock)
         fixtures.addToLog(mock, 101, "Boar Hunt", false, { "Boar killed: 0/8" })
-        C_QuestLog.ReadyForTurnIn = function() return 0 end
+        _G.C_QuestLog.ReadyForTurnIn = function() return 0 end
         T.eq(ns.GameApi.GetQuestLog()[101].complete, false)
-        C_QuestLog.ReadyForTurnIn = function() return 1 end
+        _G.C_QuestLog.ReadyForTurnIn = function() return 1 end
         T.eq(ns.GameApi.GetQuestLog()[101].complete, false, "an objective is still open")
     end },
 

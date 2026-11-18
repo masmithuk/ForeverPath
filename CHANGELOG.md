@@ -6,6 +6,7 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 
 ### Fixed
 - **Quests wrongly shown as ready to hand in.** The quest log is read more carefully: a quest only counts as ready when the game clearly says so, and never while it still has an unfinished objective. Some setups had every quest listed as "Turn in".
+- **`/qw debug` shows your quest log:** for each quest, whether it counts as ready, what the game says, how many objectives are open, who takes it in and whether the game has a marker for it, plus the current step.
 - **Hand-ins without Questie.** When the hand-in NPC isn't known (Questie missing or still loading), the step is now called "Turn in <quest>", the arrow uses the game's own quest marker, and it says to install Questie, instead of a bare "Turn in" with no map location.
 
 ## [0.8.8] - 2026-11-18

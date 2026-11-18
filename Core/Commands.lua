@@ -112,6 +112,23 @@ local subcommands = {
             Util.Print(("debug:   %d %s - %s, %s"):format(id, ns.QuestieData.Describe(id).name,
                 tostring(givers[1] and givers[1].name), pt and ("map " .. pt.mapID) or "no location"))
         end
+        -- Your quest log: what the game says about each quest, and who takes it in.
+        local QL = C_QuestLog
+        local shown = 0
+        for id, q in pairs(ctx.log) do
+            shown = shown + 1
+            if shown > 8 then break end
+            local ready = QL and QL.ReadyForTurnIn and QL.ReadyForTurnIn(id)
+            local open = #ns.GameApi.GetOpenObjectives(id)
+            local finishers = ns.QuestieData.GetFinishers(id, p.faction)
+            local wp = ns.GameApi.GetQuestWaypoint(id)
+            Util.Print(("debug:   log %d %s - ready %s (game says %s), %d objectives open, hand in to %s, marker %s"):format(
+                id, q.title, tostring(q.complete), tostring(ready), open,
+                tostring(finishers[1] and finishers[1].name), wp and ("map " .. wp.mapID) or "none"))
+        end
+        local first = ns.Engine.state.steps[1]
+        Util.Print("debug: step 1: " .. (first and (first.kind .. " " .. tostring(first.title)
+            .. (first.target and "" or " (no location)")) or "none"))
     end,
     best = function() ns.GuideFrame.BestStep() end,
     lost = function() ns.GuideFrame.BestStep() end,
