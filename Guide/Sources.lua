@@ -199,13 +199,25 @@ function Sources.TooLowLevel(ctx, questID, quest, turnIn)
     return qLevel
 end
 
+--- Group quests are left out when the "group quests" setting is off
+--- (the quest picked in the Steps list always counts).
+function Sources.HideGroupQuest(ctx, questID)
+    if ctx.includeGroupQuests ~= false or ctx.focusQuest == questID then return false end
+    return ns.QuestieData.IsReady() and ns.QuestieData.IsGroupQuest(questID)
+end
+
 local function questLogSteps(ctx, out)
-    ctx.onHold, ctx.tooLow = {}, {}
+    ctx.onHold, ctx.tooLow, ctx.groupHidden = {}, {}, {}
     for questID, quest in pairs(ctx.log) do
-        local holdUntil = not quest.complete and Sources.OnHoldUntil(ctx, questID)
+        -- Left out, in this order: group quests (setting off), too hard
+        -- for now, too low to bother. Otherwise it's a step.
+        local hideGroup = not quest.complete and Sources.HideGroupQuest(ctx, questID)
+        local holdUntil = not hideGroup and not quest.complete and Sources.OnHoldUntil(ctx, questID)
         local turnIn = quest.complete and not ctx.skipped[questID] and turnInStep(ctx, questID, quest)
-        local lowLevel = not holdUntil and Sources.TooLowLevel(ctx, questID, quest, turnIn)
-        if holdUntil then
+        local lowLevel = not hideGroup and not holdUntil and Sources.TooLowLevel(ctx, questID, quest, turnIn)
+        if hideGroup then
+            ctx.groupHidden[#ctx.groupHidden + 1] = { id = questID, title = quest.title }
+        elseif holdUntil then
             ctx.onHold[#ctx.onHold + 1] = { id = questID, title = quest.title, level = holdUntil }
         elseif lowLevel then
             ctx.tooLow[#ctx.tooLow + 1] = { id = questID, title = quest.title, level = lowLevel }
@@ -265,7 +277,8 @@ function Sources.DoableQuests(ctx)
     local level, rules = ctx.profile.level, rulesOf(ctx)
     for _, questID in ipairs(data.GetCandidates(level, rules)) do
         -- Its own level is in range; its creatures must be too.
-        if not data.TooHard(questID, level, rules) and data.IsDoable(questID, ctx) then
+        if not data.TooHard(questID, level, rules) and not Sources.HideGroupQuest(ctx, questID)
+            and data.IsDoable(questID, ctx) then
             doable[#doable + 1] = questID
         end
     end
@@ -425,13 +438,15 @@ function Sources.ProfessionNeedsTraining(p, level)
     return level >= (services.nextRankLevel[p.max] or 0)
 end
 
---- The nearest NPC with this title, if it's within reach.
-local function nearby(ctx, title)
+--- The nearest NPC with this title, if it's within reach: within
+--- `distance` yards (default nearDistance), or - with `sameMap` - anywhere
+--- on the map you're on.
+local function nearby(ctx, title, distance, sameMap)
     if not title or not ctx.origin then return nil end
     local actor, point, dist = nearestActor(ctx.origin, ns.QuestieData.GetNpcsByTitle(title, ctx.profile.faction))
-    if actor and point and point.world and dist <= ns.Data.Services.nearDistance then
-        return actor, point
-    end
+    if not (actor and point and point.world) then return nil end
+    if dist <= (distance or ns.Data.Services.nearDistance) then return actor, point end
+    if sameMap and ctx.playerMapID and point.mapID == ctx.playerMapID then return actor, point end
     return nil
 end
 
@@ -452,7 +467,7 @@ local function trainingStep(ctx, out)
         end
     end
     if not due then return end
-    local actor, point = nearby(ctx, ns.QuestieData.ClassTrainerTitle())
+    local actor, point = nearby(ctx, ns.QuestieData.ClassTrainerTitle(), ns.Data.Services.trainerDistance, true)
     if not actor then return end
     local step = serviceStep("train:" .. due, "TRAIN", "Train at " .. actor.name,
         "New class abilities are waiting (level " .. due .. ").", actor, point)

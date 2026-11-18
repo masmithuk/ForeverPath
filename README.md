@@ -119,7 +119,7 @@ The guide window shows your current step and the next few steps. Steps are built
 | **Talk to (NPC) - Accept: (quests)** | Quests you can pick up now in your guide's zones. QuestieDB supplies the quest givers and checks prerequisites, race, class, faction and level. |
 | **Complete: (quest)** | Quests in your log. The step shows live objective progress, and the arrow points to Blizzard's own quest waypoint or the nearest QuestieDB spawn. If an objective is an elite, the step says how to solo it: pull it to the nearest friendly guards, if any are within about 300 yards, or find a group. Quests whose objectives are in the same area (within about 150 yards of each other) are one step, such as "Complete: Cutting Teeth & Wayward Weapons", and the Target button cycles through all their creatures. |
 | **Turn in to (NPC)** | Finished quests in your log, pointing to the NPC who ends the quest. |
-| **Train at (trainer)** | When new class abilities are due (every two levels from 4) **and** your class trainer is within about 400 yards. |
+| **Train at (trainer)** | When new class abilities are due (every two levels from 4) **and** your class trainer is in the zone you're in or within about 1,200 yards. |
 | **Set your hearthstone at (innkeeper)** | At the inn nearest to where you're questing (the middle of your current quest steps), when you're there and your hearthstone is bound somewhere else. Inns you pass while travelling aren't suggested. Skip it and that inn won't ask again. |
 | **Train (profession) at (trainer)** | For professions you've learned, when you're close to your skill cap, old enough for the next rank (Journeyman 10, Expert 20, Artisan 35) and a trainer for it is nearby. |
 
@@ -220,7 +220,7 @@ Everything runs from the game's own UI.
 | **Home** | Your character, the guide you're following, where you're levelling now and next, your current step, rested XP, class tips, dungeons for your level, and a short explanation of every part of Questwalker. Buttons show or hide the guide window and open Steps or Guides. |
 | **Steps** | Every quest in your guide, as described above. |
 | **Guides** | The Speedrun and Story guides for your race, then yours. Select one to see its details, then **Use this guide**, **Edit** (or **View** for built-ins), **Copy**, **New guide**, **Delete**, **Export** or **Import**. Edit and View open the guide editor described above. |
-| **Settings** | Show or hide the guide window, the Target button and the minimap button; level-up messages; the waypoint arrow (a dropdown: Automatic, Shortest Path, TomTom, Map pin, Off); bring back skipped quests, **abandon unrelated quests** and reset window positions. Quest automation: accept, hand in, skip grey or repeatable quests, and (off by default) only quests your guide uses. The two columns stack when the window is narrow. |
+| **Settings** | Show or hide the guide window, group (elite) quests, dungeon suggestions, the Target button and the minimap button; level-up messages; the waypoint arrow (a dropdown: Automatic, Shortest Path, TomTom, Map pin, Off); bring back skipped quests, **abandon unrelated quests** and reset window positions. Quest automation: accept, hand in, skip grey or repeatable quests, and (off by default) only quests your guide uses. The two columns stack when the window is narrow. |
 
 The minimap's addon compartment also opens the main window, even if you hide the minimap button.
 

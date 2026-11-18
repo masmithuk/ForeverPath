@@ -125,6 +125,9 @@ return {
         T.truthy(hasKey(state, "train:8"), "Mai'ah is ~30 yards away")
         mock.player.position = { mapID = 1411, x = 0.05, y = 0.95 }
         ns.Engine.Replan()
+        T.truthy(hasKey(ns.Engine.state, "train:8"), "same zone - still suggested")
+        mock.player.position = { mapID = 1413, x = 0.5, y = 0.9 } -- another zone, far away
+        ns.Engine.Replan()
         T.truthy(not hasKey(ns.Engine.state, "train:8"), "too far away - no step")
     end },
 
@@ -421,5 +424,50 @@ return {
         fixtures.login(ns)
         T.eq(ns.QuestieData.TooLow(101, 7, { greyGap = 2 }), false, "level 5 at 7")
         T.eq(select(2, ns.QuestieData.TooLow(101, 8, { greyGap = 2 })), 5, "level 5 at 8")
+    end },
+
+    ---------------------------------------------------------------------
+    -- Group quests and dungeons
+    ---------------------------------------------------------------------
+    { "group quests can be left out of the steps", function(T)
+        local ns, mock = T.fresh()
+        local db = fixtures.durotar(mock)
+        QuestwalkerCharDB.guide.trainedLevel = 60
+        db.Npc[2001].rank = 1 -- Vile Familiars becomes an elite (group) quest
+        local state = fixtures.login(ns)
+        T.truthy(table.concat(fixtures.findStep(state, "accept:npc:1001").questIDs, ","):find("101"),
+            "included by default")
+        ns.MainFrame.ShowTab("settings")
+        ns.SettingsTab.Click("SETTING_GROUP_QUESTS", false)
+        local accept = fixtures.findStep(ns.Engine.state, "accept:npc:1001")
+        T.truthy(not accept or not table.concat(accept.questIDs, ","):find("101"), "left out")
+        fixtures.addToLog(mock, 101, "Vile Familiars", false, { "Vile Familiar slain: 0/8" })
+        ns:FireEvent("QUEST_ACCEPTED", 101)
+        ns.Engine.Replan()
+        T.truthy(not hasKey(ns.Engine.state, "complete:101"), "not even from your log")
+        T.contains(guideStatus(), "Group quests left out: Vile Familiars")
+    end },
+
+    { "Questie's group quest tag is used once Questie has started", function(T)
+        local ns, mock = T.fresh()
+        fixtures.durotar(mock)
+        fixtures.login(ns)
+        _G.Questie = { started = true }
+        _G.QuestieLoader = { ImportModule = function(_, name)
+            if name == "QuestieDB" then return { IsGroupQuest = function(id) return id == 102 end } end
+        end }
+        T.eq(ns.QuestieData.IsGroupQuest(102), true)
+        T.eq(ns.QuestieData.IsGroupQuest(101), false)
+    end },
+
+    { "dungeons for your level are suggested in the guide window", function(T)
+        local ns, mock = T.fresh()
+        fixtures.durotar(mock, { level = 18 })
+        fixtures.login(ns)
+        T.contains(guideStatus(), "Dungeons for your level: ")
+        T.contains(guideStatus(), "Wailing Caverns")
+        ns.MainFrame.ShowTab("settings")
+        ns.SettingsTab.Click("SETTING_DUNGEONS", false)
+        T.truthy(not guideStatus():find("Dungeons for your level"), "turned off")
     end },
 }

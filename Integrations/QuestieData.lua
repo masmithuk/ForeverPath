@@ -395,6 +395,22 @@ function QuestieData.QuestXP(questID)
     return nil
 end
 
+--- Is it a group (elite) quest? Questie's quest tags once Questie has
+--- started; before that (or without Questie), a quest whose objectives
+--- are elite creatures counts as one. Dungeon and raid quests aren't
+--- included here - they have their own steps.
+function QuestieData.IsGroupQuest(questID)
+    if QuestieData.QuestieStarted() then
+        local loader = _G.QuestieLoader
+        local ok, db = pcall(loader.ImportModule, loader, "QuestieDB")
+        if ok and type(db) == "table" and type(db.IsGroupQuest) == "function" then
+            local ok2, result = pcall(db.IsGroupQuest, questID)
+            if ok2 and result then return true end
+        end
+    end
+    return #ns.QuestValue.Elites(questID) > 0
+end
+
 --- Is it a class quest (only some classes can take it)?
 function QuestieData.IsClassQuest(questID)
     local classes = get("Quest", questID, "requiredClasses")
@@ -593,6 +609,16 @@ function QuestieData.BuildIndex(profile, schedule, onDone)
         end
         for _, id in ipairs(allIds("Npc")) do
             local title = get("Npc", id, "subName")
+            -- Titles are matched loosely ("Shaman Trainer", "Shaman trainer ").
+            if type(title) == "string" then
+                local tidy = title:gsub("^%s+", ""):gsub("%s+$", "")
+                if not titles[tidy] then
+                    for t in pairs(titles) do
+                        if t:lower() == tidy:lower() then tidy = t; break end
+                    end
+                end
+                title = tidy
+            end
             if title and titles[title] then
                 state.byTitle[title] = state.byTitle[title] or {}
                 table.insert(state.byTitle[title], id)

@@ -114,6 +114,26 @@ function GuideFrame.TooLowText(tooLow)
     return Util.Color("muted", L.TOOLOW_FMT:format(table.concat(parts, ", ")))
 end
 
+--- "Dungeons for your level: Wailing Caverns (17-24), Shadowfang Keep (22-30)"
+function GuideFrame.DungeonText(dungeons)
+    if not dungeons or #dungeons == 0 then return nil end
+    local parts = {}
+    for i = 1, math.min(3, #dungeons) do
+        local d = dungeons[i]
+        parts[i] = ("%s (%d-%d)"):format(d.name, d.min, d.max)
+    end
+    return Util.Color("accent", L.GUIDE_DUNGEONS_FMT:format(table.concat(parts, ", ")))
+end
+
+--- "Group quests left out: The Defias Brotherhood (turn on in Settings)"
+function GuideFrame.GroupHiddenText(hidden)
+    if not hidden or #hidden == 0 then return nil end
+    local names = {}
+    for i = 1, math.min(3, #hidden) do names[i] = hidden[i].title end
+    if #hidden > 3 then names[#names + 1] = L.ONHOLD_MORE_FMT:format(#hidden - 3) end
+    return Util.Color("muted", L.GROUP_HIDDEN_FMT:format(table.concat(names, ", ")))
+end
+
 function GuideFrame.StatusText(dataStatus, providerSetting)
     local parts = {}
     if dataStatus == "missing" then
@@ -318,6 +338,10 @@ function GuideFrame.Update(state)
     if hold then status = status and (hold .. "\n" .. status) or hold end
     local low = GuideFrame.TooLowText(state.tooLow)
     if low then status = status and (low .. "\n" .. status) or low end
+    local group = GuideFrame.GroupHiddenText(state.groupHidden)
+    if group then status = status and (group .. "\n" .. status) or group end
+    local dungeons = ns.Settings.account.guide.suggestDungeons ~= false and GuideFrame.DungeonText(state.dungeons)
+    if dungeons then status = status and (dungeons .. "\n" .. status) or dungeons end
     f.status:SetText(status or "")
     setShown(f.status, status ~= nil)
 

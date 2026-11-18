@@ -2,6 +2,15 @@
 
 All notable changes are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.8.6] - 2026-11-18
+
+### Added
+- **Include group (elite) quests** setting (on by default). Turned off, group quests aren't picked up or sent your way; the guide window lists any in your log as "Group quests left out", and the Steps tab marks them. Group quests come from Questie's quest tags, or - before Questie has started - from elite creatures in the objectives.
+- **Dungeons for your level** in the guide window, with a setting to turn it off.
+
+### Changed
+- **Class trainers** are suggested when one is in the zone you're in or within about 1,200 yards (it was 400, which you rarely got that close to). Trainer titles are matched loosely, so slightly different spellings still count.
+
 ## [0.8.5] - 2026-11-18
 
 ### Added

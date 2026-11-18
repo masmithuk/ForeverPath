@@ -117,6 +117,8 @@ local function questRow(ctx, i, q, inCurrent)
         row.status = "skipped"
     elseif ctx.notOffered and ctx.notOffered[q.id] then
         row.status = "notoffered"
+    elseif ns.Sources.HideGroupQuest(ctx, q.id) then
+        row.status = "group"
     else
         local status = ns.Catalog.QuestStatus({ id = q.id, requiredLevel = info.requiredLevel }, ctx)
         row.status = status == "available" and "upcoming" or status

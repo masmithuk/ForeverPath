@@ -91,6 +91,7 @@ function Engine.BuildContext()
         allowedMaps = allowedMaps(route, mapID),
         skipped = char.skipped,
         notOffered = char.notOffered,
+        includeGroupQuests = guideSettings().groupQuests ~= false,
         char = char,
         focusQuest = char.focus,
         -- Last planning pass's available quests (the Steps list uses them
@@ -165,6 +166,8 @@ function Engine.Replan()
     state.log = ctx.log
     state.onHold = ctx.onHold or {}
     state.tooLow = ctx.tooLow or {}
+    state.groupHidden = ctx.groupHidden or {}
+    state.dungeons = ctx.route and ctx.route.dungeons or {}
     state.dataStatus = ns.QuestieData.Status()
 
     local first = state.steps[1]
@@ -585,6 +588,13 @@ local function buildIndex()
         invalidateDoable()
         Engine.RequestReplan()
     end)
+end
+
+--- A guide setting changed that affects which quests count: plan afresh.
+function Engine.OnRulesChanged()
+    invalidateDoable()
+    Engine.state.currentKey = nil
+    Engine.Replan()
 end
 
 --- Is a quest too hard for you yet (quest or creature level)? For auto accept.

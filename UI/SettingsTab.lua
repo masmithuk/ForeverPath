@@ -40,6 +40,22 @@ local CHECKBOXES = {
         end,
     },
     {
+        label = "SETTING_GROUP_QUESTS",
+        get = function() return ns.Settings.account.guide.groupQuests ~= false end,
+        set = function(v)
+            ns.Settings.account.guide.groupQuests = v
+            ns.Engine.OnRulesChanged()
+        end,
+    },
+    {
+        label = "SETTING_DUNGEONS",
+        get = function() return ns.Settings.account.guide.suggestDungeons ~= false end,
+        set = function(v)
+            ns.Settings.account.guide.suggestDungeons = v
+            ns.GuideFrame.Update(ns.Engine.state)
+        end,
+    },
+    {
         label = "SETTING_TARGET",
         get = function() return ns.Settings.account.targetButton end,
         set = function(v) ns.TargetButton.SetEnabled(v) end,

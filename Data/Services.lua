@@ -18,6 +18,9 @@ local _, ns = ...
 ns.Data.Services = {
     -- Service steps only appear when the NPC is within this many yards.
     nearDistance = 400,
+    -- Class trainers: suggested when one is this close, or in the zone
+    -- you're in (they're usually in towns, so 400 yards was rarely met).
+    trainerDistance = 1200,
 
     -- Class training every `every` levels from `from` (Classic cadence;
     -- Forever's schedule isn't published).

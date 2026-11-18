@@ -47,6 +47,7 @@ local STATUS = {
     notoffered = { "muted", "STEPS_NOT_OFFERED" },
     onhold   = { "warn",   "STEPS_ON_HOLD_FMT" },
     toolow   = { "muted",  "STEPS_TOO_LOW" },
+    group    = { "muted",  "STEPS_GROUP" },
 }
 local STEP_UPCOMING = { "accent", "STEPS_STEP_NEXT" }
 
