@@ -144,4 +144,14 @@ return {
         ns:FireEvent("PLAYER_REGEN_ENABLED")
         T.eq(#ns.TargetButton.GetExtraButtons(), 0, "one creature left: no extras")
     end },
+
+    { "/qw debug says why the target button is hidden or shown", function(T)
+        local ns, mock = setup(T)
+        SlashCmdList.QUESTWALKER("debug")
+        T.contains(table.concat(mock.printed, "\n"), "target button showing; creatures: Near Scorpid")
+        ns.Engine.FocusQuest(102)
+        mock.printed = {}
+        SlashCmdList.QUESTWALKER("debug")
+        T.contains(table.concat(mock.printed, "\n"), "hidden: the current step is ACCEPT")
+    end },
 }

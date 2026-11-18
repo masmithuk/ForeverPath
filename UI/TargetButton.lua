@@ -286,6 +286,27 @@ function TargetButton.Update(state, origin)
     apply(TargetButton.BuildList(state.steps and state.steps[1], state.log or {}, origin))
 end
 
+--- Why the button is or isn't showing, for /qw debug.
+function TargetButton.Describe(state)
+    local step = state.steps and state.steps[1]
+    local names = TargetButton.BuildList(step, state.log or {}, state.origin)
+    local why
+    if not ns.Settings.account.targetButton then
+        why = "turned off in Settings"
+    elseif pendingList then
+        why = "waiting for combat to end"
+    elseif not step then
+        why = "hidden: no current step"
+    elseif step.kind ~= "COMPLETE" then
+        why = ("hidden: the current step is %s (%s), not a Complete step"):format(step.kind, step.title or "?")
+    elseif #names == 0 then
+        why = "hidden: the current step's quests have no creatures left to kill in QuestieDB"
+    else
+        why = "showing"
+    end
+    return ("target button %s; creatures: %s"):format(why, #names > 0 and table.concat(names, ", ") or "none")
+end
+
 --- Apply a list chosen during combat.
 function TargetButton.OnCombatEnded()
     if pendingList then apply(pendingList) end

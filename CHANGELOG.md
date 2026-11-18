@@ -2,6 +2,11 @@
 
 All notable changes are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.8.5] - 2026-11-18
+
+### Added
+- `/qw debug` now says why the Target button is showing or hidden (e.g. "the current step is TURNIN, not a Complete step") and which creatures it found.
+
 ## [0.8.4] - 2026-11-17
 
 ### Changed
