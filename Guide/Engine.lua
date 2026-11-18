@@ -680,6 +680,11 @@ function Engine.Start()
     end)
     ns:RegisterEvent("HEARTHSTONE_BOUND", onHearthBound)
     ns:RegisterEvent("SKILL_LINES_CHANGED", Engine.RequestReplan)
+    -- The Grind step's kill count follows your XP bar.
+    ns:RegisterEvent("PLAYER_XP_UPDATE", function()
+        local current = Engine.state.steps[1]
+        if current and current.kind == "GRIND" then Engine.RequestReplan() end
+    end)
 
     invalidateDoable()
     buildIndex()

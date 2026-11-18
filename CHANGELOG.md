@@ -2,6 +2,11 @@
 
 All notable changes are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.8.7] - 2026-11-18
+
+### Added
+- **Grind step:** when there are no quests left for your level, the guide says "Grind to level N", where N is the level at which its next quests open (or the next level band). It points at normal mobs around your level in your guide's zones, the Target button cycles through them, and it estimates the kills needed from your actual XP bar and rested XP. That includes "You have rested XP: kills give double until it runs out". The count updates as you gain XP, and the step goes as soon as quests are available again.
+
 ## [0.8.6] - 2026-11-18
 
 ### Added

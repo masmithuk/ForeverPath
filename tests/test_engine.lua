@@ -470,4 +470,63 @@ return {
         ns.SettingsTab.Click("SETTING_DUNGEONS", false)
         T.truthy(not guideStatus():find("Dungeons for your level"), "turned off")
     end },
+
+    ---------------------------------------------------------------------
+    -- Grinding the gap
+    ---------------------------------------------------------------------
+    { "no quests for your level: grind to where the next quests open", function(T)
+        local ns, mock = T.fresh()
+        mock.player.race = { "Orc", "Orc", 2 }
+        local db = fixtures.durotar(mock, { level = 12, mode = "efficient" })
+        QuestwalkerCharDB.guide.trainedLevel = 60
+        -- Durotar's quests are grey at 12; the next ones open at 14.
+        for _, id in ipairs({ 104 }) do db.Quest[id].requiredLevel, db.Quest[id].questLevel = 14, 16 end
+        db.Npc[2020] = { name = "Dustwind Harpy", minLevel = 12, maxLevel = 13, spawns = { [14] = { { 55, 55 } } } }
+        mock.player.xp, mock.player.xpMax, mock.player.rested = 2000, 11400, 0
+        local state = fixtures.login(ns)
+        local step = state.steps[1]
+        T.eq(step.kind, "GRIND")
+        T.eq(step.title, "Grind to level 14")
+        T.contains(step.lines[1], "Kill Dustwind Harpy (level 12-13)")
+        -- 9400 to 13 + 11400 to 14 = 20800 XP at 105 XP a kill.
+        T.contains(step.lines[2], "About 199 kills to reach level 14")
+        T.eq(ns.TargetButton.GetMacro(), "/targetexact Dustwind Harpy", "Target button points at the mobs")
+    end },
+
+    { "rested XP cuts the kills, and the step goes once quests open", function(T)
+        local ns, mock = T.fresh()
+        mock.player.race = { "Orc", "Orc", 2 }
+        local db = fixtures.durotar(mock, { level = 12, mode = "efficient" })
+        QuestwalkerCharDB.guide.trainedLevel = 60
+        db.Quest[104].requiredLevel, db.Quest[104].questLevel = 14, 16
+        db.Npc[2020] = { name = "Dustwind Harpy", minLevel = 12, maxLevel = 13, spawns = { [14] = { { 55, 55 } } } }
+        mock.player.xp, mock.player.xpMax, mock.player.rested = 2000, 11400, 5000
+        local state = fixtures.login(ns)
+        -- 5000 rested XP: ~48 kills at double XP, then ~103 normal ones.
+        T.contains(state.steps[1].lines[2], "About 151 kills")
+        T.contains(state.steps[1].lines[3], "rested XP")
+        mock.player.level = 14
+        ns:FireEvent("PLAYER_LEVEL_UP", 14)
+        ns.Engine.Replan()
+        T.truthy(ns.Engine.state.steps[1].kind ~= "GRIND", "quests again at 14")
+    end },
+
+    { "no grind step while there are quests to do", function(T)
+        local ns, mock = T.fresh()
+        fixtures.durotar(mock, { level = 6 })
+        local state = fixtures.login(ns)
+        for _, s in ipairs(state.steps) do T.truthy(s.kind ~= "GRIND") end
+    end },
+
+    { "experience maths", function(T)
+        local ns = T.fresh()
+        local E = ns.Data.Experience
+        T.eq(E.MobXP(12, 12), 105)
+        T.eq(math.floor(E.MobXP(12, 14) * 10 + 0.5), 1155, "higher mobs give more")
+        T.eq(E.MobXP(30, 10), 0, "grey mobs give nothing")
+        T.eq(E.XPToReach(12, 14, 2000, 11400), 9400 + 11400)
+        T.eq(E.KillsNeeded(1000, 100, 0), 10)
+        T.eq(E.KillsNeeded(1000, 100, 1000), 5, "all rested: double XP")
+        T.eq(E.KillsNeeded(1000, 100, 200), 8, "2 rested kills, then 6 normal")
+    end },
 }

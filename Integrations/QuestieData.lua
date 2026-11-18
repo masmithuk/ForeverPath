@@ -36,6 +36,7 @@ local state = {
     byTitle = {},         -- NPC title ("Mage Trainer", "Innkeeper"...) -> list of NpcIds
     classTitle = nil,     -- "<Class> Trainer" for this character
     leadsOn = {},         -- [questID] = true when another quest follows it
+    mobsByLevel = {},     -- [minLevel] = { npcID, ... } normal hostile mobs, for grinding
 }
 
 ---------------------------------------------------------------------------
@@ -395,6 +396,39 @@ function QuestieData.QuestXP(questID)
     return nil
 end
 
+--- Normal hostile mobs from `low` to `high` level with spawns on the given
+--- maps (uiMapID set), as actors { kind, id, name, minLevel, maxLevel, points }.
+function QuestieData.GrindMobs(low, high, maps)
+    local out = {}
+    for level = math.max(1, low), high do
+        for _, id in ipairs(state.mobsByLevel[level] or {}) do
+            local points = {}
+            for _, p in ipairs(spawnsOf("Npc", id)) do
+                if not maps or maps[p.mapID] then points[#points + 1] = p end
+            end
+            if #points > 0 then
+                out[#out + 1] = { kind = "npc", id = id, name = get("Npc", id, "name") or ("Mob " .. id),
+                                  minLevel = level, maxLevel = get("Npc", id, "maxLevel") or level, points = points }
+            end
+        end
+    end
+    return out
+end
+
+--- The lowest level above `level` at which a quest opens on the given maps
+--- (uiMapID set), or nil.
+function QuestieData.NextQuestLevel(level, maps)
+    local best
+    for _, q in ipairs(state.candidates) do
+        local req = q.requiredLevel or 1
+        if req > level and (not best or req < best) then
+            local mapID = q.areaID and ns.ZoneMap.ToUiMap(q.areaID)
+            if mapID and (not maps or maps[mapID]) then best = req end
+        end
+    end
+    return best
+end
+
 --- Is it a group (elite) quest? Questie's quest tags once Questie has
 --- started; before that (or without Questie), a quest whose objectives
 --- are elite creatures counts as one. Dungeon and raid quests aren't
@@ -575,7 +609,7 @@ function QuestieData.BuildIndex(profile, schedule, onDone)
         return
     end
     state.status = "indexing"
-    state.candidates, state.byTitle, state.leadsOn = {}, {}, {}
+    state.candidates, state.byTitle, state.leadsOn, state.mobsByLevel = {}, {}, {}, {}
 
     -- NPC titles worth indexing: class trainer, innkeepers, profession trainers.
     local services = ns.Data.Services
@@ -622,6 +656,14 @@ function QuestieData.BuildIndex(profile, schedule, onDone)
             if title and titles[title] then
                 state.byTitle[title] = state.byTitle[title] or {}
                 table.insert(state.byTitle[title], id)
+            end
+            -- Normal hostile mobs by level (for the Grind step).
+            local minLevel, rank = get("Npc", id, "minLevel"), get("Npc", id, "rank")
+            local friendly = get("Npc", id, "friendlyToFaction")
+            if type(minLevel) == "number" and minLevel >= 1 and minLevel <= 63 and (rank or 0) == 0
+                and (friendly == nil or friendly == "") then
+                state.mobsByLevel[minLevel] = state.mobsByLevel[minLevel] or {}
+                table.insert(state.mobsByLevel[minLevel], id)
             end
             -- Town guards (for "pull the elite to the guards" tips).
             local name = get("Npc", id, "name")
@@ -737,6 +779,7 @@ function QuestieData.Reset()
     if ns.StepList then ns.StepList.ResetCache() end
     state.status = "unknown"
     state.candidates, state.byTitle, state.classTitle, state.leadsOn = {}, {}, nil, {}
+    state.mobsByLevel = {}
     spawnCache = {}
     dungeonByArea = {}
     searchIndex = nil

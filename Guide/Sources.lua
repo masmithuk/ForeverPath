@@ -649,6 +649,77 @@ local function listSteps(ctx, out)
 end
 
 ---------------------------------------------------------------------------
+-- Grinding: when no quests are left for your level
+---------------------------------------------------------------------------
+
+local QUEST_KINDS = { ACCEPT = true, COMPLETE = true, TURNIN = true, DUNGEON = true }
+
+--- Maps of the guide's zones for this band and the next, plus where you are.
+local function guideMaps(ctx)
+    local maps = {}
+    for mapID in pairs(ctx.allowedMaps or {}) do maps[mapID] = true end
+    for _, entry in ipairs({ ctx.route and ctx.route.current, ctx.route and ctx.route.next }) do
+        for _, zone in ipairs(entry and entry.zones or {}) do
+            local mapID = ns.ZoneMap.MapIdByName(zone)
+            if mapID then maps[mapID] = true end
+        end
+    end
+    return maps
+end
+
+--- No quests to do at your level: grind to the level where the guide's
+--- next quests open (or the next level band, or simply the next level),
+--- on mobs around your level nearby.
+local function grindStep(ctx, out)
+    for _, s in ipairs(out) do
+        if QUEST_KINDS[s.kind] then return end
+    end
+    local data, Experience = ns.QuestieData, ns.Data.Experience
+    local level = ctx.profile.level
+    if level >= ns.Util.MAX_LEVEL or not data.IsReady() then return end
+
+    local goal = data.NextQuestLevel(level, guideMaps(ctx))
+        or (ctx.route and ctx.route.next and ctx.route.next.band.min) or (level + 1)
+    if goal <= level then goal = level + 1 end
+    goal = math.min(goal, ns.Util.MAX_LEVEL)
+
+    local mobs = data.GrindMobs(level - 1, level + 2, ctx.allowedMaps)
+    local actor, point = nearestActor(ctx.origin, mobs)
+    local xp = ns.Advisor.GetXpInfo(level)
+    local need = Experience.XPToReach(level, goal, xp.xp, xp.xpMax)
+    local mobLevel = actor and actor.minLevel or level
+    local kills = Experience.KillsNeeded(need, Experience.MobXP(level, mobLevel), xp.rested)
+
+    local L = ns.L
+    local lines = {}
+    if actor then
+        lines[#lines + 1] = L.GRIND_KILL_FMT:format(actor.name, actor.minLevel, actor.maxLevel)
+    else
+        lines[#lines + 1] = L.GRIND_ANY_FMT:format(level, level + 2)
+    end
+    if kills then lines[#lines + 1] = L.GRIND_KILLS_FMT:format(kills, goal) end
+    if (xp.rested or 0) > 0 then lines[#lines + 1] = L.GRIND_RESTED end
+
+    -- The Target button cycles through the nearest few mob types.
+    local names, seen, dist = {}, {}, {}
+    for _, m in ipairs(mobs) do
+        local _, d = ns.Planner.Nearest(ctx.origin, m.points)
+        dist[m] = d or math.huge
+    end
+    table.sort(mobs, function(a, b) return dist[a] < dist[b] end)
+    for _, m in ipairs(mobs) do
+        if not seen[m.name] and #names < 3 then seen[m.name] = true; names[#names + 1] = m.name end
+    end
+
+    out[#out + 1] = {
+        key = "grind:" .. goal, kind = "GRIND", title = L.GRIND_TITLE_FMT:format(goal),
+        lines = lines, questIDs = {}, grindLevel = goal, grindNames = names,
+        target = actor and target(point, actor.name) or nil,
+    }
+end
+Sources.GrindStep = grindStep
+
+---------------------------------------------------------------------------
 -- Entry point
 ---------------------------------------------------------------------------
 
@@ -670,5 +741,6 @@ function Sources.Collect(ctx)
     professionSteps(ctx, steps)
     guideNoteSteps(ctx, steps)
     listSteps(ctx, steps)
+    grindStep(ctx, steps)
     return steps
 end

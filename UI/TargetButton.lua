@@ -113,6 +113,9 @@ end
 -- @param log    quest log from GameApi.GetQuestLog()
 -- @param origin player's world position (may be nil)
 function TargetButton.BuildList(step, log, origin)
+    if step and step.kind == "GRIND" then
+        return step.grindNames or {} -- the mobs to grind on, nearest first
+    end
     local found = {}
     if step and step.kind == "COMPLETE" then
         for _, questID in ipairs(step.questIDs or {}) do

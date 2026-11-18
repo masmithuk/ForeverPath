@@ -38,6 +38,7 @@ local ICONS = {
     HEARTH   = "Interface\\Icons\\INV_Misc_Rune_01",
     NOTE     = "Interface\\GossipFrame\\GossipGossipIcon",
     GOTO     = "Interface\\Icons\\INV_Misc_Map_01",
+    GRIND    = "Interface\\Icons\\Ability_DualWield",
 }
 
 local frame
