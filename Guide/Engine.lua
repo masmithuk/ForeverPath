@@ -179,6 +179,7 @@ function Engine.Replan()
 
     if ns.GuideFrame then ns.GuideFrame.Update(state) end
     if ns.TargetButton then ns.TargetButton.Update(state, origin) end
+    if ns.MapPins then ns.MapPins.Update(state.steps) end
     -- Quest statuses in the Zones and Steps tabs only change with quest state.
     if questsChanged and ns.MainFrame then
         ns.MainFrame.RefreshIf("zones")

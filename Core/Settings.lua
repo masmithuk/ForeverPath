@@ -54,6 +54,7 @@ local ACCOUNT_DEFAULTS = {
         width = 320,          -- guide window width (it grows to fit its text)
         groupQuests = true,   -- include group (elite) quests in the steps
         suggestDungeons = true, -- list dungeons for your level in the guide window
+        mapNumbers = true,    -- numbered markers on the world map for the next steps
     },
 }
 

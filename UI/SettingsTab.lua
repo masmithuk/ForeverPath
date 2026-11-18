@@ -56,6 +56,11 @@ local CHECKBOXES = {
         end,
     },
     {
+        label = "SETTING_MAP_NUMBERS",
+        get = function() return ns.Settings.account.guide.mapNumbers ~= false end,
+        set = function(v) ns.MapPins.SetEnabled(v) end,
+    },
+    {
         label = "SETTING_TARGET",
         get = function() return ns.Settings.account.targetButton end,
         set = function(v) ns.TargetButton.SetEnabled(v) end,

@@ -4,6 +4,9 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 
 ## [0.8.8] - 2026-11-18
 
+### Added
+- **Step numbers on the world map.** Each of the guide's next steps gets a numbered marker where it happens: 1 (gold) is the step you're on, then 2, 3 and so on, matching the numbers in the guide window. Steps at the same spot share a marker ("1, 3"). Hover a marker to see its step. Steps in other zones show up when you look at the continent map. You can turn this off with Settings > "Number the steps on the world map".
+
 ### Changed
 - **Class quests are never skipped.** They're offered at any level below you (they're never "too low"), even when your guide's quest list or zones don't include them, its skip list names them, or the giver is out of the way. Hiding group quests and the Speedrun XP-per-minute filter leave them alone too.
 - **Class quests come first.** Picking them up, doing them and handing them in go ahead of other quests, unless a step from your guide's list is due.

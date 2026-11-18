@@ -21,6 +21,7 @@ mock.maps = {
     [1411] = { name = "Durotar",         areaID = 14, continent = 1, offset = 0 },
     [1413] = { name = "The Barrens",     areaID = 17, continent = 1, offset = 2000 },
     [1420] = { name = "Tirisfal Glades", areaID = 85, continent = 0, offset = 0 },
+    [1414] = { name = "Kalimdor",        continent = 1, offset = 0, size = 3000, noZone = true },
 }
 
 local function areaName(areaID)
@@ -88,6 +89,8 @@ function Frame:GetScript(name) return self.scripts[name] end
 function Frame:Show() self.shown = true; if self.scripts.OnShow then self.scripts.OnShow(self) end end
 function Frame:Hide() self.shown = false; if self.scripts.OnHide then self.scripts.OnHide(self) end end
 function Frame:IsShown() return self.shown end
+function Frame:SetChecked(v) rawset(self, "checked", v and true or false) end
+function Frame:GetChecked() return rawget(self, "checked") == true end
 function Frame:SetText(t) self.textValue = t end
 function Frame:GetText() return self.textValue end
 function Frame:GetStringHeight() return 100 end
@@ -390,7 +393,14 @@ function mock.install()
         GetWorldPosFromMapPos = function(mapID, v)
             local m = mock.maps[mapID]
             if not m then return nil end
-            return m.continent, vector(m.offset + v.x * 1000, v.y * 1000)
+            local size = m.size or 1000
+            return m.continent, vector(m.offset + v.x * size, v.y * size)
+        end,
+        GetMapPosFromWorldPos = function(continent, v, mapID)
+            local m = mock.maps[mapID]
+            if not m or m.continent ~= continent then return nil end
+            local size = m.size or 1000
+            return mapID, vector((v.x - m.offset) / size, v.y / size)
         end,
         GetMapInfo = function(mapID)
             local m = mock.maps[mapID]
@@ -400,7 +410,9 @@ function mock.install()
         GetFallbackWorldMapID = function() return 947 end,
         GetMapChildrenInfo = function()
             local out = {}
-            for id, m in pairs(mock.maps) do out[#out + 1] = { mapID = id, name = m.name } end
+            for id, m in pairs(mock.maps) do
+                if not m.noZone then out[#out + 1] = { mapID = id, name = m.name } end
+            end
             return out
         end,
         CanSetUserWaypointOnMap = function() return true end,

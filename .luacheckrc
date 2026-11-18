@@ -27,7 +27,7 @@ read_globals = {
     "GetNumAvailableQuests", "GetNumQuestChoices", "GetQuestID", "GetQuestMoneyToGet",
     "GetQuestReward", "IsAltKeyDown", "IsControlKeyDown", "IsQuestCompletable",
     "QuestGetAutoAccept", "SelectActiveQuest", "SelectAvailableQuest", "UnitIsPlayer", "UnitGUID", "strsplit",
-    "BreakUpLargeNumbers",
+    "BreakUpLargeNumbers", "hooksecurefunc",
     "C_Map",
     "ChatFontNormal",
     "ScrollingEdit_OnCursorChanged",
