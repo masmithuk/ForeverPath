@@ -113,7 +113,8 @@ local function questRow(ctx, i, q, inCurrent)
             and ctx.focusQuest ~= q.id then
             row.status = "toolow"
         end
-    elseif ctx.skipped[q.id] or (ctx.guide.skipSet and ctx.guide.skipSet[q.id]) then
+    elseif ctx.skipped[q.id] or (ctx.guide.skipSet and ctx.guide.skipSet[q.id]
+            and not (ns.QuestieData.IsReady() and ns.QuestieData.IsClassQuest(q.id))) then
         row.status = "skipped"
     elseif ctx.notOffered and ctx.notOffered[q.id] then
         row.status = "notoffered"

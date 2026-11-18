@@ -2,6 +2,14 @@
 
 All notable changes are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.8.8] - 2026-11-18
+
+### Changed
+- **Class quests are never skipped.** They're offered at any level below you (they're never "too low"), even when your guide's quest list or zones don't include them, its skip list names them, or the giver is out of the way. Hiding group quests and the Speedrun XP-per-minute filter leave them alone too.
+- **Class quests come first.** Picking them up, doing them and handing them in go ahead of other quests, unless a step from your guide's list is due.
+- **Never suggested for abandoning.** Class quests in your log aren't listed as "too low to be worth it", and Abandon unrelated quests keeps them.
+- **Auto accept** takes class quests even when they're grey or still too hard.
+
 ## [0.8.7] - 2026-11-18
 
 ### Added

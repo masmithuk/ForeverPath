@@ -85,12 +85,20 @@ end
 -- treated as this many yards closer (1st, 2nd, 3rd...), so the route
 -- follows the list while hand-ins and objectives still fit in by distance.
 local LIST_BONUSES = { 1500, 1200, 900 }
+-- Class quests (spells, totems, forms, pets) come first: their pick-up,
+-- objectives and hand-in are treated as this many yards closer.
+local CLASS_BONUS = 5000
 
 --- Quests the chosen guide never picks up (its "skip quests" list), or
 --- that you skipped in the step guide.
+local function isClass(questID)
+    return ns.QuestieData.IsReady() and ns.QuestieData.IsClassQuest(questID)
+end
+
 local function isSkipped(ctx, questID)
     if ctx.skipped[questID] then return true end
     if ctx.notOffered and ctx.notOffered[questID] then return true end
+    if isClass(questID) then return false end -- class quests are never skipped by a guide
     return ctx.guide ~= nil and ctx.guide.skipSet ~= nil and ctx.guide.skipSet[questID] == true
 end
 
@@ -203,6 +211,7 @@ end
 --- (the quest picked in the Steps list always counts).
 function Sources.HideGroupQuest(ctx, questID)
     if ctx.includeGroupQuests ~= false or ctx.focusQuest == questID then return false end
+    if isClass(questID) then return false end -- class quests always count
     return ns.QuestieData.IsReady() and ns.QuestieData.IsGroupQuest(questID)
 end
 
@@ -222,16 +231,19 @@ local function questLogSteps(ctx, out)
         elseif lowLevel then
             ctx.tooLow[#ctx.tooLow + 1] = { id = questID, title = quest.title, level = lowLevel }
         elseif not ctx.skipped[questID] then -- quests already taken are always shown
+            local step
             if quest.complete then
-                out[#out + 1] = turnIn
+                step = turnIn
             else
                 local dungeon = ns.QuestieData.DungeonOf(questID)
                 if dungeon then
-                    out[#out + 1] = dungeonStep(ctx, questID, quest, dungeon)
+                    step = dungeonStep(ctx, questID, quest, dungeon)
                 else
-                    out[#out + 1] = objectiveStep(ctx, questID, quest)
+                    step = objectiveStep(ctx, questID, quest)
                 end
             end
+            if step and isClass(questID) then step.bonus = (step.bonus or 0) + CLASS_BONUS end
+            out[#out + 1] = step
         end
     end
 end
@@ -307,7 +319,7 @@ function Sources.FilterByRate(doable, ctx)
     local kept = {}
     for _, id in ipairs(doable) do
         local rate = ctx.rates[id]
-        if not rate or rate >= floor then kept[#kept + 1] = id end
+        if not rate or rate >= floor or isClass(id) then kept[#kept + 1] = id end
     end
     return kept
 end
@@ -315,6 +327,7 @@ end
 --- Is the quest's nearest objective too far from its giver (Efficient)?
 local function isDetour(questID, giverPoint, maxDetour)
     if not maxDetour or not giverPoint or not giverPoint.world then return false end
+    if isClass(questID) then return false end -- class quests are worth the trip
     local _, _, dist = nearestActor(giverPoint.world, ns.QuestieData.GetObjectiveTargets(questID))
     return dist ~= nil and dist > maxDetour
 end
@@ -327,6 +340,7 @@ function Sources.WantsQuest(ctx, questID)
     if listRank(ctx, questID) then return true end
     local data = ns.QuestieData
     if not data.IsReady() then return true end
+    if data.IsClassQuest(questID) then return true end
 
     local rules = rulesOf(ctx)
     local inWindow = data.InLevelWindow(questID, ctx.profile.level, rules)
@@ -354,10 +368,30 @@ local function acceptBonus(ctx, questID, listPosition)
         bonus = bonus + math.max(-rules.rateBonus, math.min(rules.rateBonus, edge))
     end
     -- Story: stand-alone side quests only when they're on the way.
+    if isClass(questID) then return bonus + CLASS_BONUS end
     if (rules.sidePenalty or 0) > 0 and not listPosition and not ns.QuestieData.IsChainQuest(questID) then
         bonus = bonus - rules.sidePenalty
     end
     return bonus
+end
+
+--- Class quests you can pick up now (not taken, done or skipped by you,
+--- and not too hard yet). Cached with the other doable quests.
+function Sources.ClassQuests(ctx)
+    if ctx.classDoable then return ctx.classDoable end
+    local data = ns.QuestieData
+    local list = {}
+    if data.IsReady() and data.GetClassCandidates then
+        local level, rules = ctx.profile.level, rulesOf(ctx)
+        for _, id in ipairs(data.GetClassCandidates(level, rules)) do
+            if not ctx.log[id] and not ctx.isCompleted(id) and not isSkipped(ctx, id)
+                and not data.TooHard(id, level, rules) and data.IsDoable(id, ctx) then
+                list[#list + 1] = id
+            end
+        end
+    end
+    ctx.classDoable = list
+    return list
 end
 
 local function availableSteps(ctx, out)
@@ -400,7 +434,22 @@ local function availableSteps(ctx, out)
             end
         end
     end
-    for i = 1, math.min(#found, rules.maxAccept or DEFAULT_MAX_ACCEPT) do
+    local count = math.min(#found, rules.maxAccept or DEFAULT_MAX_ACCEPT)
+    -- Class quests are always offered, wherever their giver is and even
+    -- when the guide's list or zones don't include them.
+    local seen = {}
+    for i = 1, count do seen[found[i].questID] = true end
+    for _, questID in ipairs(Sources.ClassQuests(ctx)) do
+        if not seen[questID] then
+            local actor, point, dist = nearestActor(ctx.origin, data.GetStarters(questID, ctx.profile.faction))
+            if actor then
+                count = count + 1
+                table.insert(found, count, { questID = questID, actor = actor, point = point, dist = dist })
+                seen[questID] = true
+            end
+        end
+    end
+    for i = 1, count do
         local f = found[i]
         local name = data.GetQuestName(f.questID) or ("quest " .. f.questID)
         local line = "Accept: " .. name
@@ -412,7 +461,7 @@ local function availableSteps(ctx, out)
             questIDs = { f.questID },
             actor = f.actor.kind .. ":" .. f.actor.id,
             target = target(f.point, f.actor.name),
-            bonus = acceptBonus(ctx, f.questID, fromList and i or nil),
+            bonus = acceptBonus(ctx, f.questID, fromList and listRank(ctx, f.questID) and i or nil),
         }
     end
 end

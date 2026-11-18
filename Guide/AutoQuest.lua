@@ -50,6 +50,12 @@ local activity = 0      -- bumped by every dialog event
 
 local function settings() return ns.Settings.account.auto end
 
+--- Class quests are accepted even when grey or still too hard.
+local function isClassQuest(questID)
+    local data = ns.QuestieData
+    return data ~= nil and data.IsReady() and data.IsClassQuest(questID) or false
+end
+
 --- Is Questie's own quest automation switched on?
 function AutoQuest.QuestieAutomationOn()
     local q = _G.Questie
@@ -85,9 +91,10 @@ end
 -- @param wants function(questID) -> bool from the guide (mode filter)
 function AutoQuest.ShouldAccept(q, opts, wants)
     if not q.questID or tried[q.questID] then return false end
-    if opts.skipTrivial and q.isTrivial then return false end
+    local classQuest = opts.isClassQuest and opts.isClassQuest(q.questID)
+    if opts.skipTrivial and q.isTrivial and not classQuest then return false end
     if opts.skipRepeatable and q.repeatable then return false end
-    if opts.skipTooHard and opts.tooHard and opts.tooHard(q.questID) then return false end
+    if opts.skipTooHard and opts.tooHard and opts.tooHard(q.questID) and not classQuest then return false end
     if ns.Settings.char.guide.skipped[q.questID] then return false end
     if opts.followMode and wants and not wants(q.questID) then return false end
     return true
@@ -166,6 +173,7 @@ local function decisionOptions()
         followMode = s.followMode,
         skipTooHard = s.skipTooHard,
         tooHard = ns.Engine.TooHard,
+        isClassQuest = isClassQuest,
     }
 end
 
@@ -224,7 +232,7 @@ function AutoQuest.OnQuestDetail()
     if not tried[questID] then
         if ns.Settings.char.guide.skipped[questID] then return end
         if settings().followMode and not ns.Engine.WantsQuest(questID) then return end
-        if settings().skipTooHard and ns.Engine.TooHard(questID) then return end
+        if settings().skipTooHard and ns.Engine.TooHard(questID) and not isClassQuest(questID) then return end
         tried[questID] = true
     end
     AcceptQuest()

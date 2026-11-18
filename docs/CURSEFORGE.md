@@ -26,6 +26,8 @@ you're in. Pick up, do, hand in, repeat, all the way to 60.
   several creatures, there's a button for each.
 - **Elite tips:** when a quest needs an elite, it tells you if there are guards close enough to pull it to, or to
   find a group.
+- **Class quests come first.** Quests for your class (new spells, totems, forms and pets) are never skipped,
+  whatever your level or guide.
 - **Dungeon suggestions** for your level.
 - **Auto accept and hand in** when you talk to quest givers. Grey, repeatable and too-difficult quests are skipped
   (all optional).

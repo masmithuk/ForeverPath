@@ -298,6 +298,7 @@ end
 --- Is a quest too far below you to be worth doing (more than the guide's
 --- greyGap levels under you)? Returns true and the quest's level, or false.
 function QuestieData.TooLow(questID, level, rules)
+    if QuestieData.IsClassQuest(questID) then return false end -- class quests are always worth it
     local gap = rules and rules.greyGap or GREY_LEVEL_GAP
     local qLevel = get("Quest", questID, "questLevel")
     if type(qLevel) == "number" and qLevel > 0 and qLevel < level - gap then return true, qLevel end
@@ -475,6 +476,7 @@ function QuestieData.InLevelWindow(questID, level, rules)
     if not qLevel or qLevel <= 0 then return nil end
     local greyGap = rules and rules.greyGap or GREY_LEVEL_GAP
     local above = rules and rules.levelsAbove or LEVELS_ABOVE
+    if QuestieData.IsClassQuest(questID) then return qLevel <= level + above end -- never too low
     return qLevel >= level - greyGap and qLevel <= level + above
 end
 
@@ -488,9 +490,21 @@ function QuestieData.GetCandidates(level, rules)
         local qLevel = q.questLevel or q.requiredLevel or 1
         if (q.requiredLevel or 1) <= level
             and qLevel <= level + above
-            and qLevel >= level - greyGap then
+            and (qLevel >= level - greyGap or q.classQuest) then
             result[#result + 1] = q.id
         end
+    end
+    return result
+end
+
+--- Class quests the character can take at this level (any level below,
+--- up to the window's top). They're never too low to be worth doing.
+function QuestieData.GetClassCandidates(level, rules)
+    local above = rules and rules.levelsAbove or LEVELS_ABOVE
+    local result = {}
+    for _, q in ipairs(state.classQuests or {}) do
+        local qLevel = q.questLevel or q.requiredLevel or 1
+        if (q.requiredLevel or 1) <= level and qLevel <= level + above then result[#result + 1] = q.id end
     end
     return result
 end
@@ -610,6 +624,7 @@ function QuestieData.BuildIndex(profile, schedule, onDone)
     end
     state.status = "indexing"
     state.candidates, state.byTitle, state.leadsOn, state.mobsByLevel = {}, {}, {}, {}
+    state.classQuests = {}
 
     -- NPC titles worth indexing: class trainer, innkeepers, profession trainers.
     local services = ns.Data.Services
@@ -630,12 +645,15 @@ function QuestieData.BuildIndex(profile, schedule, onDone)
                     end
                 end
                 if (reqLevel or 1) <= ns.Util.MAX_LEVEL then
-                    state.candidates[#state.candidates + 1] = {
+                    local entry = {
                         id = id,
                         requiredLevel = reqLevel,
                         questLevel = get("Quest", id, "questLevel"),
                         areaID = questArea(id),
+                        classQuest = QuestieData.IsClassQuest(id),
                     }
+                    state.candidates[#state.candidates + 1] = entry
+                    if entry.classQuest then state.classQuests[#state.classQuests + 1] = entry end
                 end
             end
             count = count + 1
