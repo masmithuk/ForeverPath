@@ -31,6 +31,23 @@ local function num(v) return ns.Util.SafeNumber(v) end
 -- Quests
 ---------------------------------------------------------------------------
 
+--- Is a quest in the log ready to hand in? Only a clear "yes" counts
+--- (some clients answer 1/0 rather than true/false), and a quest that still
+--- has an unfinished objective is never ready.
+local function readyForTurnIn(QL, id, info)
+    local ready = safe(QL.ReadyForTurnIn, id)
+    if ready == nil then ready = safe(QL.IsComplete, id) end
+    if ready == nil then ready = info.isComplete end
+    if not (ready == true or ready == 1) then return false end
+    local objectives = safe(QL.GetQuestObjectives, id)
+    if type(objectives) == "table" then
+        for _, o in ipairs(objectives) do
+            if type(o) == "table" and o.finished == false then return false end
+        end
+    end
+    return true
+end
+
 --- Quests currently in the log: { [questID] = { title, complete } }.
 function GameApi.GetQuestLog()
     local log = {}
@@ -42,11 +59,9 @@ function GameApi.GetQuestLog()
         local info = safe(QL.GetInfo, i)
         if info and not info.isHeader and not info.isHidden and num(info.questID) then
             local id = info.questID
-            local complete = safe(QL.ReadyForTurnIn, id)
-            if complete == nil then complete = safe(QL.IsComplete, id) end
             log[id] = {
                 title = ns.Util.SafeString(info.title) or ("Quest " .. id),
-                complete = complete and true or false,
+                complete = readyForTurnIn(QL, id, info),
             }
         end
     end

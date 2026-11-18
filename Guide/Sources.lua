@@ -121,11 +121,19 @@ end
 local function turnInStep(ctx, questID, quest)
     local actor, point = nearestActor(ctx.origin,
         ns.QuestieData.GetFinishers(questID, ctx.profile.faction))
+    local title = actor and ("Turn in to " .. actor.name) or ("Turn in " .. quest.title)
+    local lines = { quest.title }
+    if not actor then
+        -- No quest data (Questie missing or still loading): the game's own
+        -- quest marker usually points at the hand-in for a finished quest.
+        point = withWorld(ns.GameApi.GetQuestWaypoint(questID))
+        lines = { ns.L.STEP_TURNIN_UNKNOWN }
+    end
     return {
         key = "turnin:" .. questID,
         kind = "TURNIN",
-        title = actor and ("Turn in to " .. actor.name) or "Turn in",
-        lines = { quest.title },
+        title = title,
+        lines = lines,
         questIDs = { questID },
         actor = actor and (actor.kind .. ":" .. actor.id) or nil,
         target = target(point, actor and actor.name),
