@@ -56,6 +56,7 @@ local ACCOUNT_DEFAULTS = {
         suggestDungeons = true, -- list dungeons for your level in the guide window
         mapNumbers = true,    -- numbered markers on the world map for the next steps
         compass = true,       -- compass bar at the top of the screen
+        minimapRoute = true,  -- the Questwalker arrow's route as dots on the minimap
     },
 }
 

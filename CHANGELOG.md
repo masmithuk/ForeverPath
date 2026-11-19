@@ -13,7 +13,7 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
   - **flights** between flight masters you've found (it remembers each one when you open its flight map)
   - your **Hearthstone**, when it's ready and you've set it since installing this version
   - **boats and zeppelins** to other continents
-  - the current part of the route is drawn as dots on the world map
+  - the current part of the route is drawn as yellow dots on the world map **and the minimap**. The minimap dots follow its zoom, indoors and "Rotate Minimap", and stop at its edge. Turn them off with Settings > "Route line on the minimap".
 - It's the automatic choice when Shortest Path Forever and TomTom aren't installed, and you can pick it in Settings > Waypoint arrow. Shift-drag to move it. The game's map pin is still placed on the step too.
 
 ### Changed

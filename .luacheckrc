@@ -29,7 +29,7 @@ read_globals = {
     "QuestGetAutoAccept", "SelectActiveQuest", "SelectAvailableQuest", "UnitIsPlayer", "UnitGUID", "strsplit",
     "BreakUpLargeNumbers", "hooksecurefunc", "GetPlayerFacing", "UnitExists", "UnitClass", "UnitName",
     "RAID_CLASS_COLORS", "GetItemCooldown", "IsMounted", "UnitOnTaxi", "PlaySound", "SOUNDKIT",
-    "C_Container", "NumTaxiNodes", "TaxiNodeName", "TaxiNodeGetType", "GetItemCount",
+    "C_Container", "IsIndoors", "GetCVar", "Minimap", "NumTaxiNodes", "TaxiNodeName", "TaxiNodeGetType", "GetItemCount",
     "C_Map",
     "ChatFontNormal",
     "ScrollingEdit_OnCursorChanged",

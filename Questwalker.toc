@@ -58,6 +58,7 @@ UI\TargetButton.lua
 UI\MapPins.lua
 UI\Compass.lua
 UI\Navigator.lua
+UI\MinimapRoute.lua
 
 Core\Commands.lua
 Core\Bootstrap.lua

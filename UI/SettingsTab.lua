@@ -62,6 +62,11 @@ local CHECKBOXES = {
         set = function(v) ns.Compass.SetEnabled(v) end,
     },
     {
+        label = "SETTING_MINIMAP_ROUTE",
+        get = function() return ns.Settings.account.guide.minimapRoute ~= false end,
+        set = function(v) ns.MinimapRoute.SetEnabled(v) end,
+    },
+    {
         label = "SETTING_MAP_NUMBERS",
         get = function() return ns.Settings.account.guide.mapNumbers ~= false end,
         set = function(v) ns.MapPins.SetEnabled(v) end,

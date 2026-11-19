@@ -288,6 +288,9 @@ function mock.install()
     _G.IsShiftKeyDown = function() return mock.keys.shift end
     _G.IsControlKeyDown = function() return mock.keys.ctrl end
     _G.IsAltKeyDown = function() return mock.keys.alt end
+    mock.cvars = {}
+    _G.GetCVar = function(name) return mock.cvars[name] end
+    _G.IsIndoors = function() return mock.indoors or false end
     _G.GetCVarBool = function(name) return name == "ActionButtonUseKeyDown" and mock.useKeyDown end
     mock.useKeyDown = false
     _G.SecureHandlerWrapScript = function(frame, script, _, preBody)

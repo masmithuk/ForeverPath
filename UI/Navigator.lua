@@ -313,6 +313,7 @@ function Navigator.Draw()
     if UnitOnTaxi and UnitOnTaxi("player") then
         view.main, view.detail = L.NAV_ON_FLIGHT, target.title or ""
         frame.arrow:Hide()
+        if ns.MinimapRoute then ns.MinimapRoute.Clear() end
     elseif not player or not plan or not plan.legs[1] then
         view.main = L.NAV_NO_POSITION
         frame.arrow:Hide()
@@ -356,6 +357,7 @@ function Navigator.Draw()
         if ns.MapPins and ns.MapPins.SetRoute and point then
             ns.MapPins.SetRoute(player, point)
         end
+        if ns.MinimapRoute then ns.MinimapRoute.Update(player, point, facing) end
     end
     frame.main:SetText(view.main)
     frame.distance:SetText(view.distance)
@@ -372,6 +374,7 @@ function Navigator.SetTarget(stop)
         if frame then frame:Hide() end
         Navigator.view = nil
         if ns.MapPins and ns.MapPins.SetRoute then ns.MapPins.SetRoute(nil) end
+        if ns.MinimapRoute then ns.MinimapRoute.Clear() end
         return
     end
     frame = frame or create()
