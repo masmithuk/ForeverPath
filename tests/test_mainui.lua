@@ -211,13 +211,12 @@ return {
         T.eq(f.questsTab.search:GetWidth(), f.columnWidth - 10)
     end },
 
-    { "without TomTom or Shortest Path the player is told to install one", function(T)
+    { "without TomTom or Shortest Path, Questwalker's own arrow guides you", function(T)
         local ns, mock = login(T)
-        T.contains(table.concat(mock.printed, "\n"), "install Shortest Path Forever or TomTom")
-        T.contains(ns.GuideFrame.StatusText("ready", "auto"), "install Shortest Path Forever or TomTom")
-        ns.MainFrame.ShowTab("home")
-        T.contains(ns.HomeTab.GetText(), "No arrow addon found")
-        T.eq(mock.userWaypoint ~= nil, true, "a map pin is used meanwhile")
+        T.truthy(not table.concat(mock.printed, "\n"):find("install Shortest Path"), "no nagging")
+        T.eq(ns.GuideFrame.StatusText("ready", "auto"), nil)
+        T.truthy(ns.Navigator.IsShown(), "the navigator is up")
+        T.eq(mock.userWaypoint ~= nil, true, "and the game's map pin")
     end },
 
     { "with TomTom there's no nagging", function(T)

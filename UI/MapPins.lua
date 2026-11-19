@@ -26,6 +26,11 @@ local PIN_LEVEL = 2200    -- above Blizzard's and Questie's map pins
 local CIRCLE = "Interface\\CHARACTERFRAME\\TempPortraitAlphaMask"
 
 local lastSteps = {}
+local route = nil         -- { from = world, to = world } from the Navigator
+local dots = {}
+local routeLayer
+local ROUTE_DOT_GAP = 0.012  -- map fraction between route dots
+local ROUTE_MAX_DOTS = 120
 local pins = {}
 local drawn = { mapID = nil, scale = nil, width = nil, dirty = true }
 local hooked = false
@@ -49,6 +54,49 @@ function MapPins.Project(t, mapID)
     local x, y = pos:GetXY()
     if not x or x < 0 or x > 1 or y < 0 or y > 1 then return nil end
     return x, y
+end
+
+--- Where a world position falls on `mapID` (0-1), or nil.
+function MapPins.ProjectWorld(world, mapID)
+    if not (world and mapID and C_Map and C_Map.GetMapPosFromWorldPos and CreateVector2D) then return nil end
+    local ok, _, pos = pcall(C_Map.GetMapPosFromWorldPos, world.continent, CreateVector2D(world.x, world.y), mapID)
+    if not ok or not pos then return nil end
+    local x, y = pos:GetXY()
+    if not x then return nil end
+    return x, y
+end
+
+--- Dots along the Navigator's route on `mapID`: a list of {x, y}.
+function MapPins.RouteDots(mapID)
+    local out = {}
+    if not route then return out end
+    local x1, y1 = MapPins.ProjectWorld(route.from, mapID)
+    local x2, y2 = MapPins.ProjectWorld(route.to, mapID)
+    if not (x1 and x2) then return out end
+    local dx, dy = x2 - x1, y2 - y1
+    local len = math.sqrt(dx * dx + dy * dy)
+    local n = math.min(ROUTE_MAX_DOTS, math.floor(len / ROUTE_DOT_GAP))
+    for i = 1, n do
+        local t = i / (n + 1)
+        local x, y = x1 + dx * t, y1 + dy * t
+        if x >= 0 and x <= 1 and y >= 0 and y <= 1 then out[#out + 1] = { x = x, y = y } end
+    end
+    return out
+end
+
+--- The Navigator's current leg, drawn as a dotted line (nil to clear).
+function MapPins.SetRoute(player, point)
+    if not (player and point and player.world and point.world) then
+        if route then route = nil; drawn.dirty = true end
+        return
+    end
+    local old = route
+    if old and old.to == point.world and math.abs(old.from.x - player.world.x) < 5
+        and math.abs(old.from.y - player.world.y) < 5 then
+        return
+    end
+    route = { from = player.world, to = point.world }
+    drawn.dirty = true
 end
 
 --- The markers to draw on `mapID` for the planned steps.
@@ -128,6 +176,9 @@ end
 
 local function hideAll(from)
     for i = from or 1, #pins do pins[i]:Hide() end
+    if not from then
+        for _, dot in ipairs(dots) do dot:Hide() end
+    end
 end
 
 --- Redraw the markers for the map being shown.
@@ -167,6 +218,31 @@ function MapPins.Draw()
         pin:Show()
     end
     hideAll(#markers + 1)
+
+    -- The Navigator's route, under the markers.
+    local list = MapPins.RouteDots(mapID)
+    for i, d in ipairs(list) do
+        local dot = dots[i]
+        if not dot then
+            -- On their own frame above the map tiles (textures on the
+            -- canvas itself would sit underneath them).
+            if not routeLayer then
+                routeLayer = CreateFrame("Frame", nil, child)
+                routeLayer:SetAllPoints(child)
+                routeLayer:SetFrameLevel(PIN_LEVEL - 10)
+            end
+            dot = routeLayer:CreateTexture(nil, "OVERLAY")
+            dot:SetTexture(CIRCLE)
+            dot:SetVertexColor(1, 0.82, 0.1, 0.9)
+            dots[i] = dot
+        end
+        local size = 6 / (scale > 0 and scale or 1)
+        dot:SetSize(size, size)
+        dot:ClearAllPoints()
+        dot:SetPoint("CENTER", child, "TOPLEFT", d.x * width, -d.y * height)
+        dot:Show()
+    end
+    for i = #list + 1, #dots do dots[i]:Hide() end
 end
 
 --- Watch the world map: redraw when it opens, changes map or zooms.

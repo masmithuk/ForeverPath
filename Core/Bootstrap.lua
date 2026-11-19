@@ -48,6 +48,7 @@ ns:RegisterEvent("PLAYER_LOGIN", function()
         ns.MainFrame.Show()
     end
     ns.MinimapButton.Init()
+    ns.Navigator.Init()
     ns.Engine.Start()
     ns.AutoQuest.Start()
     if ns.Waypoints.NeedsArrowAddon(ns.Settings.account.guide.waypoints) then

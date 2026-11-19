@@ -256,7 +256,7 @@ return {
         T.eq(QuestwalkerDB.guide.waypoints, "builtin")
         T.eq(mock.userWaypoint.uiMapID, 1411)
         SlashCmdList.QUESTWALKER("waypoints sideways")
-        T.contains(mock.printed[#mock.printed], "auto, shortestpath, tomtom, builtin, off")
+        T.contains(mock.printed[#mock.printed], "auto, shortestpath, questwalker, tomtom, builtin, off")
     end },
 
     { "guide window renders the current step and distance", function(T)

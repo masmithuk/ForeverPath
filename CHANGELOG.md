@@ -2,6 +2,23 @@
 
 All notable changes are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.9.0] - 2026-11-19
+
+### Added
+- **Questwalker's own sat-nav arrow.** You no longer need another addon for directions. A small panel under the compass shows:
+  - an arrow that turns as you do, green when you're facing the right way and red when it's behind you
+  - the instruction: Go straight, Bear left/right, Turn left/right, Turn around, Arriving, You've arrived (with a ping)
+  - the distance and roughly how long it'll take
+- **Journey planning.** For long trips the arrow works out the quickest way and guides you one part at a time:
+  - **flights** between flight masters you've found (it remembers each one when you open its flight map)
+  - your **Hearthstone**, when it's ready and you've set it since installing this version
+  - **boats and zeppelins** to other continents
+  - the current part of the route is drawn as dots on the world map
+- It's the automatic choice when Shortest Path Forever and TomTom aren't installed, and you can pick it in Settings > Waypoint arrow. Shift-drag to move it. The game's map pin is still placed on the step too.
+
+### Changed
+- No more "install Shortest Path Forever or TomTom" messages.
+
 ## [0.8.9] - 2026-11-18
 
 ### Fixed

@@ -10,12 +10,17 @@
                     is held until the step is actually done, so arriving
                     doesn't skip ahead; later stops are drawn as numbered
                     pins with quest badges.
+      questwalker   Questwalker's own sat-nav arrow (UI/Navigator.lua): turn
+                    instructions, distance and time, and journeys using
+                    your flight paths, hearthstone, boats and zeppelins.
+                    The game's map pin is set on the step too.
       tomtom        TomTom's crazy arrow. Path addons that follow TomTom's
                     waypoints (Well Trodden, Map Shortcuts, ...) pick this up.
       builtin       The game's own map pin (C_Map.SetUserWaypoint).
       off           No waypoints.
 
-    "auto" (the default) uses the first one available in that order. Only
+    "auto" (the default) uses Shortest Path Forever or TomTom if one is
+    installed, otherwise Questwalker's own arrow. Only
     one Questwalker waypoint or journey exists at a time, and nothing is
     saved into TomTom's persistent waypoint list.
 ]]
@@ -25,7 +30,7 @@ local _, ns = ...
 local Waypoints = {}
 ns.Waypoints = Waypoints
 
-Waypoints.PROVIDERS = { "auto", "shortestpath", "tomtom", "builtin", "off" }
+Waypoints.PROVIDERS = { "auto", "shortestpath", "questwalker", "tomtom", "builtin", "off" }
 
 local OWNER = "Questwalker"
 local MAX_ROUTE_STOPS = 6
@@ -70,9 +75,8 @@ end
 
 --- Should the player be told to install an arrow addon? (Arrows aren't
 --- turned off, and neither addon is there - only the map pin is left.)
-function Waypoints.NeedsArrowAddon(setting)
-    if setting == "off" then return false end
-    return not Waypoints.HasArrowAddon()
+function Waypoints.NeedsArrowAddon(_setting)
+    return false -- Questwalker has its own arrow now
 end
 
 function Waypoints.Resolve(setting)
@@ -80,10 +84,10 @@ function Waypoints.Resolve(setting)
     if setting == "shortestpath" then return shortestPath() and "shortestpath" or "off" end
     if setting == "tomtom" then return hasTomTom() and "tomtom" or "off" end
     if setting == "builtin" then return hasBuiltin() and "builtin" or "off" end
+    if setting == "questwalker" then return "questwalker" end
     if shortestPath() then return "shortestpath" end
     if hasTomTom() then return "tomtom" end
-    if hasBuiltin() then return "builtin" end
-    return "off"
+    return "questwalker"
 end
 
 local providers = {}
@@ -158,6 +162,18 @@ providers.builtin = {
         if C_Map and C_Map.ClearUserWaypoint then
             pcall(C_Map.ClearUserWaypoint)
         end
+    end,
+}
+
+providers.questwalker = {
+    set = function(stops)
+        ns.Navigator.SetTarget(stops[1])
+        -- The game's pin too, so the step shows on the minimap's edge.
+        if hasBuiltin() then pcall(providers.builtin.set, stops) end
+    end,
+    clear = function()
+        ns.Navigator.SetTarget(nil)
+        providers.builtin.clear()
     end,
 }
 

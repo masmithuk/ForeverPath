@@ -526,6 +526,17 @@ function QuestieData.GetNpcsByTitle(title, faction)
     return result
 end
 
+--- Flight masters friendly to `faction`, as actors with spawn points.
+function QuestieData.GetFlightMasters(faction)
+    local result = {}
+    for _, title in ipairs(ns.Data.Services.flightMasterTitles or {}) do
+        for _, actor in ipairs(QuestieData.GetNpcsByTitle(title, faction)) do
+            result[#result + 1] = actor
+        end
+    end
+    return result
+end
+
 --- "<Class> Trainer" for this character (set when the index is built).
 function QuestieData.ClassTrainerTitle()
     return state.classTitle
@@ -632,6 +643,7 @@ function QuestieData.BuildIndex(profile, schedule, onDone)
     state.classTitle = profile.class and (profile.class.name .. " Trainer") or nil
     if state.classTitle then titles[state.classTitle] = true end
     for _, p in ipairs(services.professions) do titles[p .. " Trainer"] = true end
+    for _, t in ipairs(services.flightMasterTitles or {}) do titles[t] = true end
     local work = coroutine.create(function()
         local count = 0
         for _, id in ipairs(allIds("Quest")) do

@@ -28,6 +28,11 @@ ns.Data.Services = {
 
     -- QuestieDB titles ("subName") used to find NPCs.
     innkeeperTitle = "Innkeeper",
+    -- Flight masters go by several titles.
+    flightMasterTitles = {
+        "Flight Master", "Gryphon Master", "Wind Rider Master", "Hippogryph Master", "Bat Handler",
+        "Wind Rider Keeper", "Gryphon Keeper",
+    },
     professions = {
         "Alchemy", "Blacksmithing", "Enchanting", "Engineering", "Herbalism", "Leatherworking",
         "Mining", "Skinning", "Tailoring", "Cooking", "First Aid", "Fishing",

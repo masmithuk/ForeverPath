@@ -22,6 +22,10 @@ you're in. Pick up, do, hand in, repeat, all the way to 60.
   kills you need (it counts your rested XP).
 - **Handy stops along the way:** visit your class trainer when new spells are due and you're nearby, set your
   hearthstone at the inn closest to your quests, and train your professions when you're ready for the next rank.
+- **A sat-nav arrow** to your next step: "Turn left", "Go straight", "You've arrived", with the distance and
+  roughly how long it'll take. For long trips it plans the quickest way using flight paths you've found, your
+  Hearthstone, and boats and zeppelins, then talks you through each part ("Fly to Camp Taurajo"). The route is
+  drawn on the world map.
 - **Compass at the top of the screen:** as you turn, it shows which way each of your next steps is, numbered in
   order. Hover a number to see what to do and how far away it is. Your party members show up on it too.
 - **Numbered steps on the world map:** see where each of your next steps is, in order. Hover a number to see
@@ -46,7 +50,8 @@ you're in. Pick up, do, hand in, repeat, all the way to 60.
 
 - **[Questie](https://www.curseforge.com/wow/addons/questie)** with **QuestieDB**: this is where Questwalker gets
   its quest information.
-- **An arrow addon:** **Shortest Path Forever** (recommended) or **[TomTom](https://www.curseforge.com/wow/addons/tomtom)**.
+- **Nothing else for directions.** Questwalker has its own sat-nav arrow. If you'd rather use **Shortest Path
+  Forever** or **[TomTom](https://www.curseforge.com/wow/addons/tomtom)**, it uses them instead.
   Without one, Questwalker puts a pin on your map instead, and reminds you to install one.
 
 ## Getting started

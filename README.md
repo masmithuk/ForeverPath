@@ -141,7 +141,8 @@ Steps advance on their own:
 
 - **[Questie](https://www.curseforge.com/wow/addons/questie) with QuestieDB (Forever bundle): strongly recommended.** QuestieDB is where quest-giver locations come from. Questwalker reads it through its documented `LibQuestieDB` API (contract 4). If Questie itself is also loaded, Questwalker uses Questie's own availability check, which knows about hidden and event quests. Without QuestieDB, the guide only covers quests already in your log.
 - **[Shortest Path Forever](https://www.curseforge.com/wow/addons/shortest-path-forever): recommended, and used first when installed.** It plans real routes on foot, by flight path and by boat. Questwalker hands it the next several steps through its public API (`ShortestPathForever.API.NavigateRoute`, versions 1 and 2) as one journey with numbered, quest-badged stops. The current stop is held until the step really completes, so walking up to a quest giver doesn't skip ahead. Routes refused during combat are sent again when combat ends.
-- **[TomTom](https://www.curseforge.com/wow/addons/tomtom): the alternative.** It provides the on-screen arrow. Addons that work from TomTom waypoints, such as Well Trodden (walking trails) and Map Shortcuts, then follow Questwalker's steps too. With neither addon installed, Questwalker tells you to install one (in the guide window, on Home, in Settings and once at login) and places the game's own map pin meanwhile.
+- **[TomTom](https://www.curseforge.com/wow/addons/tomtom): used next when installed.** It provides the on-screen arrow. Addons that work from TomTom waypoints, such as Well Trodden (walking trails) and Map Shortcuts, then follow Questwalker's steps too.
+- **Questwalker arrow: built in, used when neither is installed.** A sat-nav panel with a turning arrow (green ahead, red behind), the instruction (Go straight, Bear/Turn left or right, Turn around, Arriving, You've arrived), the distance and an arrival time. Long trips are planned by `Guide/Travel.lua`: walking, flying between flight masters you've opened a flight map at, your Hearthstone (when it's ready and you've set it with Questwalker running), and boats and zeppelins between continents (`Data/Transports.lua`). It guides one leg at a time and draws the leg as dots on the world map. The game's map pin is placed too.
 
 ## Features
 
@@ -221,13 +222,13 @@ Everything runs from the game's own UI.
 | **Home** | Your character, the guide you're following, where you're levelling now and next, your current step, rested XP, class tips, dungeons for your level, and a short explanation of every part of Questwalker. Buttons show or hide the guide window and open Steps or Guides. |
 | **Steps** | Every quest in your guide, as described above. |
 | **Guides** | The Speedrun and Story guides for your race, then yours. Select one to see its details, then **Use this guide**, **Edit** (or **View** for built-ins), **Copy**, **New guide**, **Delete**, **Export** or **Import**. Edit and View open the guide editor described above. |
-| **Settings** | Show or hide the guide window, group (elite) quests, dungeon suggestions, the Target button and the minimap button; level-up messages; the waypoint arrow (a dropdown: Automatic, Shortest Path, TomTom, Map pin, Off); bring back skipped quests, **abandon unrelated quests** and reset window positions. Quest automation: accept, hand in, skip grey or repeatable quests, and (off by default) only quests your guide uses. The two columns stack when the window is narrow. |
+| **Settings** | Show or hide the guide window, group (elite) quests, dungeon suggestions, the Target button and the minimap button; level-up messages; the waypoint arrow (a dropdown: Automatic, Shortest Path, Questwalker arrow, TomTom, Map pin, Off), the compass and the map numbers; bring back skipped quests, **abandon unrelated quests** and reset window positions. Quest automation: accept, hand in, skip grey or repeatable quests, and (off by default) only quests your guide uses. The two columns stack when the window is narrow. |
 
 The minimap's addon compartment also opens the main window, even if you hide the minimap button.
 
 ### Slash commands (optional)
 
-Everything above can also be done with commands, which is handy for macros: `/qw`, `/qw guide [on|off]`, `/qw skip`, `/qw back`, `/qw done`, `/qw best`, `/qw unskip`, `/qw waypoints auto|shortestpath|tomtom|builtin|off`, `/qw route speedrun|story|<your guide>`, `/qw next`, `/qw debug`, `/qw reset` and `/qw help`.
+Everything above can also be done with commands, which is handy for macros: `/qw`, `/qw guide [on|off]`, `/qw skip`, `/qw back`, `/qw done`, `/qw best`, `/qw unskip`, `/qw waypoints auto|shortestpath|questwalker|tomtom|builtin|off`, `/qw route speedrun|story|<your guide>`, `/qw next`, `/qw debug`, `/qw reset` and `/qw help`.
 
 ## Project layout
 
@@ -295,7 +296,7 @@ Leveling data is opinion-based and goes out of date with balance patches. All of
 - Forever uses the modern (Midnight-era) addon API. Old globals such as `GetSpellInfo` and `GetTalentInfo` don't exist, and some unit values can be "secret". Questwalker only reads basic character info and XP, and it checks every value with `issecretvalue`.
 - The Skyborne `raceFile` token wasn't documented at launch, so race detection falls back to matching names ("Skyborne", "High Order" and "Windshaper").
 - Skyborne race masks in QuestieDB go up to 2^33. That's beyond WoW's 32-bit `bit.band`, so flags are checked with plain arithmetic in `Util.HasFlag`.
-- The guide never calls `C_SuperTrack.SetSuperTrackedUserWaypoint`, because Forever addon guidance warns against it. The built-in provider only places a map pin, so use TomTom for an on-screen arrow.
+- The guide never calls `C_SuperTrack.SetSuperTrackedUserWaypoint`, because Forever addon guidance warns against it. The map pin provider only places a pin; the Questwalker arrow draws its own.
 
 ### Known limits
 

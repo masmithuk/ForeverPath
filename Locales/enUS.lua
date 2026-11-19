@@ -213,6 +213,7 @@ L.SETTING_UNSKIP        = "Bring back skipped quests"
 L.SETTING_RESET         = "Reset window positions"
 L.WAYPOINTS_AUTO        = "Automatic"
 L.WAYPOINTS_SHORTESTPATH = "Shortest Path"
+L.WAYPOINTS_QUESTWALKER = "Questwalker arrow"
 L.WAYPOINTS_TOMTOM      = "TomTom"
 L.WAYPOINTS_BUILTIN     = "Map pin"
 L.WAYPOINTS_OFF         = "Off"
@@ -304,7 +305,7 @@ L.HELP = {
     "/qw debug - what the guide sees (handy for bug reports)",
     "/qw best (or /qw lost) - go to the best step from where you are",
     "/qw unskip - bring back every skipped quest",
-    "/qw waypoints auto|shortestpath|tomtom|builtin|off - choose the arrow",
+    "/qw waypoints auto|shortestpath|questwalker|tomtom|builtin|off - choose the arrow",
     "/qw route speedrun|story|<your guide> - follow a guide",
     "/qw next - print your current and next zones to chat",
     "/qw reset - reset window positions",
@@ -344,4 +345,25 @@ L.GUIDE_OFF                  = "Step guide off."
 L.GUIDE_NOTHING_TO_SKIP      = "Nothing to skip."
 L.GUIDE_NOTHING_TO_MARK      = "Nothing to mark done - steps complete on their own."
 L.WAYPOINTS_SET_FMT          = "Waypoints: %s (using %s)."
-L.WAYPOINTS_UNKNOWN          = "Choose one of: auto, shortestpath, tomtom, builtin, off"
+L.WAYPOINTS_UNKNOWN          = "Choose one of: auto, shortestpath, questwalker, tomtom, builtin, off"
+L.NAV_TITLE                  = "Questwalker arrow"
+L.NAV_HINT                   = "Directions to your current step. Long trips use your flight paths, hearthstone, "
+    .. "boats and zeppelins. Shift-drag to move. Change it in Settings > Waypoint arrow."
+L.NAV_ARRIVED                = "You've arrived"
+L.NAV_ARRIVING               = "Arriving"
+L.NAV_STRAIGHT               = "Go straight"
+L.NAV_BEAR_LEFT              = "Bear left"
+L.NAV_BEAR_RIGHT             = "Bear right"
+L.NAV_TURN_LEFT              = "Turn left"
+L.NAV_TURN_RIGHT             = "Turn right"
+L.NAV_TURN_AROUND            = "Turn around"
+L.NAV_ETA_SEC                = "about %d sec"
+L.NAV_ETA_MIN                = "about %d min"
+L.NAV_FLY_FMT                = "Fly to %s"
+L.NAV_FLY_FROM_FMT           = "from %s"
+L.NAV_HEARTH                 = "Use your Hearthstone"
+L.NAV_HEARTH_TO_FMT          = "back to %s"
+L.NAV_ZEPPELIN_FMT           = "Take the zeppelin to %s"
+L.NAV_BOAT_FMT               = "Take the boat to %s"
+L.NAV_ON_FLIGHT              = "Enjoy the flight"
+L.NAV_NO_POSITION            = "Finding the way..."

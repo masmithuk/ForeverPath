@@ -25,6 +25,7 @@ local panel
 local WAYPOINT_CHOICES = {
     { id = "auto",    label = "WAYPOINTS_AUTO" },
     { id = "shortestpath", label = "WAYPOINTS_SHORTESTPATH" },
+    { id = "questwalker", label = "WAYPOINTS_QUESTWALKER" },
     { id = "tomtom",  label = "WAYPOINTS_TOMTOM" },
     { id = "builtin", label = "WAYPOINTS_BUILTIN" },
     { id = "off",     label = "WAYPOINTS_OFF" },
