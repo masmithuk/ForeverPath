@@ -434,6 +434,32 @@ end
 --- started; before that (or without Questie), a quest whose objectives
 --- are elite creatures counts as one. Dungeon and raid quests aren't
 --- included here - they have their own steps.
+local ESCORT_WORDS = { "escort", "protect", "accompany", "lead .- to safety", "guide .- to", "safely to", "safely back" }
+local STAY_ALIVE, PARTY_ACCEPT = 1, 2
+
+--- Escort quests: you walk with an NPC (and keep them alive) until the
+--- quest completes. Known by their text, or by the "stay alive"/"party
+--- accept" flags together with an event to finish.
+function QuestieData.IsEscort(questID)
+    if not QuestieData.IsReady() then return false end
+    local texts = {}
+    local objectives = get("Quest", questID, "objectivesText")
+    if type(objectives) == "table" then
+        for _, t in ipairs(objectives) do texts[#texts + 1] = tostring(t) end
+    elseif type(objectives) == "string" then
+        texts[1] = objectives
+    end
+    local trigger = get("Quest", questID, "triggerEnd")
+    if type(trigger) == "table" and type(trigger[1]) == "string" then texts[#texts + 1] = trigger[1] end
+    local text = table.concat(texts, " "):lower()
+    for _, word in ipairs(ESCORT_WORDS) do
+        if text:find(word) then return true end
+    end
+    local flags = tonumber(get("Quest", questID, "questFlags")) or 0
+    local escortFlag = flags % 2 == STAY_ALIVE or math.floor(flags / PARTY_ACCEPT) % 2 == 1
+    return escortFlag and type(trigger) == "table"
+end
+
 function QuestieData.IsGroupQuest(questID)
     if QuestieData.QuestieStarted() then
         local loader = _G.QuestieLoader

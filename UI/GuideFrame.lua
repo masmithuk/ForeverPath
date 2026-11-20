@@ -64,7 +64,7 @@ function GuideFrame.CurrentText(step)
     for _, line in ipairs(step.lines or {}) do
         lines[#lines + 1] = line
     end
-    if not step.target then
+    if not step.target and not step.noArrow then
         lines[#lines + 1] = Util.Color("muted", L.GUIDE_NO_LOCATION)
     end
     return table.concat(lines, "\n")

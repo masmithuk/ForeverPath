@@ -39,6 +39,7 @@ local ARRIVING = 35
 local LEG_DONE = 12        -- close enough to a flight master or dock
 local REPLAN_EVERY = 1     -- seconds
 local DRAW_EVERY = 0.05
+local NODE_MATCH_YARDS = 120 -- a flight master this close to a flight map node is that node
 local ARROW_TEXTURE = "Interface\\Minimap\\MinimapArrow"
 
 local frame
@@ -70,9 +71,44 @@ function Navigator.OnTaxiMap()
     charGuide().flights = known
     local npc = npcIdOf("npc")
     if npc then known[npc] = true end
-    if not (NumTaxiNodes and TaxiNodeName and TaxiNodeGetType) then return end
     local masters = ns.QuestieData.IsReady() and ns.QuestieData.GetFlightMasters(ns.Character.Detect().faction) or {}
-    -- Flight masters per zone: a zone with just one can be matched by name.
+    -- Each discovered node on the flight map, matched to the flight master
+    -- standing there: by position where the game gives it, else by name.
+    local matched = false
+    if C_TaxiMap and C_TaxiMap.GetAllTaxiNodes and GetTaxiMapID then
+        local okId, taxiMap = pcall(GetTaxiMapID)
+        local okNodes, nodes = pcall(C_TaxiMap.GetAllTaxiNodes, okId and taxiMap or nil)
+        if okNodes and type(nodes) == "table" then
+            for _, node in ipairs(nodes) do
+                local state = node.state
+                local discovered = state == 0 or state == 1
+                    or (Enum and Enum.FlightPathState and (state == Enum.FlightPathState.Current
+                        or state == Enum.FlightPathState.Reachable))
+                local pos = node.position
+                if discovered and pos and taxiMap then
+                    local x, y = pos.x, pos.y
+                    if pos.GetXY then x, y = pos:GetXY() end
+                    local world = x and ns.GameApi.GetWorldPosition(taxiMap, x, y)
+                    local best, bestD = nil, NODE_MATCH_YARDS
+                    for _, m in ipairs(masters) do
+                        local p = m.points and m.points[1]
+                        local mw = p and ns.GameApi.GetWorldPosition(p.mapID, p.x, p.y)
+                        local d = world and mw and Travel.Distance(world, mw)
+                        if d and d < bestD then best, bestD = m, d end
+                    end
+                    if best then
+                        known[best.id] = true
+                        matched = true
+                    end
+                end
+            end
+        end
+    end
+    if matched or not (NumTaxiNodes and TaxiNodeName and TaxiNodeGetType) then return end
+
+    -- By name: "Lakeshire, Redridge" is in "Redridge Mountains". A zone with
+    -- one flight master is a sure match; with several, the town name must
+    -- appear in the master's spawn zone (it rarely does), so it's skipped.
     local byZone = {}
     for _, m in ipairs(masters) do
         local p = m.points and m.points[1]
@@ -85,11 +121,14 @@ function Navigator.OnTaxiMap()
     for i = 1, NumTaxiNodes() do
         local kind = TaxiNodeGetType(i)
         if kind == "REACHABLE" or kind == "CURRENT" then
-            -- "Crossroads, The Barrens" -> "The Barrens"
             local node = TaxiNodeName(i) or ""
-            local zone = node:match(",%s*(.+)$") or node
-            local inZone = byZone[zone]
-            if inZone and #inZone == 1 then known[inZone[1].id] = true end
+            local town, zone = node:match("^(.-),%s*(.+)$")
+            town, zone = town or node, zone or node
+            for zoneName, inZone in pairs(byZone) do
+                local fits = zoneName == zone or zoneName:find(zone, 1, true) == 1
+                    or zoneName == town or zoneName:find(town, 1, true) == 1
+                if fits and #inZone == 1 then known[inZone[1].id] = true end
+            end
         end
     end
 end

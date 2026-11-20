@@ -59,9 +59,11 @@ function GameApi.GetQuestLog()
         local info = safe(QL.GetInfo, i)
         if info and not info.isHeader and not info.isHidden and num(info.questID) then
             local id = info.questID
+            local failed = safe(QL.IsFailed, id)
             log[id] = {
                 title = ns.Util.SafeString(info.title) or ("Quest " .. id),
                 complete = readyForTurnIn(QL, id, info),
+                failed = failed == true or failed == 1 or info.isComplete == -1,
             }
         end
     end

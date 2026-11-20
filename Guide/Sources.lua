@@ -161,6 +161,47 @@ local function dungeonStep(ctx, questID, quest, dungeon)
     }
 end
 
+-- Escorts come first and keep the arrow still: wandering off fails them.
+local ESCORT_BONUS = 2e6
+
+local function starterName(ctx, questID)
+    local starters = ns.QuestieData.GetStarters(questID, ctx.profile.faction)
+    return starters[1] and starters[1].name
+end
+
+--- An escort under way: stay with the NPC until the quest completes.
+local function escortStep(ctx, questID, quest)
+    local who = starterName(ctx, questID)
+    local lines = { quest.title }
+    for _, objective in ipairs(ns.GameApi.GetOpenObjectives(questID)) do
+        lines[#lines + 1] = "  " .. objective
+    end
+    lines[#lines + 1] = ns.L.STEP_ESCORT_HINT
+    return {
+        key = "escort:" .. questID,
+        kind = "ESCORT",
+        title = who and ns.L.STEP_ESCORT_FMT:format(who) or ns.L.STEP_ESCORT,
+        lines = lines,
+        questIDs = { questID },
+        bonus = ESCORT_BONUS,
+        noArrow = true,
+    }
+end
+
+--- A failed quest (escort died, timer ran out): drop it and take it again.
+local function failedStep(ctx, questID, quest)
+    local actor, point = nearestActor(ctx.origin, ns.QuestieData.GetStarters(questID, ctx.profile.faction))
+    return {
+        key = "failed:" .. questID,
+        kind = "FAILED",
+        title = ns.L.STEP_FAILED_FMT:format(quest.title),
+        lines = { actor and ns.L.STEP_FAILED_AGAIN_FMT:format(actor.name) or ns.L.STEP_FAILED_AGAIN },
+        questIDs = { questID },
+        target = target(point, actor and actor.name),
+        bonus = ESCORT_BONUS / 2,
+    }
+end
+
 local function objectiveStep(ctx, questID, quest)
     local point = withWorld(ns.GameApi.GetQuestWaypoint(questID))
     local label
@@ -240,7 +281,11 @@ local function questLogSteps(ctx, out)
             ctx.tooLow[#ctx.tooLow + 1] = { id = questID, title = quest.title, level = lowLevel }
         elseif not ctx.skipped[questID] then -- quests already taken are always shown
             local step
-            if quest.complete then
+            if quest.failed then
+                step = failedStep(ctx, questID, quest)
+            elseif not quest.complete and ns.QuestieData.IsEscort(questID) then
+                step = escortStep(ctx, questID, quest)
+            elseif quest.complete then
                 step = turnIn
             else
                 local dungeon = ns.QuestieData.DungeonOf(questID)

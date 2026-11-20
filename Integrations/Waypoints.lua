@@ -95,6 +95,8 @@ local providers = {}
 --- Journey stops for Shortest Path Forever from the planned steps.
 function Waypoints.BuildStops(steps)
     local stops = {}
+    -- An escort under way: no arrow anywhere, stay with the NPC.
+    if steps[1] and steps[1].noArrow then return stops end
     for _, step in ipairs(steps) do
         local t = step.target
         if t then

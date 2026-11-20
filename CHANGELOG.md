@@ -2,6 +2,12 @@
 
 All notable changes are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.9.1] - 2026-11-20
+
+### Fixed
+- **Escort quests.** While an escort (like Missing In Action) is under way it's the step, called "Escort <name>", and the guide waits there: no arrow sends you off until the quest completes. If the escort fails, the step says to abandon the quest and pick it up again from its quest giver. The same goes for any other failed quest.
+- **Flight paths weren't being learned.** Opening a flight map only taught the arrow about the flight master you were talking to. It now learns every flight path you've discovered from the map, matching each place to its flight master by position, or by name when the game doesn't give positions ("Lakeshire, Redridge" is Redridge Mountains). Open any flight map once to update it.
+
 ## [0.9.0] - 2026-11-19
 
 ### Added
