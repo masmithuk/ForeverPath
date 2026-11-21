@@ -137,6 +137,19 @@ function GameApi.GetOpenObjectives(questID)
     return lines
 end
 
+--- Text of the objectives you've already finished for a quest.
+function GameApi.GetFinishedObjectives(questID)
+    local lines = {}
+    local QL = C_QuestLog
+    local objectives = QL and safe(QL.GetQuestObjectives, questID)
+    if type(objectives) ~= "table" then return lines end
+    for _, o in ipairs(objectives) do
+        local text = ns.Util.SafeString(o.text)
+        if text and text ~= "" and o.finished then lines[#lines + 1] = text end
+    end
+    return lines
+end
+
 --- Blizzard's own objective waypoint for a quest in the log, if any.
 function GameApi.GetQuestWaypoint(questID)
     local QL = C_QuestLog

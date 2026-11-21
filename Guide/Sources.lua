@@ -202,13 +202,96 @@ local function failedStep(ctx, questID, quest)
     }
 end
 
+local SPOT_VISITED = 12      -- yards: you've been to a spot
+local SPOT_SAME = 25         -- yards: two spots this close are one
+local FEW_SPAWNS = 8         -- objects with this many spawns or fewer: show them all
+
+local function visitedSpots(questID)
+    local g = ns.Settings.char.guide
+    g.visitedSpots = g.visitedSpots or {}
+    g.visitedSpots[questID] = g.visitedSpots[questID] or {}
+    return g.visitedSpots[questID]
+end
+
+local function spotKey(p)
+    return ("%d:%.3f:%.3f"):format(p.mapID or 0, p.x or 0, p.y or 0)
+end
+
+--- Every place you still need to go for a quest's objectives, nearest
+--- first. Objectives already finished are left out (matched by name), and
+--- so are spots you've been to while others remain. Creatures give their
+--- nearest spawn; objects and quest items with only a few spawns (bodies,
+--- crates, rifles) give each one.
+-- @return list of { point, label, dist }
+function Sources.ObjectiveSpots(ctx, questID)
+    local finished = {}
+    for _, text in ipairs(ns.GameApi.GetFinishedObjectives(questID)) do finished[#finished + 1] = text:lower() end
+    local function done(name)
+        if not name or name == "" then return false end
+        name = name:lower()
+        for _, text in ipairs(finished) do
+            if text:find(name, 1, true) then return true end
+        end
+        return false
+    end
+    local spots = {}
+    local function add(p, label, once)
+        local point = withWorld(p)
+        local _, dist = ns.Planner.Nearest(ctx.origin, { point })
+        for _, s in ipairs(spots) do
+            if s.point.world and point.world and ns.Util.Distance(s.point.world, point.world) < SPOT_SAME then return end
+        end
+        spots[#spots + 1] = { point = point, label = label, dist = dist or math.huge, once = once }
+    end
+    for _, actor in ipairs(ns.QuestieData.GetObjectiveTargets(questID)) do
+        if not done(actor.forItem) and not done(actor.name) then
+            if actor.kind == "object" and #actor.points <= FEW_SPAWNS then
+                for _, p in ipairs(actor.points) do add(p, actor.name, true) end
+            else
+                local _, point = nearestActor(ctx.origin, { actor })
+                if point then add(point, actor.name) end
+            end
+        end
+    end
+
+    -- Objects you loot once (bodies, crates) count as done when you've
+    -- been to them. Creatures don't: you may need more of them.
+    local visited = visitedSpots(questID)
+    for _, s in ipairs(spots) do
+        if s.once and s.dist <= SPOT_VISITED then visited[spotKey(s.point)] = true end
+    end
+    local fresh = {}
+    for _, s in ipairs(spots) do
+        if not (s.once and visited[spotKey(s.point)]) then fresh[#fresh + 1] = s end
+    end
+    if #fresh > 0 then spots = fresh end
+    table.sort(spots, function(a, b) return a.dist < b.dist end)
+    return spots
+end
+
+--- Forget visited spots for quests that have left your log.
+local function pruneVisited(ctx)
+    local g = ns.Settings.char.guide
+    for questID in pairs(g.visitedSpots or {}) do
+        if not ctx.log[questID] then g.visitedSpots[questID] = nil end
+    end
+end
+
 local function objectiveStep(ctx, questID, quest)
-    local point = withWorld(ns.GameApi.GetQuestWaypoint(questID))
-    local label
-    if not point then
-        local actor
-        actor, point = nearestActor(ctx.origin, ns.QuestieData.GetObjectiveTargets(questID))
-        label = actor and actor.name
+    local point, label, targets
+    local spots = ns.QuestieData.IsReady() and Sources.ObjectiveSpots(ctx, questID) or {}
+    if #spots >= 2 then
+        -- Several places to go: head for the nearest, show them all.
+        point, label = spots[1].point, spots[1].label
+        targets = {}
+        for _, s in ipairs(spots) do targets[#targets + 1] = target(s.point, s.label) end
+    else
+        point = withWorld(ns.GameApi.GetQuestWaypoint(questID))
+        if not point then
+            local actor
+            actor, point = nearestActor(ctx.origin, ns.QuestieData.GetObjectiveTargets(questID))
+            label = actor and actor.name
+        end
     end
     local lines = { quest.title }
     for _, objective in ipairs(ns.GameApi.GetOpenObjectives(questID)) do
@@ -228,6 +311,7 @@ local function objectiveStep(ctx, questID, quest)
         lines = lines,
         questIDs = { questID },
         target = target(point, label or quest.title),
+        targets = targets, -- every spot still to visit (when there's more than one)
     }
 end
 
@@ -266,6 +350,7 @@ end
 
 local function questLogSteps(ctx, out)
     ctx.onHold, ctx.tooLow, ctx.groupHidden = {}, {}, {}
+    pruneVisited(ctx)
     for questID, quest in pairs(ctx.log) do
         -- Left out, in this order: group quests (setting off), too hard
         -- for now, too low to bother. Otherwise it's a step.

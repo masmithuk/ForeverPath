@@ -2,6 +2,14 @@
 
 All notable changes are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.9.2] - 2026-11-21
+
+### Fixed
+- **Objectives in several places.** Quests like Treacherous Cold (three rifles on three bodies) showed only one spot. Every place you still need to go is now shown on the world map and the compass, all with the step's number, and the arrow takes you to the nearest:
+  - objectives you've finished are left out (a rifle you've got isn't shown again)
+  - objects you loot once (bodies, crates) with only a few spawns show every spawn, and drop off once you've been there
+  - creatures show their nearest spawn and stay on the list until that objective is done
+
 ## [0.9.1] - 2026-11-20
 
 ### Fixed

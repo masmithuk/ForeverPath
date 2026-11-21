@@ -106,17 +106,21 @@ function MapPins.Layout(steps, mapID)
     if not mapID then return markers end
     for i, step in ipairs(steps or {}) do
         if i > MapPins.MAX_STEPS then break end
-        local x, y = MapPins.Project(step.target, mapID)
-        if x then
-            local into
-            for _, m in ipairs(markers) do
-                if math.abs(m.x - x) < SAME_SPOT and math.abs(m.y - y) < SAME_SPOT then into = m; break end
-            end
-            if into then
-                into.numbers[#into.numbers + 1] = i
-                into.steps[#into.steps + 1] = step
-            else
-                markers[#markers + 1] = { x = x, y = y, numbers = { i }, steps = { step }, current = i == 1 }
+        for _, t in ipairs(step.targets or { step.target }) do
+            local x, y = MapPins.Project(t, mapID)
+            if x then
+                local into
+                for _, m in ipairs(markers) do
+                    if math.abs(m.x - x) < SAME_SPOT and math.abs(m.y - y) < SAME_SPOT then into = m; break end
+                end
+                if into then
+                    if into.numbers[#into.numbers] ~= i then
+                        into.numbers[#into.numbers + 1] = i
+                        into.steps[#into.steps + 1] = step
+                    end
+                else
+                    markers[#markers + 1] = { x = x, y = y, numbers = { i }, steps = { step }, current = i == 1 }
+                end
             end
         end
     end

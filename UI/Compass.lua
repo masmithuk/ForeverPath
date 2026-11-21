@@ -144,22 +144,25 @@ function Compass.Layout(steps, player, facing, party, halfWidth)
 
     for i, step in ipairs(steps or {}) do
         if i > Compass.MAX_STEPS then break end
-        local to = step.target and step.target.world
-        local bearing = to and Compass.Bearing(player.world, to, axes)
-        if bearing then
-            local rel = Compass.Relative(bearing, facing)
-            local offset = Compass.Offset(rel, halfWidth)
-            local edge
-            if not offset and i == 1 then
-                -- The current step waits at the edge, pointing the way to turn.
-                edge = rel < 0 and "left" or "right"
-                offset = (rel < 0 and -1 or 1) * halfWidth
-            end
-            if offset then
-                result.markers[#result.markers + 1] = {
-                    kind = "step", label = tostring(i), number = i, current = i == 1, offset = offset,
-                    edge = edge, step = step, distance = ns.Util.Distance(player.world, to),
-                }
+        for k, t in ipairs(step.targets or { step.target }) do
+            local to = t and t.world
+            local bearing = to and Compass.Bearing(player.world, to, axes)
+            if bearing then
+                local rel = Compass.Relative(bearing, facing)
+                local offset = Compass.Offset(rel, halfWidth)
+                local edge
+                if not offset and i == 1 and k == 1 then
+                    -- The current step waits at the edge, pointing the way to turn.
+                    edge = rel < 0 and "left" or "right"
+                    offset = (rel < 0 and -1 or 1) * halfWidth
+                end
+                if offset then
+                    result.markers[#result.markers + 1] = {
+                        kind = "step", label = tostring(i), number = i, current = i == 1, offset = offset,
+                        edge = edge, step = step, distance = ns.Util.Distance(player.world, to),
+                        spot = t.label,
+                    }
+                end
             end
         end
     end
